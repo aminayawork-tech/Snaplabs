@@ -26,112 +26,138 @@ st.set_page_config(
 # ── Theme CSS ──────────────────────────────────────────────────────────────
 DARK_CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+* { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 [data-testid="stAppViewContainer"] { background: #0d0d1a; color: #e2e8f0; }
 [data-testid="stSidebar"] { background: #111127; border-right: 1px solid #1e1e3f; }
-h1, h2, h3 { color: #a78bfa !important; }
-h4, h5, h6 { color: #818cf8 !important; }
-p, li, label, .stMarkdown { color: #e2e8f0 !important; }
+h1 { color: #a78bfa !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -0.5px !important; }
+h2 { color: #a78bfa !important; font-size: 1.5rem !important; font-weight: 700 !important; }
+h3 { color: #c4b5fd !important; font-size: 1.15rem !important; font-weight: 600 !important; }
+h4 { color: #818cf8 !important; font-size: 1rem !important; font-weight: 600 !important; }
+p, li { color: #cbd5e1 !important; font-size: 0.9rem !important; line-height: 1.6 !important; }
+label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 500 !important; letter-spacing: 0.02em !important; }
 .stButton > button {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white; border: none; border-radius: 8px;
-    font-weight: 600; padding: 0.5rem 1.5rem; transition: all 0.2s;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    color: #ffffff !important; border: none !important; border-radius: 8px !important;
+    font-weight: 600 !important; font-size: 0.875rem !important;
+    letter-spacing: 0.01em !important; padding: 0.55rem 1.4rem !important;
+    line-height: 1.4 !important; transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(99,102,241,0.4) !important;
 }
+.stButton > button p { color: #ffffff !important; font-size: 0.875rem !important; font-weight: 600 !important; }
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea {
     background: #1a1a2e !important; color: #e2e8f0 !important;
     border: 1px solid #2d2d5e !important; border-radius: 8px !important;
+    font-size: 0.9rem !important;
 }
 [data-testid="stMetric"] {
     background: #1a1a2e; border: 1px solid #2d2d5e;
     border-radius: 12px; padding: 1rem;
 }
-[data-testid="stMetricValue"] { color: #a78bfa !important; }
-[data-testid="stMetricLabel"] { color: #94a3b8 !important; }
+[data-testid="stMetricValue"] { color: #a78bfa !important; font-weight: 700 !important; }
+[data-testid="stMetricLabel"] { color: #64748b !important; font-size: 0.78rem !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
 .streamlit-expanderHeader {
     background: #1a1a2e !important; border: 1px solid #2d2d5e !important;
-    border-radius: 8px !important; color: #a78bfa !important;
+    border-radius: 8px !important; color: #a78bfa !important; font-weight: 600 !important;
 }
 .stTabs [data-baseweb="tab-list"] {
     background: #111127; border-radius: 10px; padding: 4px; gap: 4px;
 }
-.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #94a3b8; font-weight: 500; padding: 8px 20px; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; }
-.stDataFrame, .stTable { background: #1a1a2e !important; }
+.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #94a3b8; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; font-weight: 600 !important; }
+.stDataFrame { background: #1a1a2e !important; }
 .metric-card {
     background: linear-gradient(135deg, #1a1a2e, #1e1e3f);
-    border: 1px solid #2d2d5e; border-radius: 12px; padding: 1.2rem; margin: 0.5rem 0;
+    border: 1px solid #2d2d5e; border-radius: 12px; padding: 1.4rem; margin: 0.5rem 0;
 }
+.metric-card h4 { margin-bottom: 0.5rem !important; }
+.metric-card p { margin: 0.4rem 0 !important; }
+.metric-card small { color: #64748b !important; font-size: 0.78rem !important; }
 .sidebar-logo {
-    font-size: 1.6rem; font-weight: 800;
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
     background: linear-gradient(135deg, #818cf8, #a78bfa);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.2rem;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.1rem;
 }
-.sidebar-tagline { font-size: 0.75rem; color: #64748b; margin-bottom: 1.5rem; }
+.sidebar-tagline { font-size: 0.72rem; color: #64748b; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1.5rem; }
 .stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0d0d1a; }
 ::-webkit-scrollbar-thumb { background: #2d2d5e; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #1a1a2e !important; color: #e2e8f0 !important; }
+.stCaption, .caption { color: #64748b !important; font-size: 0.8rem !important; }
 </style>
 """
 
 LIGHT_CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+* { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 [data-testid="stAppViewContainer"] { background: #f8fafc; color: #1e293b; }
 [data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
-h1, h2, h3 { color: #4f46e5 !important; }
-h4, h5, h6 { color: #6366f1 !important; }
-p, li, label, .stMarkdown { color: #334155 !important; }
+h1 { color: #4f46e5 !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -0.5px !important; }
+h2 { color: #4f46e5 !important; font-size: 1.5rem !important; font-weight: 700 !important; }
+h3 { color: #4338ca !important; font-size: 1.15rem !important; font-weight: 600 !important; }
+h4 { color: #6366f1 !important; font-size: 1rem !important; font-weight: 600 !important; }
+p, li { color: #475569 !important; font-size: 0.9rem !important; line-height: 1.6 !important; }
+label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 500 !important; letter-spacing: 0.02em !important; }
 .stButton > button {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white; border: none; border-radius: 8px;
-    font-weight: 600; padding: 0.5rem 1.5rem; transition: all 0.2s;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    color: #ffffff !important; border: none !important; border-radius: 8px !important;
+    font-weight: 600 !important; font-size: 0.875rem !important;
+    letter-spacing: 0.01em !important; padding: 0.55rem 1.4rem !important;
+    line-height: 1.4 !important; transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(99,102,241,0.3) !important;
 }
+.stButton > button p { color: #ffffff !important; font-size: 0.875rem !important; font-weight: 600 !important; }
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea {
     background: #ffffff !important; color: #1e293b !important;
     border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
+    font-size: 0.9rem !important;
 }
 [data-testid="stMetric"] {
     background: #ffffff; border: 1px solid #e2e8f0;
     border-radius: 12px; padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
-[data-testid="stMetricValue"] { color: #4f46e5 !important; }
-[data-testid="stMetricLabel"] { color: #64748b !important; }
+[data-testid="stMetricValue"] { color: #4f46e5 !important; font-weight: 700 !important; }
+[data-testid="stMetricLabel"] { color: #94a3b8 !important; font-size: 0.78rem !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
 .streamlit-expanderHeader {
     background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important; color: #4f46e5 !important;
+    border-radius: 8px !important; color: #4f46e5 !important; font-weight: 600 !important;
 }
 .stTabs [data-baseweb="tab-list"] {
     background: #f1f5f9; border-radius: 10px; padding: 4px; gap: 4px;
 }
-.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #64748b; font-weight: 500; padding: 8px 20px; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; }
+.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #64748b; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; font-weight: 600 !important; }
 .metric-card {
-    background: linear-gradient(135deg, #ffffff, #f8fafc);
-    border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin: 0.5rem 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.4rem; margin: 0.5rem 0;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
+.metric-card h4 { margin-bottom: 0.5rem !important; }
+.metric-card p { margin: 0.4rem 0 !important; }
+.metric-card small { color: #94a3b8 !important; font-size: 0.78rem !important; }
 .sidebar-logo {
-    font-size: 1.6rem; font-weight: 800;
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.2rem;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.1rem;
 }
-.sidebar-tagline { font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.5rem; }
+.sidebar-tagline { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1.5rem; }
 .stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #ffffff !important; color: #1e293b !important; }
+.stCaption, .caption { color: #94a3b8 !important; font-size: 0.8rem !important; }
 </style>
 """
 
@@ -211,7 +237,7 @@ def render_sidebar():
         st.divider()
 
         # ── Client selector ────────────────────────────────────────────────
-        st.markdown("### 👤 Active Client")
+        st.markdown("### Active Client")
         clients = DB["get_all_clients"]()
 
         if clients:
@@ -226,20 +252,20 @@ def render_sidebar():
             st.info("No clients yet. Add one in Research.")
 
         if st.session_state.active_client_id:
-            st.success(f"✅ {st.session_state.active_client_name}")
+            st.success(f"{st.session_state.active_client_name}  ✓")
 
         st.divider()
 
         # ── Quick Test Button ──────────────────────────────────────────────
-        st.markdown("### 🚀 Quick Test")
-        if st.button("⚡ Empyrean Services", use_container_width=True):
+        st.markdown("### Quick Test")
+        if st.button("Test: Empyrean Services", use_container_width=True):
             st.session_state.last_url = "https://empyreanservices.com/"
-            st.toast("URL loaded! Go to Research tab.", icon="🎯")
+            st.toast("URL loaded — go to Research tab.")
 
         st.divider()
 
         # ── Cost Tracker ──────────────────────────────────────────────────
-        st.markdown("### 💰 Session Costs")
+        st.markdown("### Session Costs")
         try:
             from utils import get_cost_summary
             costs = get_cost_summary()
@@ -261,7 +287,7 @@ def render_sidebar():
 #  TAB 1 – DASHBOARD
 # ═══════════════════════════════════════════════════════════════════════════
 def tab_dashboard():
-    st.markdown("## 🏠 Dashboard")
+    st.markdown("## Dashboard")
     st.caption("Welcome to SnapLabs — your all-in-one AI marketing command centre.")
 
     clients = DB["get_all_clients"]()
@@ -289,7 +315,7 @@ def tab_dashboard():
     col_left, col_right = st.columns([2, 1])
 
     with col_left:
-        st.markdown("### 📋 Recent Clients")
+        st.markdown("### Recent Clients")
         if not clients:
             st.info("No clients yet. Head to the **Research** tab to add your first one!")
         else:
@@ -300,30 +326,30 @@ def tab_dashboard():
             st.dataframe(df, use_container_width=True, hide_index=True)
 
     with col_right:
-        st.markdown("### ⚡ Quick Actions")
-        if st.button("🔍 New Research", use_container_width=True):
+        st.markdown("### Quick Actions")
+        if st.button("New Research", use_container_width=True):
             st.session_state["_nav"] = "Research"
             st.rerun()
-        if st.button("📄 Generate Proposal", use_container_width=True):
+        if st.button("Generate Proposal", use_container_width=True):
             st.session_state["_nav"] = "Proposal"
             st.rerun()
-        if st.button("🤖 Run Agent", use_container_width=True):
+        if st.button("Run Agent", use_container_width=True):
             st.session_state["_nav"] = "Agents"
             st.rerun()
-        if st.button("⚙️ Run Workflow", use_container_width=True):
+        if st.button("Run Workflow", use_container_width=True):
             st.session_state["_nav"] = "Workflows"
             st.rerun()
 
     st.divider()
 
     # ── Platform overview cards ────────────────────────────────────────────
-    st.markdown("### 🗺️ Platform Overview")
+    st.markdown("### Platform Overview")
     c1, c2, c3 = st.columns(3)
 
     with c1:
         st.markdown("""
 <div class="metric-card">
-<h4>🔍 Research Engine</h4>
+<h4>Research Engine</h4>
 <p>Scrape any website with Firecrawl, then get a full AI marketing audit including keywords, gaps, competitors & quick wins.</p>
 <small>Powered by Firecrawl + Claude</small>
 </div>""", unsafe_allow_html=True)
@@ -331,7 +357,7 @@ def tab_dashboard():
     with c2:
         st.markdown("""
 <div class="metric-card">
-<h4>📄 Proposal Generator</h4>
+<h4>Proposal Generator</h4>
 <p>Turn your audit into a polished client proposal with custom pricing, PDF export, and follow-up email.</p>
 <small>One-click PDF download</small>
 </div>""", unsafe_allow_html=True)
@@ -339,7 +365,7 @@ def tab_dashboard():
     with c3:
         st.markdown("""
 <div class="metric-card">
-<h4>🤖 AI Agent Squad</h4>
+<h4>AI Agent Squad</h4>
 <p>8 specialist agents: Content, SEO, Ads, Lead Gen, Email, Social, Reviews & Custom. Chain them into powerful workflows.</p>
 <small>Powered by Claude AI</small>
 </div>""", unsafe_allow_html=True)
@@ -780,12 +806,12 @@ def tab_agents():
     col1, col2 = st.columns([1, 2])
     with col1:
         st.markdown("### Select Agent")
-        agent_names = [f"{a['icon']} {a['name']}" for a in agent_list]
+        agent_names = [a['name'] for a in agent_list]
         selected_idx = st.radio("", agent_names, label_visibility="collapsed")
         selected_agent_meta = agent_list[agent_names.index(selected_idx)]
 
     with col2:
-        st.markdown(f"### {selected_agent_meta['icon']} {selected_agent_meta['name']}")
+        st.markdown(f"### {selected_agent_meta['name']}")
         st.caption(selected_agent_meta["description"])
 
         agent_id = selected_agent_meta["id"]
@@ -870,7 +896,7 @@ def tab_agents():
         st.markdown("### All Agent Outputs This Session")
         for aid, out_data in agent_outputs.items():
             meta = AGENT_REGISTRY.get(aid, {})
-            with st.expander(f"{meta.get('icon','?')} {meta.get('name', aid)} - {out_data['timestamp']}"):
+            with st.expander(f"{meta.get('name', aid)}  ·  {out_data['timestamp']}"):
                 st.caption(f"Task: {out_data['task']}")
                 st.markdown(out_data["output"][:800] + "..." if len(out_data["output"]) > 800 else out_data["output"])
 
@@ -898,7 +924,7 @@ def tab_workflows():
 
     # ---- TEMPLATES ----
     with wf_tab1:
-        st.markdown("### Pre-built Workflow Templates")
+        st.markdown("### Workflow Templates")
         st.caption("One-click workflows that chain research, proposals, and agents together.")
 
         templates = list_workflow_templates()
@@ -906,7 +932,7 @@ def tab_workflows():
 
         for i, tpl in enumerate(templates):
             with cols[i % 2]:
-                with st.expander(f"{tpl['icon']} {tpl['name']}"):
+                with st.expander(f"{tpl['name']}"):
                     st.caption(tpl["description"])
                     st.markdown(f"**Steps:** {' > '.join(tpl['steps'])}")
                     st.markdown(f"**Est. time:** {tpl['estimated_time']}")
@@ -933,7 +959,7 @@ def tab_workflows():
 
     # ---- CUSTOM BUILDER ----
     with wf_tab2:
-        st.markdown("### Custom Workflow Builder")
+        st.markdown("### Custom Builder")
         st.caption("Select agents, define their tasks, and run them in sequence.")
 
         agent_list = get_agent_list()
@@ -947,12 +973,12 @@ def tab_workflows():
         run_research_first = st.checkbox("Run Research First", value=bool(not research_data))
         run_proposal = st.checkbox("Generate Proposal After Research", value=False)
 
-        st.markdown("#### Select & Configure Agents")
+        st.markdown("#### Select Agents")
         selected_agents = []
         for agent in agent_list:
             agent_id = agent["id"]
             checked = st.checkbox(
-                f"{agent['icon']} {agent['name']}",
+                agent['name'],
                 key=f"wf_check_{agent_id}",
                 help=agent["description"],
             )

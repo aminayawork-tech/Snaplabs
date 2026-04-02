@@ -142,7 +142,7 @@ content_agent = BaseAgent(
     agent_id="content_engine",
     name="Content Engine Agent",
     description="Creates blog posts, social content, email sequences, case studies, and content calendars",
-    icon="✍️",
+    icon="[Content]",
     system_prompt=CONTENT_SYSTEM,
     color="#7c3aed",
 )
@@ -150,7 +150,7 @@ register_agent("content_engine", {
     "id": "content_engine",
     "name": "Content Engine Agent",
     "description": "Blog posts, content calendars, social copy, case studies",
-    "icon": "✍️",
+    "icon": "Content",
     "color": "#7c3aed",
     "order": 1,
     "default_tasks": [
@@ -176,7 +176,7 @@ ads_agent = BaseAgent(
     agent_id="paid_ads",
     name="Paid Ads Agent",
     description="Meta & Google ad campaigns, targeting strategy, creative copy, budget allocation",
-    icon="💰",
+    icon="[Ads]",
     system_prompt=ADS_SYSTEM,
     color="#dc2626",
 )
@@ -184,7 +184,7 @@ register_agent("paid_ads", {
     "id": "paid_ads",
     "name": "Paid Ads Agent",
     "description": "Meta & Google campaigns, ad copy, targeting, budget optimization",
-    "icon": "💰",
+    "icon": "Ads",
     "color": "#dc2626",
     "order": 2,
     "default_tasks": [
@@ -211,7 +211,7 @@ seo_agent = BaseAgent(
     agent_id="seo",
     name="SEO Agent",
     description="Technical SEO, keyword strategy, on-page optimization, link building plans",
-    icon="🔍",
+    icon="[SEO]",
     system_prompt=SEO_SYSTEM,
     color="#059669",
 )
@@ -219,7 +219,7 @@ register_agent("seo", {
     "id": "seo",
     "name": "SEO Agent",
     "description": "Technical SEO audits, keyword strategy, on-page optimization",
-    "icon": "🔍",
+    "icon": "SEO",
     "color": "#059669",
     "order": 3,
     "default_tasks": [
@@ -246,7 +246,7 @@ leadgen_agent = BaseAgent(
     agent_id="lead_gen",
     name="Lead Gen Agent",
     description="LinkedIn outreach, cold email sequences, ICP targeting, lead scoring",
-    icon="🎯",
+    icon="[LeadGen]",
     system_prompt=LEADGEN_SYSTEM,
     color="#d97706",
 )
@@ -254,7 +254,7 @@ register_agent("lead_gen", {
     "id": "lead_gen",
     "name": "Lead Gen Agent",
     "description": "LinkedIn outreach, cold email sequences, ICP definition",
-    "icon": "🎯",
+    "icon": "LeadGen",
     "color": "#d97706",
     "order": 4,
     "default_tasks": [
@@ -281,7 +281,7 @@ email_agent = BaseAgent(
     agent_id="email_sms",
     name="Email/SMS Nurture Agent",
     description="Automated email sequences, SMS campaigns, drip campaigns, re-engagement flows",
-    icon="📧",
+    icon="[Email]",
     system_prompt=EMAIL_SYSTEM,
     color="#0891b2",
 )
@@ -289,7 +289,7 @@ register_agent("email_sms", {
     "id": "email_sms",
     "name": "Email/SMS Nurture Agent",
     "description": "Automated sequences, drip campaigns, re-engagement flows",
-    "icon": "📧",
+    "icon": "Email",
     "color": "#0891b2",
     "order": 5,
     "default_tasks": [
@@ -316,7 +316,7 @@ social_agent = BaseAgent(
     agent_id="social_media",
     name="Social Media Agent",
     description="Platform-specific posts, hashtag strategy, community management scripts, viral hooks",
-    icon="📱",
+    icon="[Social]",
     system_prompt=SOCIAL_SYSTEM,
     color="#9333ea",
 )
@@ -324,7 +324,7 @@ register_agent("social_media", {
     "id": "social_media",
     "name": "Social Media Agent",
     "description": "Platform-specific content, hashtags, community management",
-    "icon": "📱",
+    "icon": "Social",
     "color": "#9333ea",
     "order": 6,
     "default_tasks": [
@@ -350,7 +350,7 @@ review_agent = BaseAgent(
     agent_id="review_referral",
     name="Review & Referral Agent",
     description="Google/Yelp review campaigns, referral programs, reputation management",
-    icon="⭐",
+    icon="[Reviews]",
     system_prompt=REVIEW_SYSTEM,
     color="#f59e0b",
 )
@@ -358,7 +358,7 @@ register_agent("review_referral", {
     "id": "review_referral",
     "name": "Review & Referral Agent",
     "description": "Review campaigns, referral programs, reputation management",
-    "icon": "⭐",
+    "icon": "Reviews",
     "color": "#f59e0b",
     "order": 7,
     "default_tasks": [
@@ -384,7 +384,7 @@ custom_agent = BaseAgent(
     agent_id="custom",
     name="Custom Agent",
     description="Flexible agent for any custom marketing task or analysis",
-    icon="⚡",
+    icon="[Custom]",
     system_prompt=CUSTOM_SYSTEM,
     color="#6b7280",
 )
@@ -392,7 +392,7 @@ register_agent("custom", {
     "id": "custom",
     "name": "Custom Agent",
     "description": "Any custom marketing task — flexible and open-ended",
-    "icon": "⚡",
+    "icon": "Custom",
     "color": "#6b7280",
     "order": 8,
     "default_tasks": [
