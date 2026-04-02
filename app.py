@@ -395,7 +395,22 @@ def tab_research():
 
     st.caption("Credit usage: ~1 Firecrawl credit per page. Deep crawl = up to 10 credits.")
 
-    run_btn = st.button("Run AI Research Audit", type="primary", use_container_width=True)
+    # ── API key diagnostics ────────────────────────────────────────────────
+    _missing_keys = []
+    if not os.getenv("ANTHROPIC_API_KEY", "").strip():
+        _missing_keys.append("ANTHROPIC_API_KEY")
+    if not os.getenv("FIRECRAWL_API_KEY", "").strip():
+        _missing_keys.append("FIRECRAWL_API_KEY")
+    if _missing_keys:
+        st.error(
+            f"Missing environment variable(s): **{', '.join(_missing_keys)}**  \n"
+            "Go to your Railway project → **Settings → Variables**, add them, then redeploy."
+        )
+
+    run_btn = st.button(
+        "Run AI Research Audit", type="primary",
+        use_container_width=True, disabled=bool(_missing_keys)
+    )
 
     if run_btn:
         if not url or not url.startswith("http"):

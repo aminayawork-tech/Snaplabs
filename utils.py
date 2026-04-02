@@ -281,18 +281,28 @@ def call_claude(
     model: Optional[str] = None,
     max_tokens: int = 4096,
     temperature: float = 0.3,
+    retries: int = 3,
 ) -> str:
     """
-    Simple Claude API call. Returns the text response.
-    Tracks token usage automatically.
+    Simple Claude API call with retry logic.
+    Raises a descriptive RuntimeError on failure.
     """
     import anthropic
+    import httpx
 
-    client = anthropic.Anthropic(api_key=get_anthropic_key())
+    api_key = get_anthropic_key()
+    if not api_key or api_key.startswith("your_"):
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY is not configured. "
+            "Add it to your Railway environment variables: Settings → Variables."
+        )
+
+    # Explicit httpx client with generous timeout for Railway
+    http_client = httpx.Client(timeout=httpx.Timeout(120.0, connect=15.0))
+    client = anthropic.Anthropic(api_key=api_key, http_client=http_client)
     model = model or get_claude_model()
 
     messages = [{"role": "user", "content": prompt}]
-
     kwargs = {
         "model": model,
         "max_tokens": max_tokens,
@@ -302,12 +312,38 @@ def call_claude(
     if system:
         kwargs["system"] = system
 
-    response = client.messages.create(**kwargs)
-    track_claude_usage(
-        response.usage.input_tokens,
-        response.usage.output_tokens,
-    )
-    return response.content[0].text
+    last_err = None
+    for attempt in range(retries):
+        try:
+            response = client.messages.create(**kwargs)
+            track_claude_usage(
+                response.usage.input_tokens,
+                response.usage.output_tokens,
+            )
+            return response.content[0].text
+        except anthropic.AuthenticationError:
+            raise RuntimeError(
+                "Claude API key is invalid or expired. "
+                "Check ANTHROPIC_API_KEY in Railway → Settings → Variables."
+            )
+        except anthropic.RateLimitError:
+            raise RuntimeError(
+                "Claude API rate limit reached. Wait a moment and try again."
+            )
+        except (httpx.ConnectError, httpx.TimeoutException, anthropic.APIConnectionError) as e:
+            last_err = e
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)   # 1s, 2s, 4s backoff
+                continue
+            raise RuntimeError(
+                f"Could not connect to Claude API after {retries} attempts. "
+                f"Check your internet/firewall, or verify the API key. Detail: {e}"
+            )
+        except anthropic.APIStatusError as e:
+            raise RuntimeError(f"Claude API error {e.status_code}: {e.message}")
+        except Exception as e:
+            raise RuntimeError(f"Unexpected Claude error: {e}")
+    raise RuntimeError(f"Claude call failed after {retries} retries: {last_err}")
 
 
 def call_claude_json(
