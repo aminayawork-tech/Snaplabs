@@ -89,6 +89,9 @@ label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 5
 ::-webkit-scrollbar-thumb { background: #2d2d5e; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #1a1a2e !important; color: #e2e8f0 !important; }
 .stCaption, .caption { color: #64748b !important; font-size: 0.8rem !important; }
+/* research result cards */
+[data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { background: #13132a; color: #e2e8f0; }
+[data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] strong { color: #a78bfa; }
 </style>
 """
 
@@ -158,6 +161,8 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #ffffff !important; color: #1e293b !important; }
 .stCaption, .caption { color: #94a3b8 !important; font-size: 0.8rem !important; }
+/* light mode cards - override inline dark border color */
+[data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { border-color: #e2e8f0 !important; background: #ffffff !important; color: #1e293b !important; }
 </style>
 """
 
@@ -484,12 +489,131 @@ def tab_research():
         _render_research_results(data, result)
 
 
+def _build_summary_markdown(data: dict) -> str:
+    """Build a clean human-readable Markdown report from research JSON."""
+    biz = data.get("business_name", "Business")
+    score = data.get("overall_marketing_score", {})
+    score_val = score.get("score", 0) if isinstance(score, dict) else 0
+
+    lines = []
+    lines.append(f"# Marketing Audit Report: {biz}")
+    lines.append(f"**Industry:** {data.get('industry','N/A')}  |  **Location:** {data.get('location','N/A')}  |  **Score:** {score_val}/100")
+    lines.append("")
+
+    # Services
+    services = data.get("services_offered", [])
+    if services:
+        lines.append("## Services Offered")
+        for s in services:
+            lines.append(f"- {s}")
+        lines.append("")
+
+    # Gaps
+    gaps = data.get("current_marketing_gaps", [])
+    if gaps:
+        lines.append("## Marketing Gaps")
+        for g in gaps:
+            lines.append(f"- {g}")
+        lines.append("")
+
+    # Strengths
+    strengths = data.get("current_marketing_strengths", [])
+    if strengths:
+        lines.append("## Strengths")
+        for s in strengths:
+            lines.append(f"- {s}")
+        lines.append("")
+
+    # Target Audience
+    personas = data.get("target_audience", [])
+    if personas:
+        lines.append("## Target Audience")
+        for i, p in enumerate(personas):
+            if isinstance(p, dict):
+                lines.append(f"### Persona {i+1}: {p.get('persona_name','Segment')}")
+                lines.append(f"**Demographics:** {p.get('demographics','N/A')}")
+                lines.append(f"**Where to reach:** {p.get('where_to_reach','N/A')}")
+                pains = p.get("pain_points", [])
+                if pains:
+                    lines.append("**Pain Points:**")
+                    for pain in pains:
+                        lines.append(f"- {pain}")
+            else:
+                lines.append(f"- {p}")
+        lines.append("")
+
+    # Keywords
+    keywords = data.get("top_10_longtail_keywords", [])
+    if keywords:
+        lines.append("## Top Keywords")
+        for kw in keywords:
+            if isinstance(kw, dict):
+                lines.append(f"- **{kw.get('keyword','')}** — {kw.get('intent','')} intent, {kw.get('difficulty','')} difficulty")
+            else:
+                lines.append(f"- {kw}")
+        lines.append("")
+
+    # Competitors
+    competitors = data.get("competitor_analysis", [])
+    if competitors:
+        lines.append("## Competitor Analysis")
+        for comp in competitors:
+            if isinstance(comp, dict):
+                lines.append(f"### {comp.get('name','Competitor')}")
+                lines.append(f"**Strengths:** {comp.get('strengths','N/A')}")
+                lines.append(f"**Weaknesses:** {comp.get('weaknesses','N/A')}")
+                lines.append(f"**Est. Traffic:** {comp.get('estimated_traffic','N/A')}")
+            else:
+                lines.append(f"- {comp}")
+        lines.append("")
+
+    # Quick Wins
+    wins = data.get("quick_win_opportunities", [])
+    if wins:
+        lines.append("## Quick Wins")
+        for i, win in enumerate(wins):
+            if isinstance(win, dict):
+                effort = win.get("effort","medium")
+                lines.append(f"### {i+1}. {win.get('tactic','Tactic')} [{effort} effort]")
+                lines.append(f"**Timeline:** {win.get('timeline','N/A')}  |  **Impact:** {win.get('expected_impact','N/A')}")
+            else:
+                lines.append(f"- {win}")
+        lines.append("")
+
+    # Suggested workflow
+    workflow = data.get("suggested_agent_workflow", {})
+    if workflow:
+        lines.append("## Suggested Agent Workflow")
+        for phase, desc in workflow.items():
+            lines.append(f"**{phase.replace('_',' ').title()}:** {desc}")
+        lines.append("")
+
+    # Contact
+    contact = data.get("key_contact_info", {})
+    if contact:
+        lines.append("## Contact Info")
+        for k, v in contact.items():
+            if v:
+                lines.append(f"- **{k.replace('_',' ').title()}:** {v}")
+        lines.append("")
+
+    # Score breakdown
+    if isinstance(score, dict) and "breakdown" in score:
+        lines.append("## Score Breakdown")
+        for k, v in score["breakdown"].items():
+            lines.append(f"- **{k.title()}:** {v}/100")
+        if score.get("summary"):
+            lines.append(f"\n_{score['summary']}_")
+
+    return "\n".join(lines)
+
+
 def _render_research_results(data: dict, result: dict):
     biz_name = data.get("business_name", "Business")
     score = data.get("overall_marketing_score", {})
     score_val = score.get("score", 0) if isinstance(score, dict) else 0
 
-    st.markdown(f"---\n### Audit Results: **{biz_name}**")
+    st.markdown(f"### Audit Results: **{biz_name}**")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -503,11 +627,63 @@ def _render_research_results(data: dict, result: dict):
 
     st.success("Research complete! Go to the Proposal tab to generate a client proposal.")
 
-    t1, t2, t3, t4, t5, t6 = st.tabs([
-        "Overview", "Audience", "SEO & Keywords",
-        "Competitors", "Quick Wins", "Raw JSON"
+    t0, t1, t2, t3, t4, t5, t6 = st.tabs([
+        "Summary", "Overview", "Audience", "SEO & Keywords",
+        "Competitors", "Quick Wins", "Export"
     ])
 
+    # ── SUMMARY TAB ──────────────────────────────────────────────────────────
+    with t0:
+        summary_md = _build_summary_markdown(data)
+        st.markdown(summary_md)
+        st.divider()
+        st.markdown("**Download Report**")
+        dl1, dl2, dl3 = st.columns(3)
+        with dl1:
+            st.download_button(
+                "Download Markdown",
+                data=summary_md,
+                file_name=f"audit_{biz_name.replace(' ','_')}.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        with dl2:
+            st.download_button(
+                "Download JSON",
+                data=json.dumps(data, indent=2),
+                file_name=f"audit_{biz_name.replace(' ','_')}.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+        with dl3:
+            if st.button("Download PDF", use_container_width=True, key="summary_pdf"):
+                with st.spinner("Generating PDF..."):
+                    try:
+                        from utils import markdown_to_pdf, read_pdf_bytes
+                        import tempfile, os
+                        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                        tmp.close()
+                        path = markdown_to_pdf(summary_md, output_path=tmp.name)
+                        if path:
+                            pdf_bytes = read_pdf_bytes(path)
+                            if pdf_bytes:
+                                st.session_state["_audit_pdf"] = pdf_bytes
+                                st.session_state["_audit_pdf_name"] = biz_name
+                                try: os.unlink(path)
+                                except: pass
+                    except Exception as e:
+                        st.error(f"PDF error: {e}")
+            if st.session_state.get("_audit_pdf"):
+                st.download_button(
+                    "Save PDF",
+                    data=st.session_state["_audit_pdf"],
+                    file_name=f"audit_{st.session_state.get('_audit_pdf_name','report').replace(' ','_')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="save_audit_pdf",
+                )
+
+    # ── OVERVIEW TAB ─────────────────────────────────────────────────────────
     with t1:
         col1, col2 = st.columns(2)
         with col1:
@@ -519,43 +695,58 @@ def _render_research_results(data: dict, result: dict):
             if services:
                 st.markdown("**Services Offered**")
                 for s in services:
-                    st.markdown(f"  - {s}")
+                    st.markdown(f"- {s}")
+            contact = data.get("key_contact_info", {})
+            if contact:
+                st.markdown("**Contact Info**")
+                for k, v in contact.items():
+                    if v and str(v).strip() not in ("", "N/A", "[]", "{}"):
+                        st.markdown(f"- **{k.replace('_',' ').title()}:** {v}")
         with col2:
-            st.markdown("**Marketing Gaps**")
-            for gap in data.get("current_marketing_gaps", []):
-                st.markdown(f"  - {gap}")
-            st.markdown("**Strengths**")
-            for s in data.get("current_marketing_strengths", []):
-                st.markdown(f"  - {s}")
+            gaps = data.get("current_marketing_gaps", [])
+            if gaps:
+                st.markdown("**Marketing Gaps**")
+                for gap in gaps:
+                    st.markdown(f"- {gap}")
+            strengths = data.get("current_marketing_strengths", [])
+            if strengths:
+                st.markdown("**Strengths**")
+                for s in strengths:
+                    st.markdown(f"- {s}")
         if isinstance(score, dict) and "breakdown" in score:
             st.markdown("**Score Breakdown**")
             import pandas as pd
             bd = score["breakdown"]
             df = pd.DataFrame([bd])
             st.bar_chart(df.T)
-            st.caption(score.get("summary", ""))
-        contact = data.get("key_contact_info", {})
-        if contact:
-            st.markdown("**Contact Info**")
-            st.json(contact)
+            if score.get("summary"):
+                st.caption(score["summary"])
 
+    # ── AUDIENCE TAB ─────────────────────────────────────────────────────────
     with t2:
         personas = data.get("target_audience", [])
         if not personas:
             st.info("No audience data found.")
-        for i, p in enumerate(personas):
-            if isinstance(p, dict):
-                with st.expander(f"Persona {i+1}: {p.get('persona_name', f'Segment {i+1}')}"):
-                    st.markdown(f"**Demographics:** {p.get('demographics', 'N/A')}")
-                    st.markdown(f"**Where to reach:** {p.get('where_to_reach', 'N/A')}")
+        else:
+            for i, p in enumerate(personas):
+                if isinstance(p, dict):
+                    name = p.get("persona_name", f"Segment {i+1}")
+                    demo = p.get("demographics", "")
+                    reach = p.get("where_to_reach", "")
                     pains = p.get("pain_points", [])
-                    if pains:
-                        st.markdown("**Pain Points:**")
-                        for pain in pains:
-                            st.markdown(f"  - {pain}")
-            else:
-                st.markdown(f"- {p}")
+                    pain_html = "".join(f"<li>{x}</li>" for x in pains) if pains else "<li>N/A</li>"
+                    st.markdown(f"""
+<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
+  <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">{i+1}. {name}</div>
+  <div style="font-size:0.85rem;margin-bottom:0.3rem;"><strong>Demographics:</strong> {demo}</div>
+  <div style="font-size:0.85rem;margin-bottom:0.5rem;"><strong>Where to reach:</strong> {reach}</div>
+  <div style="font-size:0.85rem;"><strong>Pain Points:</strong></div>
+  <ul style="margin:0.3rem 0 0 1rem;font-size:0.85rem;">{pain_html}</ul>
+</div>""", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"- {p}")
 
+    # ── SEO & KEYWORDS TAB ───────────────────────────────────────────────────
     with t3:
         keywords = data.get("top_10_longtail_keywords", [])
         if keywords:
@@ -565,60 +756,81 @@ def _render_research_results(data: dict, result: dict):
                 if isinstance(kw, dict):
                     rows.append({
                         "Keyword": kw.get("keyword", ""),
-                        "Intent": kw.get("intent", ""),
-                        "Difficulty": kw.get("difficulty", ""),
+                        "Intent": kw.get("intent", "").capitalize(),
+                        "Difficulty": kw.get("difficulty", "").capitalize(),
                     })
                 else:
                     rows.append({"Keyword": str(kw), "Intent": "", "Difficulty": ""})
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            df = pd.DataFrame(rows)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download Keywords CSV",
+                data=df.to_csv(index=False),
+                file_name=f"keywords_{biz_name.replace(' ','_')}.csv",
+                mime="text/csv",
+            )
         else:
             st.info("No keyword data found.")
 
+    # ── COMPETITORS TAB ──────────────────────────────────────────────────────
     with t4:
         competitors = data.get("competitor_analysis", [])
         if not competitors:
             st.info("No competitor data found.")
-        for comp in competitors:
-            if isinstance(comp, dict):
-                with st.expander(f"Competitor: {comp.get('name', 'Unknown')}"):
-                    st.markdown(f"**Strengths:** {comp.get('strengths', 'N/A')}")
-                    st.markdown(f"**Weaknesses:** {comp.get('weaknesses', 'N/A')}")
-                    st.markdown(f"**Est. Traffic:** {comp.get('estimated_traffic', 'N/A')}")
-            else:
-                st.markdown(f"- {comp}")
+        else:
+            for comp in competitors:
+                if isinstance(comp, dict):
+                    name = comp.get("name", "Competitor")
+                    strengths = comp.get("strengths", "N/A")
+                    weaknesses = comp.get("weaknesses", "N/A")
+                    traffic = comp.get("estimated_traffic", "N/A")
+                    st.markdown(f"""
+<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
+  <div style="font-weight:700;font-size:1rem;margin-bottom:0.6rem;">{name}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;font-size:0.85rem;">
+    <div><strong>Strengths:</strong><br>{strengths}</div>
+    <div><strong>Weaknesses:</strong><br>{weaknesses}</div>
+  </div>
+  <div style="margin-top:0.6rem;font-size:0.82rem;color:#64748b;">Est. Traffic: {traffic}</div>
+</div>""", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"- {comp}")
 
+    # ── QUICK WINS TAB ───────────────────────────────────────────────────────
     with t5:
         wins = data.get("quick_win_opportunities", [])
         if not wins:
             st.info("No quick wins found.")
-        for i, win in enumerate(wins):
-            if isinstance(win, dict):
-                with st.expander(f"#{i+1}: {win.get('tactic', 'Quick Win')} [{win.get('effort','medium')} effort]"):
-                    st.markdown(f"**Timeline:** {win.get('timeline', 'N/A')}")
-                    st.markdown(f"**Expected Impact:** {win.get('expected_impact', 'N/A')}")
-            else:
-                st.markdown(f"- {win}")
+        else:
+            effort_colors = {"low": "#166534", "medium": "#854d0e", "high": "#7f1d1d"}
+            effort_bg = {"low": "#052e16", "medium": "#1c1917", "high": "#1c0e0e"}
+            for i, win in enumerate(wins):
+                if isinstance(win, dict):
+                    effort = win.get("effort", "medium").lower()
+                    tactic = win.get("tactic", "Tactic")
+                    timeline = win.get("timeline", "N/A")
+                    impact = win.get("expected_impact", "N/A")
+                    ec = effort_colors.get(effort, "#475569")
+                    eb = effort_bg.get(effort, "#1e293b")
+                    st.markdown(f"""
+<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
+    <span style="background:#1e1e3f;color:#a78bfa;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">{i+1}</span>
+    <span style="font-weight:600;font-size:0.95rem;">{tactic}</span>
+    <span style="margin-left:auto;background:{eb};color:{ec};border:1px solid {ec};border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:600;">{effort.upper()}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;font-size:0.85rem;">
+    <div><strong>Timeline:</strong> {timeline}</div>
+    <div><strong>Impact:</strong> {impact}</div>
+  </div>
+</div>""", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"- {win}")
 
+    # ── EXPORT TAB ──────────────────────────────────────────────────────────
     with t6:
+        st.markdown("**Raw JSON Data**")
         st.json(data)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                "Download JSON",
-                data=json.dumps(data, indent=2),
-                file_name=f"research_{biz_name.replace(' ','_')}.json",
-                mime="application/json",
-                use_container_width=True,
-            )
-        with col2:
-            md_export = f"# Research Report: {biz_name}\n\n```json\n{json.dumps(data, indent=2)}\n```"
-            st.download_button(
-                "Download Markdown",
-                data=md_export,
-                file_name=f"research_{biz_name.replace(' ','_')}.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
 
 # =============================================================================
 #  TAB 3 - PROPOSAL
