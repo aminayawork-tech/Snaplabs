@@ -1,4 +1,5 @@
-# MarketingOS - AI Marketing Platform
+# SnapLabs - AI Marketing Platform
+
 # Core
 streamlit>=1.32.0
 python-dotenv>=1.0.0
@@ -11,18 +12,17 @@ langchain>=0.1.0
 langchain-core>=0.1.0
 
 # Web Scraping
-firecrawl-py>=0.0.16
+firecrawl-py>=1.0.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 
 # Database
 sqlalchemy>=2.0.0
 
-# PDF Generation
-markdown-pdf>=0.1.0
+# PDF Generation (reportlab only - no system deps needed)
 reportlab>=4.0.0
-weasyprint>=61.0
 markdown>=3.5.0
+markdown-pdf>=0.1.0
 
 # UI Extras
 streamlit-extras>=0.3.0
