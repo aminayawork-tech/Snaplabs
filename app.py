@@ -23,129 +23,122 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS – dark professional theme (blues/purples) ────────────────────
-st.markdown("""
+# ── Theme CSS ──────────────────────────────────────────────────────────────
+DARK_CSS = """
 <style>
-/* ── Global ── */
-[data-testid="stAppViewContainer"] {
-    background: #0d0d1a;
-    color: #e2e8f0;
-}
-[data-testid="stSidebar"] {
-    background: #111127;
-    border-right: 1px solid #1e1e3f;
-}
-/* ── Headers ── */
+[data-testid="stAppViewContainer"] { background: #0d0d1a; color: #e2e8f0; }
+[data-testid="stSidebar"] { background: #111127; border-right: 1px solid #1e1e3f; }
 h1, h2, h3 { color: #a78bfa !important; }
 h4, h5, h6 { color: #818cf8 !important; }
-/* ── Buttons ── */
+p, li, label, .stMarkdown { color: #e2e8f0 !important; }
 .stButton > button {
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
-    transition: all 0.2s;
+    color: white; border: none; border-radius: 8px;
+    font-weight: 600; padding: 0.5rem 1.5rem; transition: all 0.2s;
 }
 .stButton > button:hover {
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+    transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.4);
 }
-/* ── Input fields ── */
 .stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stSelectbox > div > div > select {
-    background: #1a1a2e !important;
-    color: #e2e8f0 !important;
-    border: 1px solid #2d2d5e !important;
-    border-radius: 8px !important;
+.stTextArea > div > div > textarea {
+    background: #1a1a2e !important; color: #e2e8f0 !important;
+    border: 1px solid #2d2d5e !important; border-radius: 8px !important;
 }
-/* ── Metrics ── */
 [data-testid="stMetric"] {
-    background: #1a1a2e;
-    border: 1px solid #2d2d5e;
-    border-radius: 12px;
-    padding: 1rem;
+    background: #1a1a2e; border: 1px solid #2d2d5e;
+    border-radius: 12px; padding: 1rem;
 }
-/* ── Expanders ── */
+[data-testid="stMetricValue"] { color: #a78bfa !important; }
+[data-testid="stMetricLabel"] { color: #94a3b8 !important; }
 .streamlit-expanderHeader {
-    background: #1a1a2e !important;
-    border: 1px solid #2d2d5e !important;
-    border-radius: 8px !important;
-    color: #a78bfa !important;
+    background: #1a1a2e !important; border: 1px solid #2d2d5e !important;
+    border-radius: 8px !important; color: #a78bfa !important;
 }
-/* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #111127;
-    border-radius: 10px;
-    padding: 4px;
-    gap: 4px;
+    background: #111127; border-radius: 10px; padding: 4px; gap: 4px;
 }
-.stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    color: #94a3b8;
-    font-weight: 500;
-    padding: 8px 20px;
-}
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    color: white !important;
-}
-/* ── Cards / containers ── */
+.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #94a3b8; font-weight: 500; padding: 8px 20px; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; }
+.stDataFrame, .stTable { background: #1a1a2e !important; }
 .metric-card {
     background: linear-gradient(135deg, #1a1a2e, #1e1e3f);
-    border: 1px solid #2d2d5e;
-    border-radius: 12px;
-    padding: 1.2rem;
-    margin: 0.5rem 0;
+    border: 1px solid #2d2d5e; border-radius: 12px; padding: 1.2rem; margin: 0.5rem 0;
 }
-.agent-card {
-    background: #1a1a2e;
-    border: 1px solid #2d2d5e;
-    border-radius: 10px;
-    padding: 1rem;
-    margin: 0.4rem 0;
-    transition: border-color 0.2s;
-}
-.agent-card:hover { border-color: #4f46e5; }
-.success-box {
-    background: #052e16;
-    border: 1px solid #166534;
-    border-radius: 8px;
-    padding: 1rem;
-    color: #86efac;
-}
-.warning-box {
-    background: #1c1917;
-    border: 1px solid #78350f;
-    border-radius: 8px;
-    padding: 1rem;
-    color: #fcd34d;
-}
-/* ── Sidebar nav ── */
 .sidebar-logo {
-    font-size: 1.6rem;
-    font-weight: 800;
+    font-size: 1.6rem; font-weight: 800;
     background: linear-gradient(135deg, #818cf8, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.2rem;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.2rem;
 }
-.sidebar-tagline {
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-bottom: 1.5rem;
-}
-/* ── Progress ── */
+.sidebar-tagline { font-size: 0.75rem; color: #64748b; margin-bottom: 1.5rem; }
 .stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
-/* ── Scrollbars ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0d0d1a; }
 ::-webkit-scrollbar-thumb { background: #2d2d5e; border-radius: 3px; }
+div[data-testid="stSelectbox"] > div > div { background: #1a1a2e !important; color: #e2e8f0 !important; }
 </style>
-""", unsafe_allow_html=True)
+"""
+
+LIGHT_CSS = """
+<style>
+[data-testid="stAppViewContainer"] { background: #f8fafc; color: #1e293b; }
+[data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
+h1, h2, h3 { color: #4f46e5 !important; }
+h4, h5, h6 { color: #6366f1 !important; }
+p, li, label, .stMarkdown { color: #334155 !important; }
+.stButton > button {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white; border: none; border-radius: 8px;
+    font-weight: 600; padding: 0.5rem 1.5rem; transition: all 0.2s;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: #ffffff !important; color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
+}
+[data-testid="stMetric"] {
+    background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+[data-testid="stMetricValue"] { color: #4f46e5 !important; }
+[data-testid="stMetricLabel"] { color: #64748b !important; }
+.streamlit-expanderHeader {
+    background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important; color: #4f46e5 !important;
+}
+.stTabs [data-baseweb="tab-list"] {
+    background: #f1f5f9; border-radius: 10px; padding: 4px; gap: 4px;
+}
+.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #64748b; font-weight: 500; padding: 8px 20px; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; }
+.metric-card {
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin: 0.5rem 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.sidebar-logo {
+    font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.2rem;
+}
+.sidebar-tagline { font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.5rem; }
+.stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+div[data-testid="stSelectbox"] > div > div { background: #ffffff !important; color: #1e293b !important; }
+</style>
+"""
+
+def apply_theme():
+    theme = st.session_state.get("theme", "dark")
+    css = DARK_CSS if theme == "dark" else LIGHT_CSS
+    st.markdown(css, unsafe_allow_html=True)
 
 # ── Lazy imports (avoid crashing on missing optional packages) ──────────────
 def _import_db():
@@ -185,6 +178,7 @@ DEFAULTS = {
     "workflow_results": None,
     "agent_outputs": {},
     "cost_log": [],
+    "theme": "dark",
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -203,8 +197,17 @@ def fmt_num(n):
 # ═══════════════════════════════════════════════════════════════════════════
 def render_sidebar():
     with st.sidebar:
-        st.markdown('<div class="sidebar-logo">⚡ SnapLabs</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
+        # Theme toggle row
+        logo_col, toggle_col = st.columns([3, 1])
+        with logo_col:
+            st.markdown('<div class="sidebar-logo">⚡ SnapLabs</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
+        with toggle_col:
+            is_dark = st.session_state.get("theme", "dark") == "dark"
+            label = "☀️" if is_dark else "🌙"
+            if st.button(label, key="theme_toggle", help="Toggle light/dark mode"):
+                st.session_state.theme = "light" if is_dark else "dark"
+                st.rerun()
         st.divider()
 
         # ── Client selector ────────────────────────────────────────────────
@@ -1157,6 +1160,7 @@ def _render_workflow_results(results: dict):
 #  MAIN ENTRY POINT
 # =============================================================================
 def main():
+    apply_theme()
     render_sidebar()
 
     st.markdown("# SnapLabs")
