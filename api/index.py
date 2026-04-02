@@ -5,7 +5,7 @@ Update LIVE_URL below once deployed on Railway/Render.
 """
 from http.server import BaseHTTPRequestHandler
 
-LIVE_URL = "https://snaplabs.up.railway.app"  # <-- update after Railway deploy
+LIVE_URL = "https://web-production-4ebbd.up.railway.app"
 
 REDIRECT_HTML = f"""<!DOCTYPE html>
 <html>
