@@ -149,17 +149,36 @@ class ResearchAgent:
 
         log(f"Scraped {pages_crawled} page(s). Running AI analysis...")
 
-        if not scraped_markdown or len(scraped_markdown.strip()) < 100:
-            return {
-                "success": False,
-                "url": url,
-                "error": "Scraped content is too short or empty. The site may block bots.",
-                "scraped_markdown": scraped_markdown,
-                "research": {},
-                "pages_crawled": pages_crawled,
-                "credits_used": credits_used,
-                "scrape_source": scrape_source,
-            }
+        if not scraped_markdown or len(scraped_markdown.strip()) < 30:
+            # Last-ditch attempt with fallback scraper if Firecrawl returned nothing
+            if scrape_source == "firecrawl":
+                log("Firecrawl returned minimal content, trying fallback scraper...")
+                fallback = self.scraper._scrape_fallback(url)
+                if fallback.get("success") and len(fallback.get("markdown","").strip()) >= 30:
+                    scraped_markdown = fallback["markdown"]
+                    scrape_source = "requests_fallback"
+                else:
+                    return {
+                        "success": False,
+                        "url": url,
+                        "error": "Could not extract content from this site. It may be JavaScript-heavy or block automated access. Try enabling Deep Crawl.",
+                        "scraped_markdown": scraped_markdown,
+                        "research": {},
+                        "pages_crawled": pages_crawled,
+                        "credits_used": credits_used,
+                        "scrape_source": scrape_source,
+                    }
+            else:
+                return {
+                    "success": False,
+                    "url": url,
+                    "error": "Could not extract content from this site. It may be JavaScript-heavy or block automated access. Try enabling Deep Crawl.",
+                    "scraped_markdown": scraped_markdown,
+                    "research": {},
+                    "pages_crawled": pages_crawled,
+                    "credits_used": credits_used,
+                    "scrape_source": scrape_source,
+                }
 
         # --- Step 2: Claude Analysis ---
         truncated_md = truncate_text(scraped_markdown, max_chars=14000)

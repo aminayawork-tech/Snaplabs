@@ -135,6 +135,7 @@ DEFAULTS = {
     "last_url": "",
     "workflow_results": None,
     "agent_outputs": {},
+    "current_page": "Dashboard",
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -218,16 +219,16 @@ def tab_dashboard():
     with col_right:
         st.markdown("### Quick Actions")
         if st.button("New Research", use_container_width=True):
-            st.session_state["_nav"] = "Research"
+            st.session_state.current_page = "Research"
             st.rerun()
         if st.button("Generate Proposal", use_container_width=True):
-            st.session_state["_nav"] = "Proposal"
+            st.session_state.current_page = "Proposal"
             st.rerun()
         if st.button("Run Agent", use_container_width=True):
-            st.session_state["_nav"] = "Agents"
+            st.session_state.current_page = "Agents"
             st.rerun()
         if st.button("Run Workflow", use_container_width=True):
-            st.session_state["_nav"] = "Workflows"
+            st.session_state.current_page = "Workflows"
             st.rerun()
 
     st.divider()
@@ -472,8 +473,9 @@ def _build_summary_markdown(data: dict) -> str:
     if workflow:
         lines.append("## Suggested Agent Workflow")
         for phase, desc in workflow.items():
-            lines.append(f"**{phase.replace('_',' ').title()}:** {desc}")
-        lines.append("")
+            lines.append(f"**{phase.replace('_',' ').title()}**")
+            lines.append(f"{desc}")
+            lines.append("")
 
     # Contact
     contact = data.get("key_contact_info", {})
@@ -741,7 +743,7 @@ def tab_proposal():
     if not research_data:
         st.warning("No research data found. Run a Research Audit first, then come back here.")
         if st.button("Go to Research"):
-            st.session_state["_nav"] = "Research"
+            st.session_state.current_page = "Research"
             st.rerun()
         return
 
@@ -778,7 +780,7 @@ def tab_proposal():
                     performance_bonus=performance_bonus,
                     custom_notes=custom_notes,
                     agency_name_override=agency_name,
-                    max_tokens=3500,
+                    max_tokens=2000,
                 )
                 if proposal_result.get("success"):
                     st.session_state.proposal_markdown = proposal_result["markdown"]
@@ -1300,31 +1302,55 @@ def _render_workflow_results(results: dict):
 # =============================================================================
 #  MAIN ENTRY POINT
 # =============================================================================
+PAGES = ["Dashboard", "Research", "Proposal", "Agents", "Workflows"]
+
 def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
     render_sidebar()
 
-    st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
-    st.caption("AI-Powered Marketing Platform | Research · Propose · Automate · Grow")
+    # Handle navigation redirects (from Quick Actions, Go to Research, etc.)
+    if st.session_state.get("_nav"):
+        st.session_state.current_page = st.session_state.pop("_nav")
+
+    st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
+
+    # ── Top navigation bar ─────────────────────────────────────────────────
+    nav_css = """
+<style>
+.nav-bar { display:flex; gap:6px; margin-bottom:1.2rem; }
+.nav-bar a {
+    display:inline-block; padding:7px 18px; border-radius:8px;
+    font-size:0.875rem; font-weight:500; text-decoration:none;
+    color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0;
+    cursor:pointer;
+}
+.nav-bar a.active {
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    color:#fff !important; border-color:transparent; font-weight:600;
+}
+</style>"""
+    st.markdown(nav_css, unsafe_allow_html=True)
+
+    cur = st.session_state.current_page
+    nav_cols = st.columns(len(PAGES))
+    for i, page in enumerate(PAGES):
+        with nav_cols[i]:
+            if st.button(page, key=f"nav_{page}", use_container_width=True,
+                         type="primary" if cur == page else "secondary"):
+                st.session_state.current_page = page
+                st.rerun()
+
     st.divider()
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Dashboard",
-        "Research",
-        "Proposal",
-        "Agents",
-        "Workflows",
-    ])
-
-    with tab1:
+    if cur == "Dashboard":
         tab_dashboard()
-    with tab2:
+    elif cur == "Research":
         tab_research()
-    with tab3:
+    elif cur == "Proposal":
         tab_proposal()
-    with tab4:
+    elif cur == "Agents":
         tab_agents()
-    with tab5:
+    elif cur == "Workflows":
         tab_workflows()
 
 

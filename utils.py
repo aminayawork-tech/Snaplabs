@@ -175,11 +175,34 @@ class FirecrawlWrapper:
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
 
+            # Extract meta info before removing tags
+            title = soup.title.string.strip() if soup.title else ""
+            meta_desc = ""
+            meta_tag = soup.find("meta", attrs={"name": "description"})
+            if meta_tag:
+                meta_desc = meta_tag.get("content", "")
+            og_desc = ""
+            og_tag = soup.find("meta", attrs={"property": "og:description"})
+            if og_tag:
+                og_desc = og_tag.get("content", "")
+
             # Remove non-content tags
             for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                 tag.decompose()
 
             text = soup.get_text(separator="\n", strip=True)
+
+            # Prepend meta info so Claude has context even on thin pages
+            prefix = ""
+            if title:
+                prefix += f"Page Title: {title}\n"
+            if meta_desc:
+                prefix += f"Meta Description: {meta_desc}\n"
+            if og_desc and og_desc != meta_desc:
+                prefix += f"OG Description: {og_desc}\n"
+            if prefix:
+                text = prefix + "\n" + text
+
             links = [a.get("href", "") for a in soup.find_all("a", href=True)][:50]
 
             return {
