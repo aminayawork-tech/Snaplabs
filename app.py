@@ -27,6 +27,7 @@ st.set_page_config(
 APP_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Round');
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 [data-testid="stAppViewContainer"] { background: #f8fafc; color: #1e293b; }
 [data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
@@ -36,18 +37,35 @@ h3 { color: #4338ca !important; font-size: 1.15rem !important; font-weight: 600 
 h4 { color: #6366f1 !important; font-size: 1rem !important; font-weight: 600 !important; }
 p, li { color: #475569 !important; font-size: 0.9rem !important; line-height: 1.6 !important; }
 label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 500 !important; letter-spacing: 0.02em !important; }
-.stButton > button {
+
+/* ── Primary buttons (active nav + action buttons) ── */
+.stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
     color: #ffffff !important; border: none !important; border-radius: 8px !important;
     font-weight: 600 !important; font-size: 0.875rem !important;
     letter-spacing: 0.01em !important; padding: 0.55rem 1.4rem !important;
     line-height: 1.4 !important; transition: all 0.2s !important;
 }
-.stButton > button:hover {
+.stButton > button[kind="primary"]:hover {
     background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
     transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(99,102,241,0.3) !important;
 }
-.stButton > button p { color: #ffffff !important; font-size: 0.875rem !important; font-weight: 600 !important; }
+.stButton > button[kind="primary"] p { color: #ffffff !important; font-weight: 600 !important; }
+
+/* ── Secondary buttons (inactive nav tabs) ── */
+.stButton > button[kind="secondary"] {
+    background: #ffffff !important; color: #64748b !important;
+    border: 1.5px solid #e2e8f0 !important; border-radius: 8px !important;
+    font-weight: 500 !important; font-size: 0.875rem !important;
+    padding: 0.55rem 1.4rem !important; line-height: 1.4 !important;
+    transition: all 0.2s !important; box-shadow: none !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background: #f5f3ff !important; color: #4f46e5 !important;
+    border-color: #a5b4fc !important; transform: none !important;
+}
+.stButton > button[kind="secondary"] p { color: inherit !important; font-weight: 500 !important; }
+
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea {
     background: #ffffff !important; color: #1e293b !important;
@@ -95,6 +113,12 @@ div[data-testid="stSelectbox"] > div > div { background: #ffffff !important; col
 h1 a, h2 a, h3 a, h4 a { display: none !important; }
 /* light mode cards - override inline dark border color */
 [data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { border-color: #e2e8f0 !important; background: #ffffff !important; color: #1e293b !important; }
+/* hide "Made with Streamlit" footer */
+footer { display: none !important; }
+footer + div { display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+/* fix Material Icons showing as text (sidebar collapse icon) */
+.material-icons, .material-icons-round { font-family: 'Material Icons Round' !important; font-feature-settings: 'liga' !important; -webkit-font-feature-settings: 'liga' !important; }
 </style>
 """
 
@@ -1315,22 +1339,6 @@ def main():
     st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
 
     # ── Top navigation bar ─────────────────────────────────────────────────
-    nav_css = """
-<style>
-.nav-bar { display:flex; gap:6px; margin-bottom:1.2rem; }
-.nav-bar a {
-    display:inline-block; padding:7px 18px; border-radius:8px;
-    font-size:0.875rem; font-weight:500; text-decoration:none;
-    color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0;
-    cursor:pointer;
-}
-.nav-bar a.active {
-    background:linear-gradient(135deg,#4f46e5,#7c3aed);
-    color:#fff !important; border-color:transparent; font-weight:600;
-}
-</style>"""
-    st.markdown(nav_css, unsafe_allow_html=True)
-
     cur = st.session_state.current_page
     nav_cols = st.columns(len(PAGES))
     for i, page in enumerate(PAGES):
