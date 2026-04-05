@@ -24,80 +24,7 @@ st.set_page_config(
 )
 
 # ── Theme CSS ──────────────────────────────────────────────────────────────
-DARK_CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-* { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
-[data-testid="stAppViewContainer"] { background: #0d0d1a; color: #e2e8f0; }
-[data-testid="stSidebar"] { background: #111127; border-right: 1px solid #1e1e3f; }
-h1 { color: #a78bfa !important; font-size: 2rem !important; font-weight: 800 !important; letter-spacing: -0.5px !important; }
-h2 { color: #a78bfa !important; font-size: 1.5rem !important; font-weight: 700 !important; }
-h3 { color: #c4b5fd !important; font-size: 1.15rem !important; font-weight: 600 !important; }
-h4 { color: #818cf8 !important; font-size: 1rem !important; font-weight: 600 !important; }
-p, li { color: #cbd5e1 !important; font-size: 0.9rem !important; line-height: 1.6 !important; }
-label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 500 !important; letter-spacing: 0.02em !important; }
-.stButton > button {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    color: #ffffff !important; border: none !important; border-radius: 8px !important;
-    font-weight: 600 !important; font-size: 0.875rem !important;
-    letter-spacing: 0.01em !important; padding: 0.55rem 1.4rem !important;
-    line-height: 1.4 !important; transition: all 0.2s !important;
-}
-.stButton > button:hover {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-    transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(99,102,241,0.4) !important;
-}
-.stButton > button p { color: #ffffff !important; font-size: 0.875rem !important; font-weight: 600 !important; }
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea {
-    background: #1a1a2e !important; color: #e2e8f0 !important;
-    border: 1px solid #2d2d5e !important; border-radius: 8px !important;
-    font-size: 0.9rem !important;
-}
-[data-testid="stMetric"] {
-    background: #1a1a2e; border: 1px solid #2d2d5e;
-    border-radius: 12px; padding: 1rem;
-}
-[data-testid="stMetricValue"] { color: #a78bfa !important; font-weight: 700 !important; }
-[data-testid="stMetricLabel"] { color: #64748b !important; font-size: 0.78rem !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
-.streamlit-expanderHeader {
-    background: #1a1a2e !important; border: 1px solid #2d2d5e !important;
-    border-radius: 8px !important; color: #a78bfa !important; font-weight: 600 !important;
-}
-.stTabs [data-baseweb="tab-list"] {
-    background: #111127; border-radius: 10px; padding: 4px; gap: 4px;
-}
-.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #94a3b8; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; font-weight: 600 !important; }
-.stDataFrame { background: #1a1a2e !important; }
-.metric-card {
-    background: linear-gradient(135deg, #1a1a2e, #1e1e3f);
-    border: 1px solid #2d2d5e; border-radius: 12px; padding: 1.4rem; margin: 0.5rem 0;
-}
-.metric-card h4 { margin-bottom: 0.5rem !important; }
-.metric-card p { margin: 0.4rem 0 !important; }
-.metric-card small { color: #64748b !important; font-size: 0.78rem !important; }
-.sidebar-logo {
-    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #818cf8, #a78bfa);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.1rem;
-}
-.sidebar-tagline { font-size: 0.72rem; color: #64748b; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1.5rem; }
-.stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0d0d1a; }
-::-webkit-scrollbar-thumb { background: #2d2d5e; border-radius: 3px; }
-div[data-testid="stSelectbox"] > div > div { background: #1a1a2e !important; color: #e2e8f0 !important; }
-.stCaption, .caption { color: #64748b !important; font-size: 0.8rem !important; }
-/* hide Streamlit heading anchor links */
-h1 a, h2 a, h3 a, h4 a { display: none !important; }
-/* research result cards */
-[data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { background: #13132a; color: #e2e8f0; }
-[data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] strong { color: #a78bfa; }
-</style>
-"""
-
-LIGHT_CSS = """
+APP_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
@@ -171,11 +98,6 @@ h1 a, h2 a, h3 a, h4 a { display: none !important; }
 </style>
 """
 
-def apply_theme():
-    theme = st.session_state.get("theme", "dark")
-    css = DARK_CSS if theme == "dark" else LIGHT_CSS
-    st.markdown(css, unsafe_allow_html=True)
-
 # ── Lazy imports (avoid crashing on missing optional packages) ──────────────
 def _import_db():
     from database import (
@@ -213,8 +135,6 @@ DEFAULTS = {
     "last_url": "",
     "workflow_results": None,
     "agent_outputs": {},
-    "cost_log": [],
-    "theme": "dark",
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -257,22 +177,6 @@ def render_sidebar():
 
         st.divider()
 
-        # ── Cost Tracker (collapsible) ────────────────────────────────────
-        with st.expander(f"Session Usage", expanded=False):
-            try:
-                from utils import get_cost_summary
-                costs = get_cost_summary()
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Claude", f"${costs['claude_cost_usd']}")
-                    st.metric("Tokens", fmt_num(costs["claude_input_tokens"] + costs["claude_output_tokens"]))
-                with col2:
-                    st.metric("Firecrawl", f"${costs['firecrawl_cost_usd']}")
-                    st.metric("Credits", costs["firecrawl_credits"])
-                st.caption(f"Total: **${costs['total_cost_usd']}** | {costs['calls']} calls")
-            except Exception:
-                st.caption("Cost tracking unavailable")
-
         st.divider()
         st.caption("snappymarketer · Powered by Claude + Firecrawl")
 
@@ -287,19 +191,12 @@ def tab_dashboard():
     total_clients = len(clients)
 
     # ── KPI Row ────────────────────────────────────────────────────────────
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     with c1:
         st.metric("Total Clients", total_clients)
     with c2:
-        try:
-            from utils import get_cost_summary
-            costs = get_cost_summary()
-            st.metric("Session Cost", f"${costs['total_cost_usd']}")
-        except Exception:
-            st.metric("Session Cost", "$0.00")
-    with c3:
         st.metric("Agents Available", "8")
-    with c4:
+    with c3:
         st.metric("Workflow Templates", "5")
 
     st.divider()
@@ -1342,17 +1239,6 @@ def _render_workflow_results(results: dict):
     else:
         st.error(f"Workflow status: {status}")
 
-    # Cost summary
-    cost = results.get("cost_summary", {})
-    if cost:
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.metric("Total Cost", f"${cost.get('total_cost_usd', 0)}")
-        with c2:
-            st.metric("Claude Tokens", cost.get("claude_input_tokens", 0) + cost.get("claude_output_tokens", 0))
-        with c3:
-            st.metric("Firecrawl Credits", cost.get("firecrawl_credits", 0))
-
     tabs_list = []
     if results.get("research"):
         tabs_list.append("Research")
@@ -1415,7 +1301,7 @@ def _render_workflow_results(results: dict):
 #  MAIN ENTRY POINT
 # =============================================================================
 def main():
-    apply_theme()
+    st.markdown(APP_CSS, unsafe_allow_html=True)
     render_sidebar()
 
     st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
