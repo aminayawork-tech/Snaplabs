@@ -166,6 +166,7 @@ class ProposalAgent:
         performance_bonus: str = "10% of incremental revenue",
         custom_notes: str = "",
         agency_name_override: str = "",
+        max_tokens: int = 3500,
     ) -> Dict[str, Any]:
         """
         Generate a full Markdown proposal from research JSON.
@@ -219,7 +220,7 @@ class ProposalAgent:
             markdown = call_claude(
                 prompt=prompt,
                 system=PROPOSAL_SYSTEM,
-                max_tokens=6000,
+                max_tokens=max_tokens,
                 temperature=0.4,
             )
             return {

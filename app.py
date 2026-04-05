@@ -1,5 +1,5 @@
 """
-app.py - SnapLabs: AI Marketing Platform
+app.py - snappymarketer: AI Marketing Platform
 Main Streamlit application with 5 tabs: Dashboard | Research | Proposal | Agents | Workflows
 """
 
@@ -17,8 +17,8 @@ load_dotenv()
 
 # ── Page config (must be first Streamlit call) ──────────────────────────────
 st.set_page_config(
-    page_title="SnapLabs – AI Marketing Platform",
-    page_icon="⚡",
+    page_title="snappymarketer – AI Marketing Platform",
+    page_icon="S",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -89,6 +89,8 @@ label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 5
 ::-webkit-scrollbar-thumb { background: #2d2d5e; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #1a1a2e !important; color: #e2e8f0 !important; }
 .stCaption, .caption { color: #64748b !important; font-size: 0.8rem !important; }
+/* hide Streamlit heading anchor links */
+h1 a, h2 a, h3 a, h4 a { display: none !important; }
 /* research result cards */
 [data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { background: #13132a; color: #e2e8f0; }
 [data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] strong { color: #a78bfa; }
@@ -139,7 +141,8 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 .stTabs [data-baseweb="tab-list"] {
     background: #f1f5f9; border-radius: 10px; padding: 4px; gap: 4px;
 }
-.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #64748b; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
+.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #1e293b; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
+.stTabs [data-baseweb="tab"]:hover { color: #4f46e5 !important; background: rgba(79,70,229,0.06) !important; }
 .stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; font-weight: 600 !important; }
 .metric-card {
     background: #ffffff;
@@ -161,6 +164,8 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 div[data-testid="stSelectbox"] > div > div { background: #ffffff !important; color: #1e293b !important; }
 .stCaption, .caption { color: #94a3b8 !important; font-size: 0.8rem !important; }
+/* hide Streamlit heading anchor links */
+h1 a, h2 a, h3 a, h4 a { display: none !important; }
 /* light mode cards - override inline dark border color */
 [data-testid="stMarkdownContainer"] div[style*="border:1px solid #2d2d5e"] { border-color: #e2e8f0 !important; background: #ffffff !important; color: #1e293b !important; }
 </style>
@@ -228,21 +233,12 @@ def fmt_num(n):
 # ═══════════════════════════════════════════════════════════════════════════
 def render_sidebar():
     with st.sidebar:
-        # Theme toggle row
-        logo_col, toggle_col = st.columns([3, 1])
-        with logo_col:
-            st.markdown('<div class="sidebar-logo">⚡ SnapLabs</div>', unsafe_allow_html=True)
-            st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
-        with toggle_col:
-            is_dark = st.session_state.get("theme", "dark") == "dark"
-            label = "☀️" if is_dark else "🌙"
-            if st.button(label, key="theme_toggle", help="Toggle light/dark mode"):
-                st.session_state.theme = "light" if is_dark else "dark"
-                st.rerun()
+        st.markdown('<div class="sidebar-logo"><span style="-webkit-text-fill-color:#1e293b;background:none;">Snappy</span><span>marketer</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
         st.divider()
 
         # ── Client selector ────────────────────────────────────────────────
-        st.markdown("### Active Client")
+        st.markdown("**Active Client**")
         clients = DB["get_all_clients"]()
 
         if clients:
@@ -261,39 +257,31 @@ def render_sidebar():
 
         st.divider()
 
-        # ── Quick Test Button ──────────────────────────────────────────────
-        st.markdown("### Quick Test")
-        if st.button("Test: Empyrean Services", use_container_width=True):
-            st.session_state.last_url = "https://empyreanservices.com/"
-            st.toast("URL loaded — go to Research tab.")
+        # ── Cost Tracker (collapsible) ────────────────────────────────────
+        with st.expander(f"Session Usage", expanded=False):
+            try:
+                from utils import get_cost_summary
+                costs = get_cost_summary()
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Claude", f"${costs['claude_cost_usd']}")
+                    st.metric("Tokens", fmt_num(costs["claude_input_tokens"] + costs["claude_output_tokens"]))
+                with col2:
+                    st.metric("Firecrawl", f"${costs['firecrawl_cost_usd']}")
+                    st.metric("Credits", costs["firecrawl_credits"])
+                st.caption(f"Total: **${costs['total_cost_usd']}** | {costs['calls']} calls")
+            except Exception:
+                st.caption("Cost tracking unavailable")
 
         st.divider()
-
-        # ── Cost Tracker ──────────────────────────────────────────────────
-        st.markdown("### Session Costs")
-        try:
-            from utils import get_cost_summary
-            costs = get_cost_summary()
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Claude", f"${costs['claude_cost_usd']}")
-                st.metric("Tokens", fmt_num(costs["claude_input_tokens"] + costs["claude_output_tokens"]))
-            with col2:
-                st.metric("Firecrawl", f"${costs['firecrawl_cost_usd']}")
-                st.metric("Credits", costs["firecrawl_credits"])
-            st.caption(f"Total: **${costs['total_cost_usd']}** | {costs['calls']} calls")
-        except Exception:
-            st.caption("Cost tracking unavailable")
-
-        st.divider()
-        st.caption("SnapLabs v1.0 · Powered by Claude + Firecrawl")
+        st.caption("snappymarketer · Powered by Claude + Firecrawl")
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 1 – DASHBOARD
 # ═══════════════════════════════════════════════════════════════════════════
 def tab_dashboard():
-    st.markdown("## Dashboard")
-    st.caption("Welcome to SnapLabs — your all-in-one AI marketing command centre.")
+    st.header("Dashboard")
+    st.caption("Your all-in-one AI marketing command centre.")
 
     clients = DB["get_all_clients"]()
     total_clients = len(clients)
@@ -379,7 +367,7 @@ def tab_dashboard():
 #  TAB 2 - RESEARCH
 # ═══════════════════════════════════════════════════════════════════════════
 def tab_research():
-    st.markdown("## Research & Audit")
+    st.header("Research & Audit")
     st.caption("Scrape any website with Firecrawl then get a full marketing intelligence report powered by Claude.")
 
     col1, col2 = st.columns([3, 1])
@@ -531,8 +519,10 @@ def _build_summary_markdown(data: dict) -> str:
         for i, p in enumerate(personas):
             if isinstance(p, dict):
                 lines.append(f"### Persona {i+1}: {p.get('persona_name','Segment')}")
-                lines.append(f"**Demographics:** {p.get('demographics','N/A')}")
-                lines.append(f"**Where to reach:** {p.get('where_to_reach','N/A')}")
+                lines.append(f"**Demographics:** {p.get('demographics','N/A')}  ")
+                lines.append("")
+                lines.append(f"**Where to reach:** {p.get('where_to_reach','N/A')}  ")
+                lines.append("")
                 pains = p.get("pain_points", [])
                 if pains:
                     lines.append("**Pain Points:**")
@@ -736,12 +726,14 @@ def _render_research_results(data: dict, result: dict):
                     pains = p.get("pain_points", [])
                     pain_html = "".join(f"<li>{x}</li>" for x in pains) if pains else "<li>N/A</li>"
                     st.markdown(f"""
-<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
-  <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;">{i+1}. {name}</div>
-  <div style="font-size:0.85rem;margin-bottom:0.3rem;"><strong>Demographics:</strong> {demo}</div>
-  <div style="font-size:0.85rem;margin-bottom:0.5rem;"><strong>Where to reach:</strong> {reach}</div>
-  <div style="font-size:0.85rem;"><strong>Pain Points:</strong></div>
-  <ul style="margin:0.3rem 0 0 1rem;font-size:0.85rem;">{pain_html}</ul>
+<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1.1rem 1.2rem;margin:0.6rem 0;">
+  <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.8rem;color:#7c3aed;">{i+1}. {name}</div>
+  <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:0.7rem;">
+    <tr><td style="padding:4px 0;width:130px;font-weight:600;vertical-align:top;">Demographics</td><td style="padding:4px 0;">{demo}</td></tr>
+    <tr><td style="padding:4px 0;font-weight:600;vertical-align:top;">Where to reach</td><td style="padding:4px 0;">{reach}</td></tr>
+  </table>
+  <div style="font-size:0.83rem;font-weight:600;margin-bottom:0.3rem;">Pain Points</div>
+  <ul style="margin:0;padding-left:1.2rem;font-size:0.83rem;">{pain_html}</ul>
 </div>""", unsafe_allow_html=True)
                 else:
                     st.markdown(f"- {p}")
@@ -836,7 +828,7 @@ def _render_research_results(data: dict, result: dict):
 #  TAB 3 - PROPOSAL
 # =============================================================================
 def tab_proposal():
-    st.markdown("## Client Proposal Generator")
+    st.header("Client Proposal Generator")
     st.caption("Turn your research audit into a professional, ready-to-send client proposal.")
 
     # Pull research from session or DB
@@ -889,6 +881,7 @@ def tab_proposal():
                     performance_bonus=performance_bonus,
                     custom_notes=custom_notes,
                     agency_name_override=agency_name,
+                    max_tokens=3500,
                 )
                 if proposal_result.get("success"):
                     st.session_state.proposal_markdown = proposal_result["markdown"]
@@ -1007,7 +1000,7 @@ def tab_proposal():
 #  TAB 4 - AGENTS
 # =============================================================================
 def tab_agents():
-    st.markdown("## AI Agent Builder")
+    st.header("AI Agent Builder")
     st.caption("Run specialist AI agents powered by Claude. Each agent is loaded with your client context.")
 
     from agents import get_agent_list, run_agent, AGENT_REGISTRY
@@ -1114,8 +1107,17 @@ def tab_agents():
                 use_container_width=True,
             )
         with col2:
-            if st.button("Copy to Clipboard (show)", use_container_width=True):
-                st.code(out["output"])
+            st.download_button(
+                "Download Markdown",
+                data=out["output"],
+                file_name=f"{agent_id}_output.md",
+                mime="text/markdown",
+                use_container_width=True,
+                key=f"dl2_{agent_id}",
+            )
+        st.divider()
+        st.markdown("**Output Preview:**")
+        st.markdown(out["output"])
 
     # All recent outputs
     if len(agent_outputs) > 1:
@@ -1131,7 +1133,7 @@ def tab_agents():
 #  TAB 5 - WORKFLOWS
 # =============================================================================
 def tab_workflows():
-    st.markdown("## AI Workflow Engine")
+    st.header("AI Workflow Engine")
     st.caption("Chain agents together into powerful multi-step marketing pipelines. Research feeds each agent automatically.")
 
     from workflow import WorkflowRunner, list_workflow_templates, WORKFLOW_TEMPLATES
@@ -1159,30 +1161,30 @@ def tab_workflows():
 
         for i, tpl in enumerate(templates):
             with cols[i % 2]:
-                with st.expander(f"{tpl['name']}"):
-                    st.caption(tpl["description"])
-                    st.markdown(f"**Steps:** {' > '.join(tpl['steps'])}")
-                    st.markdown(f"**Est. time:** {tpl['estimated_time']}")
-                    st.markdown(f"**Cost:** {tpl['credits']}")
-
-                    tpl_url = st.text_input(
-                        "URL to research",
-                        value=st.session_state.get("last_url", ""),
-                        key=f"tpl_url_{tpl['id']}",
-                        placeholder="https://example.com",
-                    )
-
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        tpl_setup_fee = st.text_input("Setup Fee $", value="2,500", key=f"fee_{tpl['id']}")
-                    with col2:
-                        tpl_retainer = st.text_input("Monthly $", value="1,500", key=f"ret_{tpl['id']}")
-
-                    if st.button(f"Run: {tpl['name']}", key=f"run_tpl_{tpl['id']}", type="primary", use_container_width=True):
-                        if not tpl_url or not tpl_url.startswith("http"):
-                            st.error("Enter a valid URL first.")
-                        else:
-                            _run_workflow_template(tpl, tpl_url, tpl_setup_fee, tpl_retainer)
+                st.markdown(f"""
+<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.4rem 0;">
+  <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.3rem;">{tpl['name']}</div>
+  <div style="font-size:0.82rem;color:#64748b;margin-bottom:0.5rem;">{tpl['description']}</div>
+  <div style="font-size:0.8rem;"><strong>Steps:</strong> {' › '.join(tpl['steps'])}</div>
+  <div style="font-size:0.8rem;"><strong>Time:</strong> {tpl['estimated_time']} &nbsp;|&nbsp; <strong>Cost:</strong> {tpl['credits']}</div>
+</div>""", unsafe_allow_html=True)
+                tpl_url = st.text_input(
+                    "URL",
+                    value=st.session_state.get("last_url", ""),
+                    key=f"tpl_url_{tpl['id']}",
+                    placeholder="https://example.com",
+                    label_visibility="collapsed",
+                )
+                col1, col2 = st.columns(2)
+                with col1:
+                    tpl_setup_fee = st.text_input("Setup Fee $", value="2,500", key=f"fee_{tpl['id']}")
+                with col2:
+                    tpl_retainer = st.text_input("Monthly $", value="1,500", key=f"ret_{tpl['id']}")
+                if st.button(f"Run: {tpl['name']}", key=f"run_tpl_{tpl['id']}", type="primary", use_container_width=True):
+                    if not tpl_url or not tpl_url.startswith("http"):
+                        st.error("Enter a valid URL first.")
+                    else:
+                        _run_workflow_template(tpl, tpl_url, tpl_setup_fee, tpl_retainer)
 
     # ---- CUSTOM BUILDER ----
     with wf_tab2:
@@ -1330,7 +1332,7 @@ def _run_custom_workflow(url, agent_sequence, run_research_first, run_proposal,
 
 def _render_workflow_results(results: dict):
     st.divider()
-    st.markdown("## Workflow Results")
+    st.header("Workflow Results")
 
     status = results.get("status", "unknown")
     if status == "completed":
@@ -1416,7 +1418,7 @@ def main():
     apply_theme()
     render_sidebar()
 
-    st.markdown("# SnapLabs")
+    st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
     st.caption("AI-Powered Marketing Platform | Research · Propose · Automate · Grow")
     st.divider()
 
