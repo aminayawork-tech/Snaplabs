@@ -42,29 +42,33 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
     color: #ffffff !important; border: none !important; border-radius: 8px !important;
-    font-weight: 600 !important; font-size: 0.875rem !important;
-    letter-spacing: 0.01em !important; padding: 0.55rem 1.4rem !important;
-    line-height: 1.4 !important; transition: all 0.2s !important;
+    font-weight: 600 !important; font-size: 0.8rem !important;
+    letter-spacing: 0.01em !important; padding: 0.5rem 0.75rem !important;
+    line-height: 1.3 !important; transition: all 0.2s !important;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
 }
 .stButton > button[kind="primary"]:hover {
     background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-    transform: translateY(-1px) !important; box-shadow: 0 4px 15px rgba(99,102,241,0.3) !important;
+    box-shadow: 0 4px 15px rgba(99,102,241,0.3) !important;
 }
-.stButton > button[kind="primary"] p { color: #ffffff !important; font-weight: 600 !important; }
+.stButton > button[kind="primary"] p,
+.stButton > button[kind="primary"] span { color: #ffffff !important; font-size: 0.8rem !important; font-weight: 600 !important; }
 
-/* ── Secondary buttons (inactive nav tabs) ── */
+/* ── Secondary buttons (inactive nav) ── */
 .stButton > button[kind="secondary"] {
     background: #ffffff !important; color: #64748b !important;
     border: 1.5px solid #e2e8f0 !important; border-radius: 8px !important;
-    font-weight: 500 !important; font-size: 0.875rem !important;
-    padding: 0.55rem 1.4rem !important; line-height: 1.4 !important;
+    font-weight: 500 !important; font-size: 0.8rem !important;
+    padding: 0.5rem 0.75rem !important; line-height: 1.3 !important;
     transition: all 0.2s !important; box-shadow: none !important;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
 }
 .stButton > button[kind="secondary"]:hover {
     background: #f5f3ff !important; color: #4f46e5 !important;
-    border-color: #a5b4fc !important; transform: none !important;
+    border-color: #a5b4fc !important;
 }
-.stButton > button[kind="secondary"] p { color: inherit !important; font-weight: 500 !important; }
+.stButton > button[kind="secondary"] p,
+.stButton > button[kind="secondary"] span { color: inherit !important; font-size: 0.8rem !important; font-weight: 500 !important; }
 
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea {
@@ -86,9 +90,23 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 .stTabs [data-baseweb="tab-list"] {
     background: #f1f5f9; border-radius: 10px; padding: 4px; gap: 4px;
 }
-.stTabs [data-baseweb="tab"] { border-radius: 8px; color: #1e293b; font-weight: 500; font-size: 0.875rem; padding: 8px 18px; }
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px; font-weight: 500; font-size: 0.875rem; padding: 8px 18px;
+    color: #1e293b !important;
+}
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div { color: #1e293b !important; font-size: 0.875rem !important; }
 .stTabs [data-baseweb="tab"]:hover { color: #4f46e5 !important; background: rgba(79,70,229,0.06) !important; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: white !important; font-weight: 600 !important; }
+.stTabs [data-baseweb="tab"]:hover p,
+.stTabs [data-baseweb="tab"]:hover span { color: #4f46e5 !important; }
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    color: #ffffff !important; font-weight: 600 !important;
+}
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div { color: #ffffff !important; font-weight: 600 !important; }
 .metric-card {
     background: #ffffff;
     border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.4rem; margin: 0.5rem 0;
@@ -118,7 +136,15 @@ footer { display: none !important; }
 footer + div { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
 /* fix Material Icons showing as text (sidebar collapse icon) */
-.material-icons, .material-icons-round { font-family: 'Material Icons Round' !important; font-feature-settings: 'liga' !important; -webkit-font-feature-settings: 'liga' !important; }
+.material-icons, .material-icons-round {
+    font-family: 'Material Icons Round' !important;
+    font-feature-settings: 'liga' !important;
+    -webkit-font-feature-settings: 'liga' !important;
+}
+/* hide the "keyboard_double_arrow_right" text when Material Icons font fails to load on mobile */
+[data-testid="stSidebarCollapsedControl"] { display: none !important; }
+[data-testid="stSidebarToggleButton"] span[style*="keyboard"] { font-size: 0 !important; }
+button[data-testid="stBaseButton-headerNoPadding"] span { font-size: 0 !important; }
 </style>
 """
 
