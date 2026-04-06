@@ -116,12 +116,19 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
 .metric-card p { margin: 0.4rem 0 !important; }
 .metric-card small { color: #94a3b8 !important; font-size: 0.78rem !important; }
 .sidebar-logo {
-    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
+    font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.1rem;
 }
-.sidebar-tagline { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1rem; }
-.sidebar-section-label { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0 0.3rem 0.2rem; margin-top: 0.25rem; }
+.sidebar-logo-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:8px;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    color:#fff; font-weight:800; font-size:1rem; flex-shrink:0;
+}
+.sidebar-brand-row { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.1rem; }
+.sidebar-tagline { font-size:0.68rem; color:#94a3b8; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.75rem; padding-left:2px; }
+.sidebar-section-label { font-size:0.65rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.09em; padding:0.5rem 0 0.2rem 0.2rem; margin-top:0.25rem; }
 /* Sidebar nav buttons – left-aligned, no gradient */
 [data-testid="stSidebar"] .stButton > button {
     justify-content: flex-start !important; text-align: left !important;
@@ -251,13 +258,31 @@ def fmt_num(n):
 # ═══════════════════════════════════════════════════════════════════════════
 def render_sidebar():
     with st.sidebar:
-        st.markdown('<div class="sidebar-logo"><span style="-webkit-text-fill-color:#1e293b;background:none;">Snappy</span><span>marketer</span></div>', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
+        # ── Brand header with icon ─────────────────────────────────────────
+        st.markdown("""
+<div class="sidebar-brand-row">
+  <div class="sidebar-logo-icon">S</div>
+  <div class="sidebar-logo">
+    <span style="-webkit-text-fill-color:#1e293b;background:none;">Snappy</span><span>marketer</span>
+  </div>
+</div>
+<div class="sidebar-tagline">AI Marketing Platform</div>""", unsafe_allow_html=True)
 
-        # ── Main navigation ────────────────────────────────────────────────
-        st.markdown('<div class="sidebar-section-label">Main menu</div>', unsafe_allow_html=True)
         cur = st.session_state.get("current_page", "Dashboard")
-        for page, icon in PAGES.items():
+
+        # ── MAIN MENU ─────────────────────────────────────────────────────
+        st.markdown('<div class="sidebar-section-label">Main Menu</div>', unsafe_allow_html=True)
+        for page, icon in MAIN_PAGES.items():
+            is_active = cur == page
+            if st.button(f"{icon}  {page}", key=f"sidenav_{page}",
+                         use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state.current_page = page
+                st.rerun()
+
+        # ── WORKFLOWS ─────────────────────────────────────────────────────
+        st.markdown('<div class="sidebar-section-label">Workflows</div>', unsafe_allow_html=True)
+        for page, icon in WORKFLOW_PAGES.items():
             is_active = cur == page
             if st.button(f"{icon}  {page}", key=f"sidenav_{page}",
                          use_container_width=True,
@@ -267,32 +292,30 @@ def render_sidebar():
 
         st.divider()
 
-        # ── Client selector ────────────────────────────────────────────────
-        st.markdown("**Active Client**")
+        # ── Active Client selector ─────────────────────────────────────────
+        st.markdown('<div style="font-size:0.75rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;">Active Client</div>', unsafe_allow_html=True)
         clients = DB["get_all_clients"]()
-
         if clients:
             client_options = {c["name"]: c["id"] for c in clients}
             client_labels = ["— Select client —"] + list(client_options.keys())
             selected = st.selectbox("Client", client_labels, label_visibility="collapsed")
             if selected != "— Select client —":
-                cid = client_options[selected]
-                st.session_state.active_client_id = cid
+                st.session_state.active_client_id = client_options[selected]
                 st.session_state.active_client_name = selected
         else:
-            st.info("No clients yet. Add one in Research.")
+            st.caption("No clients yet. Add one in Research.")
 
         if st.session_state.active_client_id:
             st.success(f"{st.session_state.active_client_name}  ✓")
-            col_del1, col_del2 = st.columns([3, 1])
-            with col_del2:
+            _, col_del = st.columns([4, 1])
+            with col_del:
                 if st.button("✕", key="delete_client_btn", help="Remove this client"):
                     st.session_state["_confirm_delete"] = True
             if st.session_state.get("_confirm_delete"):
-                st.warning(f"Delete **{st.session_state.active_client_name}**? This cannot be undone.")
+                st.warning(f"Delete **{st.session_state.active_client_name}**?")
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("Yes, delete", key="confirm_del", type="primary"):
+                    if st.button("Delete", key="confirm_del", type="primary"):
                         try:
                             DB["delete_client"](st.session_state.active_client_id)
                         except Exception:
@@ -309,9 +332,7 @@ def render_sidebar():
                         st.rerun()
 
         st.divider()
-
-        st.divider()
-        st.caption("snappymarketer · Powered by Claude + Firecrawl")
+        st.caption("snappymarketer · Claude + Firecrawl")
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 1 – DASHBOARD
@@ -747,20 +768,26 @@ def _render_research_results(data: dict, result: dict):
                 fig = go.Figure(go.Pie(
                     labels=labels,
                     values=values,
-                    hole=0.6,
-                    marker=dict(colors=colors, line=dict(color="#ffffff", width=2)),
-                    textinfo="label+percent",
-                    textfont=dict(size=11, color="#1e293b"),
+                    hole=0.58,
+                    marker=dict(colors=colors, line=dict(color="#ffffff", width=3)),
+                    textinfo="none",  # hide slice labels — use legend only to prevent cutoff
                     hovertemplate="<b>%{label}</b><br>Score: %{value}<br>%{percent}<extra></extra>",
                 ))
+                center_score = score.get("score", sum(values))
+                max_score = score.get("max_score", 100)
                 fig.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(t=10, b=10, l=10, r=10), height=260,
+                    margin=dict(t=20, b=20, l=20, r=120), height=240,
                     showlegend=True,
-                    legend=dict(orientation="v", x=1, y=0.5, font=dict(size=11, color="#475569")),
+                    legend=dict(
+                        orientation="v", x=1.02, y=0.5,
+                        font=dict(size=11, color="#475569"),
+                        bgcolor="rgba(0,0,0,0)",
+                    ),
                     annotations=[dict(
-                        text=f"<b>{score.get('score', total)}</b><br><span style='font-size:10px'>/ {score.get('max_score', 100)}</span>",
-                        x=0.5, y=0.5, font=dict(size=18, color="#1e293b"), showarrow=False,
+                        text=f"<b>{center_score}</b><br>/ {max_score}",
+                        x=0.38, y=0.5, font=dict(size=20, color="#1e293b"),
+                        showarrow=False, align="center",
                     )],
                 )
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -1474,18 +1501,100 @@ def _render_workflow_results(results: dict):
 # =============================================================================
 #  MAIN ENTRY POINT
 # =============================================================================
-PAGES = {
+MAIN_PAGES = {
     "Dashboard":  "⊞",
     "Research":   "◎",
+    "Clients":    "◉",
+    "Recordings": "▶",
+}
+WORKFLOW_PAGES = {
     "Proposal":   "◻",
     "Agents":     "◈",
     "Workflows":  "⟳",
 }
+PAGES = {**MAIN_PAGES, **WORKFLOW_PAGES}  # for any code still referencing PAGES
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CLIENTS PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+def tab_clients():
+    st.header("Clients")
+    st.caption("Manage all your clients and their research history.")
+
+    clients = DB["get_all_clients"]()
+
+    if not clients:
+        st.info("No clients yet. Run a Research Audit to add your first client.")
+        if st.button("Go to Research", type="primary"):
+            st.session_state.current_page = "Research"
+            st.rerun()
+        return
+
+    for c in clients:
+        with st.container():
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{c['name']}**")
+                st.caption(c.get("website_url", ""))
+            with col2:
+                st.caption(f"Industry: {c.get('industry','—')}")
+                st.caption(f"Added: {str(c.get('created_at',''))[:10]}")
+            with col3:
+                if st.button("Select", key=f"sel_{c['id']}"):
+                    st.session_state.active_client_id = c["id"]
+                    st.session_state.active_client_name = c["name"]
+                    st.session_state.current_page = "Research"
+                    st.rerun()
+            st.divider()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  RECORDINGS PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+def tab_recordings():
+    st.header("Recordings")
+    st.caption("Upload audit screen recordings to share with clients.")
+
+    st.info("Upload a screen recording of a client's audit results to share with them.")
+
+    uploaded = st.file_uploader(
+        "Upload recording (MP4, WebM, MOV)",
+        type=["mp4", "webm", "mov"],
+        key="rec_upload",
+    )
+    if uploaded:
+        st.video(uploaded)
+        st.download_button(
+            "Download to share",
+            data=uploaded.getvalue(),
+            file_name=uploaded.name,
+            mime=uploaded.type,
+            type="primary",
+        )
+
+    st.divider()
+    st.markdown("### How to record an audit for your client")
+    st.markdown("""
+**On Mac / Windows:**
+1. Open the client's audit results in snappymarketer
+2. Press `Cmd+Shift+5` (Mac) or use the Xbox Game Bar `Win+G` (Windows)
+3. Select **Record screen** and enable **Microphone**
+4. Walk through the audit results, explain the findings
+5. Stop recording, upload the file above
+
+**Enable audio in Chrome screen recording:**
+- When the recording prompt appears, look for the microphone icon in the toolbar
+- Click it to toggle audio on before starting
+- Make sure Chrome has microphone permission: `chrome://settings/content/microphone`
+
+**Share with client:** Download the file above and attach it to an email, or upload to Google Drive / Loom and share the link.
+""")
+
 
 def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
 
-    # Handle navigation redirects before rendering sidebar
     if st.session_state.get("_nav"):
         st.session_state.current_page = st.session_state.pop("_nav")
 
@@ -1496,6 +1605,10 @@ def main():
         tab_dashboard()
     elif cur == "Research":
         tab_research()
+    elif cur == "Clients":
+        tab_clients()
+    elif cur == "Recordings":
+        tab_recordings()
     elif cur == "Proposal":
         tab_proposal()
     elif cur == "Agents":
