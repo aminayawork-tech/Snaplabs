@@ -135,15 +135,45 @@ h1 a, h2 a, h3 a, h4 a { display: none !important; }
 footer { display: none !important; }
 footer + div { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
-/* fix Material Icons showing as text (sidebar collapse icon) */
-.material-icons, .material-icons-round {
-    font-family: 'Material Icons Round' !important;
-    font-feature-settings: 'liga' !important;
-    -webkit-font-feature-settings: 'liga' !important;
+/* ── Sidebar toggle buttons – always visible, icon text hidden ── */
+/* Collapse button (inside open sidebar) */
+[data-testid="stSidebarToggleButton"] {
+    opacity: 1 !important; visibility: visible !important;
+    background: #f1f5f9 !important; border: 1.5px solid #e2e8f0 !important;
+    border-radius: 50% !important; width: 32px !important; height: 32px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    cursor: pointer !important;
 }
-/* hide the "keyboard_double_arrow_right" text when Material Icons font fails to load on mobile */
-[data-testid="stSidebarCollapsedControl"] { display: none !important; }
-[data-testid="stSidebarToggleButton"] span[style*="keyboard"] { font-size: 0 !important; }
+[data-testid="stSidebarToggleButton"]:hover {
+    background: #ede9fe !important; border-color: #a5b4fc !important;
+}
+[data-testid="stSidebarToggleButton"] span { font-size: 0 !important; line-height: 0 !important; }
+[data-testid="stSidebarToggleButton"]::after {
+    content: "‹" !important; font-size: 1.3rem !important; font-weight: 700 !important;
+    color: #4f46e5 !important; line-height: 1 !important;
+}
+/* Expand button (shown when sidebar is collapsed) */
+[data-testid="stSidebarCollapsedControl"] {
+    display: flex !important; opacity: 1 !important; visibility: visible !important;
+    align-items: center !important; justify-content: center !important;
+}
+[data-testid="stSidebarCollapsedControl"] button {
+    opacity: 1 !important; visibility: visible !important;
+    background: #f1f5f9 !important; border: 1.5px solid #e2e8f0 !important;
+    border-radius: 50% !important; width: 32px !important; height: 32px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    cursor: pointer !important;
+}
+[data-testid="stSidebarCollapsedControl"] button:hover {
+    background: #ede9fe !important; border-color: #a5b4fc !important;
+}
+[data-testid="stSidebarCollapsedControl"] span,
+[data-testid="stSidebarCollapsedControl"] p { font-size: 0 !important; line-height: 0 !important; }
+[data-testid="stSidebarCollapsedControl"] button::after {
+    content: "›" !important; font-size: 1.3rem !important; font-weight: 700 !important;
+    color: #4f46e5 !important; line-height: 1 !important;
+}
+/* Catch-all for any header button with icon text */
 button[data-testid="stBaseButton-headerNoPadding"] span { font-size: 0 !important; }
 </style>
 """
@@ -654,10 +684,33 @@ def _render_research_results(data: dict, result: dict):
                     st.markdown(f"- {s}")
         if isinstance(score, dict) and "breakdown" in score:
             st.markdown("**Score Breakdown**")
-            import pandas as pd
-            bd = score["breakdown"]
-            df = pd.DataFrame([bd])
-            st.bar_chart(df.T)
+            try:
+                import plotly.graph_objects as go
+                bd = score["breakdown"]
+                labels = [k.replace("_", " ").title() for k in bd.keys()]
+                values = list(bd.values())
+                max_val = 20
+                colors = ["#4f46e5" if v >= max_val * 0.6 else "#7c3aed" if v >= max_val * 0.3 else "#a5b4fc" for v in values]
+                fig = go.Figure(go.Bar(
+                    x=labels, y=values,
+                    marker=dict(color=colors, line=dict(width=0)),
+                    text=[str(v) for v in values],
+                    textposition="outside",
+                    textfont=dict(size=12, color="#1e293b"),
+                ))
+                fig.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(248,250,252,1)",
+                    margin=dict(t=10, b=10, l=10, r=10), height=220,
+                    xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#475569"), title=None),
+                    yaxis=dict(showgrid=True, gridcolor="#e2e8f0", tickfont=dict(size=11, color="#94a3b8"),
+                               range=[0, max(values) * 1.3 if values else 20], title=None, zeroline=False),
+                    bargap=0.4, showlegend=False,
+                )
+                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            except ImportError:
+                import pandas as pd
+                bd = score["breakdown"]
+                st.bar_chart(pd.DataFrame([bd]).T)
             if score.get("summary"):
                 st.caption(score["summary"])
 
@@ -743,26 +796,32 @@ def _render_research_results(data: dict, result: dict):
         if not wins:
             st.info("No quick wins found.")
         else:
-            effort_colors = {"low": "#166534", "medium": "#854d0e", "high": "#7f1d1d"}
-            effort_bg = {"low": "#052e16", "medium": "#1c1917", "high": "#1c0e0e"}
+            effort_map = {
+                "low":    {"bg": "#f0fdf4", "border": "#86efac", "color": "#15803d"},
+                "medium": {"bg": "#fffbeb", "border": "#fcd34d", "color": "#92400e"},
+                "high":   {"bg": "#fef2f2", "border": "#fca5a5", "color": "#b91c1c"},
+            }
             for i, win in enumerate(wins):
                 if isinstance(win, dict):
                     effort = win.get("effort", "medium").lower()
                     tactic = win.get("tactic", "Tactic")
                     timeline = win.get("timeline", "N/A")
                     impact = win.get("expected_impact", "N/A")
-                    ec = effort_colors.get(effort, "#475569")
-                    eb = effort_bg.get(effort, "#1e293b")
+                    es = effort_map.get(effort, effort_map["medium"])
                     st.markdown(f"""
-<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
-  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
-    <span style="background:#1e1e3f;color:#a78bfa;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;">{i+1}</span>
-    <span style="font-weight:600;font-size:0.95rem;">{tactic}</span>
-    <span style="margin-left:auto;background:{eb};color:{ec};border:1px solid {ec};border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:600;">{effort.upper()}</span>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;font-size:0.85rem;">
-    <div><strong>Timeline:</strong> {timeline}</div>
-    <div><strong>Impact:</strong> {impact}</div>
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem 1.2rem;margin:0.5rem 0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+  <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+    <span style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:50%;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;margin-top:2px;flex-shrink:0;">{i+1}</span>
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+        <span style="font-weight:600;font-size:0.92rem;color:#1e293b;line-height:1.4;">{tactic}</span>
+        <span style="background:{es['bg']};color:{es['color']};border:1.5px solid {es['border']};border-radius:20px;padding:3px 12px;font-size:0.72rem;font-weight:700;white-space:nowrap;flex-shrink:0;">{effort.upper()}</span>
+      </div>
+      <div style="display:flex;gap:2rem;margin-top:0.45rem;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;"><span style="font-weight:600;color:#4f46e5;">Timeline:</span> <span style="color:#64748b;">{timeline}</span></span>
+        <span style="font-size:0.82rem;"><span style="font-weight:600;color:#4f46e5;">Impact:</span> <span style="color:#64748b;">{impact}</span></span>
+      </div>
+    </div>
   </div>
 </div>""", unsafe_allow_html=True)
                 else:
