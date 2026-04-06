@@ -1,15 +1,9 @@
 {
-  "version": 2,
-  "builds": [
+  "redirects": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.py"
+      "source": "/(.*)",
+      "destination": "https://web-production-4ebbd.up.railway.app",
+      "permanent": false
     }
   ]
 }
