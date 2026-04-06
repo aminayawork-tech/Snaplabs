@@ -465,12 +465,27 @@ def markdown_to_pdf(markdown_text: str, output_path: Optional[str] = None) -> Op
 
     # Method 2: reportlab fallback
     try:
+        import re as _re
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
         from reportlab.lib import colors
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
         from reportlab.lib.enums import TA_LEFT, TA_CENTER
+
+        def _md_inline(text: str) -> str:
+            """Convert inline markdown to ReportLab XML tags."""
+            # Escape XML-special chars first
+            text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Bold+italic ***…***
+            text = _re.sub(r'\*{3}(.+?)\*{3}', r'<b><i>\1</i></b>', text)
+            # Bold **…**
+            text = _re.sub(r'\*{2}(.+?)\*{2}', r'<b>\1</b>', text)
+            # Italic *…*  (single asterisk, not at word boundary crossing **)
+            text = _re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+            # Inline code `…`
+            text = _re.sub(r'`(.+?)`', r'<font face="Courier">\1</font>', text)
+            return text
 
         doc = SimpleDocTemplate(
             output_path,
@@ -496,35 +511,76 @@ def markdown_to_pdf(markdown_text: str, output_path: Optional[str] = None) -> Op
             fontSize=16,
             textColor=colors.HexColor("#3730a3"),
             spaceAfter=8,
+            spaceBefore=14,
+        )
+        h3_style = ParagraphStyle(
+            "CustomH3",
+            parent=styles["Heading3"],
+            fontSize=13,
+            textColor=colors.HexColor("#312e81"),
+            spaceAfter=6,
+            spaceBefore=10,
+        )
+        h4_style = ParagraphStyle(
+            "CustomH4",
+            parent=styles["Normal"],
+            fontSize=11,
+            textColor=colors.HexColor("#4f46e5"),
+            fontName="Helvetica-Bold",
+            spaceAfter=4,
+            spaceBefore=6,
         )
         body_style = ParagraphStyle(
             "CustomBody",
             parent=styles["Normal"],
             fontSize=11,
             leading=16,
-            spaceAfter=6,
+            spaceAfter=4,
+        )
+        bullet_style = ParagraphStyle(
+            "CustomBullet",
+            parent=styles["Normal"],
+            fontSize=11,
+            leading=16,
+            leftIndent=16,
+            spaceAfter=3,
+        )
+        num_style = ParagraphStyle(
+            "CustomNum",
+            parent=styles["Normal"],
+            fontSize=11,
+            leading=16,
+            leftIndent=16,
+            spaceAfter=3,
         )
 
         story = []
         for line in markdown_text.split("\n"):
-            line = line.strip()
-            if not line:
-                story.append(Spacer(1, 8))
-            elif line.startswith("# "):
-                story.append(Paragraph(line[2:], title_style))
-                story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#4f46e5")))
-                story.append(Spacer(1, 8))
-            elif line.startswith("## "):
-                story.append(Spacer(1, 12))
-                story.append(Paragraph(line[3:], h2_style))
-            elif line.startswith("### "):
-                story.append(Paragraph(f"<b>{line[4:]}</b>", body_style))
-            elif line.startswith("- ") or line.startswith("* "):
-                story.append(Paragraph(f"• {line[2:]}", body_style))
+            stripped = line.strip()
+            if not stripped:
+                story.append(Spacer(1, 6))
+            elif stripped in ("---", "***", "___"):
+                story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e2e8f0"), spaceAfter=6))
+            elif stripped.startswith("#### "):
+                story.append(Paragraph(_md_inline(stripped[5:]), h4_style))
+            elif stripped.startswith("### "):
+                story.append(Paragraph(_md_inline(stripped[4:]), h3_style))
+            elif stripped.startswith("## "):
+                story.append(Spacer(1, 4))
+                story.append(Paragraph(_md_inline(stripped[3:]), h2_style))
+                story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#c7d2fe"), spaceAfter=4))
+            elif stripped.startswith("# "):
+                story.append(Paragraph(_md_inline(stripped[2:]), title_style))
+                story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#4f46e5"), spaceAfter=8))
+            elif stripped.startswith("- ") or stripped.startswith("* "):
+                story.append(Paragraph(f"• {_md_inline(stripped[2:])}", bullet_style))
+            elif _re.match(r'^\d+\.\s', stripped):
+                # Numbered list  "1. item"
+                m = _re.match(r'^(\d+)\.\s(.*)', stripped)
+                if m:
+                    story.append(Paragraph(f"{m.group(1)}. {_md_inline(m.group(2))}", num_style))
             else:
-                # Escape XML special chars
-                safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                story.append(Paragraph(safe, body_style))
+                story.append(Paragraph(_md_inline(stripped), body_style))
 
         doc.build(story)
         return output_path

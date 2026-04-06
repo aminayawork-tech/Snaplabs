@@ -898,7 +898,9 @@ def _render_research_results(data: dict, result: dict):
                     timeline = win.get("timeline", "N/A")
                     impact = win.get("expected_impact", "N/A")
                     es = effort_map.get(effort, effort_map["medium"])
-                    st.markdown(f"""
+                    card_col, btn_col = st.columns([5, 1])
+                    with card_col:
+                        st.markdown(f"""
 <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem 1.2rem;margin:0.5rem 0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
   <div style="display:flex;align-items:flex-start;gap:0.75rem;">
     <span style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:50%;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;margin-top:2px;flex-shrink:0;">{i+1}</span>
@@ -914,6 +916,13 @@ def _render_research_results(data: dict, result: dict):
     </div>
   </div>
 </div>""", unsafe_allow_html=True)
+                    with btn_col:
+                        st.markdown("<div style='margin-top:0.9rem;'></div>", unsafe_allow_html=True)
+                        if st.button("Run Agent →", key=f"qw_agent_{i}", type="primary", use_container_width=True):
+                            st.session_state.agent_prefill_task = f"{tactic}\n\nExpected Impact: {impact}\nTimeline: {timeline}"
+                            st.session_state.agent_prefill_id = "content"
+                            st.session_state.current_page = "Agents"
+                            st.rerun()
                 else:
                     st.markdown(f"- {win}")
 
@@ -1120,12 +1129,23 @@ def tab_agents():
 
     agent_list = get_agent_list()
 
+    # Check for prefill from Quick Wins
+    prefill_task = st.session_state.pop("agent_prefill_task", None)
+    prefill_id   = st.session_state.pop("agent_prefill_id", None)
+
     # Agent selector
     col1, col2 = st.columns([1, 2])
     with col1:
         st.markdown("### Select Agent")
         agent_names = [a['name'] for a in agent_list]
-        selected_idx = st.radio("", agent_names, label_visibility="collapsed")
+        # Default to prefilled agent if provided
+        default_agent_idx = 0
+        if prefill_id:
+            for idx, a in enumerate(agent_list):
+                if a["id"] == prefill_id:
+                    default_agent_idx = idx
+                    break
+        selected_idx = st.radio("", agent_names, index=default_agent_idx, label_visibility="collapsed")
         selected_agent_meta = agent_list[agent_names.index(selected_idx)]
 
     with col2:
@@ -1135,8 +1155,10 @@ def tab_agents():
         agent_id = selected_agent_meta["id"]
         default_tasks = AGENT_REGISTRY.get(agent_id, {}).get("default_tasks", [])
 
-        # Task input
-        if default_tasks:
+        # Task input — prefill from Quick Wins if available
+        if prefill_task:
+            task = st.text_area("Task (from Quick Win)", value=prefill_task, height=120)
+        elif default_tasks:
             task_options = ["Custom task..."] + default_tasks
             task_select = st.selectbox("Quick task", task_options)
             if task_select == "Custom task...":
@@ -1247,7 +1269,7 @@ def tab_workflows():
     research_data = result.get("research", {}) if result else {}
     biz_name = research_data.get("business_name", "Client")
 
-    wf_tab1, wf_tab2 = st.tabs(["Workflow Templates", "Custom Workflow Builder"])
+    wf_tab1, wf_tab2, wf_tab3 = st.tabs(["Workflow Templates", "Custom Workflow Builder", "Integrations"])
 
     # ---- TEMPLATES ----
     with wf_tab1:
@@ -1349,6 +1371,72 @@ def tab_workflows():
                     monthly_retainer=custom_retainer,
                     existing_research=research_data if not run_research_first else None,
                 )
+
+    # ---- INTEGRATIONS ----
+    with wf_tab3:
+        st.markdown("### Platform Integrations")
+        st.caption("Connect external platforms so agents can push changes and sync data automatically.")
+
+        # GitHub Integration
+        st.markdown("#### GitHub")
+        st.markdown("""
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1.2rem 1.4rem;margin:0.5rem 0;">
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+    <span style="font-size:1.5rem;">&#9654;</span>
+    <span style="font-weight:700;font-size:1rem;color:#1e293b;">GitHub</span>
+    <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">Not Connected</span>
+  </div>
+  <p style="color:#64748b;font-size:0.85rem;margin:0;">Connect your GitHub repository to let agents push website copy, blog posts, and code improvements directly to your repo — just like Claude Code does.</p>
+</div>""", unsafe_allow_html=True)
+        gh_col1, gh_col2 = st.columns(2)
+        with gh_col1:
+            gh_repo = st.text_input("Repository (owner/repo)", value=st.session_state.get("gh_repo", ""), placeholder="yourname/your-website", key="gh_repo_input")
+        with gh_col2:
+            gh_token = st.text_input("GitHub Personal Access Token", value=st.session_state.get("gh_token", ""), type="password", placeholder="ghp_...", key="gh_token_input")
+        gh_branch = st.text_input("Branch", value=st.session_state.get("gh_branch", "main"), key="gh_branch_input")
+        if st.button("Save GitHub Connection", type="primary", key="gh_save"):
+            if gh_repo and gh_token:
+                st.session_state.gh_repo   = gh_repo
+                st.session_state.gh_token  = gh_token
+                st.session_state.gh_branch = gh_branch
+                st.success(f"GitHub connected: {gh_repo} (branch: {gh_branch})")
+            else:
+                st.error("Please enter both a repository and a personal access token.")
+
+        st.markdown("---")
+
+        # Slack Integration
+        st.markdown("#### Slack")
+        st.markdown("""
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1.2rem 1.4rem;margin:0.5rem 0;">
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+    <span style="font-size:1.5rem;">&#128172;</span>
+    <span style="font-weight:700;font-size:1rem;color:#1e293b;">Slack</span>
+    <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">Not Connected</span>
+  </div>
+  <p style="color:#64748b;font-size:0.85rem;margin:0;">Send agent reports, workflow completions, and audit results directly to a Slack channel.</p>
+</div>""", unsafe_allow_html=True)
+        slack_webhook = st.text_input("Slack Webhook URL", value=st.session_state.get("slack_webhook", ""), type="password", placeholder="https://hooks.slack.com/services/...", key="slack_webhook_input")
+        slack_channel = st.text_input("Channel name", value=st.session_state.get("slack_channel", "#marketing"), key="slack_channel_input")
+        if st.button("Save Slack Connection", type="primary", key="slack_save"):
+            if slack_webhook:
+                st.session_state.slack_webhook = slack_webhook
+                st.session_state.slack_channel = slack_channel
+                st.success(f"Slack connected to {slack_channel}")
+            else:
+                st.error("Please enter a Slack webhook URL.")
+
+        st.markdown("---")
+
+        # Google Search Console (info only)
+        st.markdown("#### More Integrations (Coming Soon)")
+        st.markdown("""
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.5rem;">
+  <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:1rem;text-align:center;color:#94a3b8;font-size:0.85rem;">Google Search Console</div>
+  <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:1rem;text-align:center;color:#94a3b8;font-size:0.85rem;">Meta Ads Manager</div>
+  <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:1rem;text-align:center;color:#94a3b8;font-size:0.85rem;">Google Ads</div>
+  <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:1rem;text-align:center;color:#94a3b8;font-size:0.85rem;">Mailchimp / ActiveCampaign</div>
+</div>""", unsafe_allow_html=True)
 
     # ---- Display workflow results ----
     wf_results = st.session_state.get("workflow_results")
