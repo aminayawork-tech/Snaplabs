@@ -120,7 +120,30 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
     background: linear-gradient(135deg, #4f46e5, #7c3aed);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.1rem;
 }
-.sidebar-tagline { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1.5rem; }
+.sidebar-tagline { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1rem; }
+.sidebar-section-label { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0 0.3rem 0.2rem; margin-top: 0.25rem; }
+/* Sidebar nav buttons – left-aligned, no gradient */
+[data-testid="stSidebar"] .stButton > button {
+    justify-content: flex-start !important; text-align: left !important;
+    padding: 0.45rem 0.75rem !important; font-size: 0.875rem !important;
+    font-weight: 500 !important; border-radius: 8px !important;
+    transition: all 0.15s !important; margin-bottom: 1px !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
+    background: transparent !important; color: #64748b !important;
+    border: none !important; box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
+    background: #f1f5f9 !important; color: #4f46e5 !important; border: none !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: #ede9fe !important; color: #4f46e5 !important;
+    border: none !important; font-weight: 600 !important; box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button p,
+[data-testid="stSidebar"] .stButton > button span {
+    color: inherit !important; font-size: inherit !important; font-weight: inherit !important;
+}
 .stProgress > div > div { background: linear-gradient(90deg, #4f46e5, #7c3aed) !important; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -136,45 +159,39 @@ footer { display: none !important; }
 footer + div { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
 /* ── Sidebar toggle buttons – always visible, icon text hidden ── */
-/* Collapse button (inside open sidebar) */
-[data-testid="stSidebarToggleButton"] {
-    opacity: 1 !important; visibility: visible !important;
-    background: #f1f5f9 !important; border: 1.5px solid #e2e8f0 !important;
-    border-radius: 50% !important; width: 32px !important; height: 32px !important;
-    display: flex !important; align-items: center !important; justify-content: center !important;
-    cursor: pointer !important;
-}
-[data-testid="stSidebarToggleButton"]:hover {
-    background: #ede9fe !important; border-color: #a5b4fc !important;
-}
-[data-testid="stSidebarToggleButton"] span { font-size: 0 !important; line-height: 0 !important; }
-[data-testid="stSidebarToggleButton"]::after {
-    content: "‹" !important; font-size: 1.3rem !important; font-weight: 700 !important;
-    color: #4f46e5 !important; line-height: 1 !important;
-}
-/* Expand button (shown when sidebar is collapsed) */
-[data-testid="stSidebarCollapsedControl"] {
-    display: flex !important; opacity: 1 !important; visibility: visible !important;
-    align-items: center !important; justify-content: center !important;
-}
+[data-testid="stSidebarToggleButton"],
+[data-testid="stSidebarCollapsedControl"],
 [data-testid="stSidebarCollapsedControl"] button {
     opacity: 1 !important; visibility: visible !important;
     background: #f1f5f9 !important; border: 1.5px solid #e2e8f0 !important;
     border-radius: 50% !important; width: 32px !important; height: 32px !important;
     display: flex !important; align-items: center !important; justify-content: center !important;
-    cursor: pointer !important;
+    overflow: hidden !important; cursor: pointer !important;
 }
+[data-testid="stSidebarToggleButton"]:hover,
 [data-testid="stSidebarCollapsedControl"] button:hover {
     background: #ede9fe !important; border-color: #a5b4fc !important;
 }
-[data-testid="stSidebarCollapsedControl"] span,
-[data-testid="stSidebarCollapsedControl"] p { font-size: 0 !important; line-height: 0 !important; }
-[data-testid="stSidebarCollapsedControl"] button::after {
-    content: "›" !important; font-size: 1.3rem !important; font-weight: 700 !important;
-    color: #4f46e5 !important; line-height: 1 !important;
+/* Nuke ALL text/spans inside these buttons */
+[data-testid="stSidebarToggleButton"] *,
+[data-testid="stSidebarCollapsedControl"] * {
+    font-size: 0 !important; line-height: 0 !important; color: transparent !important;
+    width: 0 !important; height: 0 !important; overflow: hidden !important;
 }
-/* Catch-all for any header button with icon text */
-button[data-testid="stBaseButton-headerNoPadding"] span { font-size: 0 !important; }
+/* Inject clean arrow via ::after on the button itself */
+[data-testid="stSidebarToggleButton"]::after {
+    content: "‹" !important; font-size: 1.2rem !important; font-weight: 700 !important;
+    color: #4f46e5 !important; line-height: 1 !important;
+    width: auto !important; height: auto !important; display: block !important;
+}
+[data-testid="stSidebarCollapsedControl"] button::after {
+    content: "›" !important; font-size: 1.2rem !important; font-weight: 700 !important;
+    color: #4f46e5 !important; line-height: 1 !important;
+    width: auto !important; height: auto !important; display: block !important;
+}
+/* Catch-all */
+button[data-testid="stBaseButton-headerNoPadding"] span,
+button[data-testid="stBaseButton-headerNoPadding"] p { font-size: 0 !important; color: transparent !important; }
 </style>
 """
 
@@ -236,6 +253,18 @@ def render_sidebar():
     with st.sidebar:
         st.markdown('<div class="sidebar-logo"><span style="-webkit-text-fill-color:#1e293b;background:none;">Snappy</span><span>marketer</span></div>', unsafe_allow_html=True)
         st.markdown('<div class="sidebar-tagline">AI Marketing Platform</div>', unsafe_allow_html=True)
+
+        # ── Main navigation ────────────────────────────────────────────────
+        st.markdown('<div class="sidebar-section-label">Main menu</div>', unsafe_allow_html=True)
+        cur = st.session_state.get("current_page", "Dashboard")
+        for page, icon in PAGES.items():
+            is_active = cur == page
+            if st.button(f"{icon}  {page}", key=f"sidenav_{page}",
+                         use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state.current_page = page
+                st.rerun()
+
         st.divider()
 
         # ── Client selector ────────────────────────────────────────────────
@@ -243,18 +272,41 @@ def render_sidebar():
         clients = DB["get_all_clients"]()
 
         if clients:
-            client_options = {f"{c['name']} ({c['website_url'][:30]}...)": c["id"] for c in clients}
+            client_options = {c["name"]: c["id"] for c in clients}
             client_labels = ["— Select client —"] + list(client_options.keys())
             selected = st.selectbox("Client", client_labels, label_visibility="collapsed")
             if selected != "— Select client —":
                 cid = client_options[selected]
                 st.session_state.active_client_id = cid
-                st.session_state.active_client_name = selected.split(" (")[0]
+                st.session_state.active_client_name = selected
         else:
             st.info("No clients yet. Add one in Research.")
 
         if st.session_state.active_client_id:
             st.success(f"{st.session_state.active_client_name}  ✓")
+            col_del1, col_del2 = st.columns([3, 1])
+            with col_del2:
+                if st.button("✕", key="delete_client_btn", help="Remove this client"):
+                    st.session_state["_confirm_delete"] = True
+            if st.session_state.get("_confirm_delete"):
+                st.warning(f"Delete **{st.session_state.active_client_name}**? This cannot be undone.")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Yes, delete", key="confirm_del", type="primary"):
+                        try:
+                            DB["delete_client"](st.session_state.active_client_id)
+                        except Exception:
+                            pass
+                        st.session_state.active_client_id = None
+                        st.session_state.active_client_name = ""
+                        st.session_state.research_result = None
+                        st.session_state.proposal_markdown = ""
+                        st.session_state["_confirm_delete"] = False
+                        st.rerun()
+                with c2:
+                    if st.button("Cancel", key="cancel_del"):
+                        st.session_state["_confirm_delete"] = False
+                        st.rerun()
 
         st.divider()
 
@@ -689,22 +741,27 @@ def _render_research_results(data: dict, result: dict):
                 bd = score["breakdown"]
                 labels = [k.replace("_", " ").title() for k in bd.keys()]
                 values = list(bd.values())
-                max_val = 20
-                colors = ["#4f46e5" if v >= max_val * 0.6 else "#7c3aed" if v >= max_val * 0.3 else "#a5b4fc" for v in values]
-                fig = go.Figure(go.Bar(
-                    x=labels, y=values,
-                    marker=dict(color=colors, line=dict(width=0)),
-                    text=[str(v) for v in values],
-                    textposition="outside",
-                    textfont=dict(size=12, color="#1e293b"),
+                total = sum(values) if sum(values) > 0 else 1
+                palette = ["#4f46e5", "#7c3aed", "#a78bfa", "#6366f1", "#818cf8"]
+                colors = palette[:len(values)]
+                fig = go.Figure(go.Pie(
+                    labels=labels,
+                    values=values,
+                    hole=0.6,
+                    marker=dict(colors=colors, line=dict(color="#ffffff", width=2)),
+                    textinfo="label+percent",
+                    textfont=dict(size=11, color="#1e293b"),
+                    hovertemplate="<b>%{label}</b><br>Score: %{value}<br>%{percent}<extra></extra>",
                 ))
                 fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(248,250,252,1)",
-                    margin=dict(t=10, b=10, l=10, r=10), height=220,
-                    xaxis=dict(showgrid=False, tickfont=dict(size=12, color="#475569"), title=None),
-                    yaxis=dict(showgrid=True, gridcolor="#e2e8f0", tickfont=dict(size=11, color="#94a3b8"),
-                               range=[0, max(values) * 1.3 if values else 20], title=None, zeroline=False),
-                    bargap=0.4, showlegend=False,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(t=10, b=10, l=10, r=10), height=260,
+                    showlegend=True,
+                    legend=dict(orientation="v", x=1, y=0.5, font=dict(size=11, color="#475569")),
+                    annotations=[dict(
+                        text=f"<b>{score.get('score', total)}</b><br><span style='font-size:10px'>/ {score.get('max_score', 100)}</span>",
+                        x=0.5, y=0.5, font=dict(size=18, color="#1e293b"), showarrow=False,
+                    )],
                 )
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
             except ImportError:
@@ -779,13 +836,19 @@ def _render_research_results(data: dict, result: dict):
                     weaknesses = comp.get("weaknesses", "N/A")
                     traffic = comp.get("estimated_traffic", "N/A")
                     st.markdown(f"""
-<div style="border:1px solid #2d2d5e;border-radius:10px;padding:1rem 1.2rem;margin:0.6rem 0;">
-  <div style="font-weight:700;font-size:1rem;margin-bottom:0.6rem;">{name}</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;font-size:0.85rem;">
-    <div><strong>Strengths:</strong><br>{strengths}</div>
-    <div><strong>Weaknesses:</strong><br>{weaknesses}</div>
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1.1rem 1.3rem;margin:0.55rem 0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+  <div style="font-weight:700;font-size:1rem;color:#1e293b;margin-bottom:0.8rem;">{name}</div>
+  <div style="margin-bottom:0.55rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem;">Strengths</div>
+    <div style="font-size:0.87rem;color:#475569;line-height:1.5;">{strengths}</div>
   </div>
-  <div style="margin-top:0.6rem;font-size:0.82rem;color:#64748b;">Est. Traffic: {traffic}</div>
+  <div style="margin-bottom:0.55rem;">
+    <div style="font-size:0.75rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem;">Weaknesses</div>
+    <div style="font-size:0.87rem;color:#475569;line-height:1.5;">{weaknesses}</div>
+  </div>
+  <div style="display:inline-block;background:#f1f5f9;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;color:#64748b;">
+    Est. Traffic: {traffic}
+  </div>
 </div>""", unsafe_allow_html=True)
                 else:
                     st.markdown(f"- {comp}")
@@ -1411,29 +1474,23 @@ def _render_workflow_results(results: dict):
 # =============================================================================
 #  MAIN ENTRY POINT
 # =============================================================================
-PAGES = ["Dashboard", "Research", "Proposal", "Agents", "Workflows"]
+PAGES = {
+    "Dashboard":  "⊞",
+    "Research":   "◎",
+    "Proposal":   "◻",
+    "Agents":     "◈",
+    "Workflows":  "⟳",
+}
 
 def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
-    render_sidebar()
 
-    # Handle navigation redirects (from Quick Actions, Go to Research, etc.)
+    # Handle navigation redirects before rendering sidebar
     if st.session_state.get("_nav"):
         st.session_state.current_page = st.session_state.pop("_nav")
 
-    st.markdown('<h1 style="font-size:2rem;font-weight:800;margin-bottom:0.5rem"><span style="color:#1e293b">Snappy</span><span style="color:#7c3aed">marketer</span></h1>', unsafe_allow_html=True)
-
-    # ── Top navigation bar ─────────────────────────────────────────────────
+    render_sidebar()
     cur = st.session_state.current_page
-    nav_cols = st.columns(len(PAGES))
-    for i, page in enumerate(PAGES):
-        with nav_cols[i]:
-            if st.button(page, key=f"nav_{page}", use_container_width=True,
-                         type="primary" if cur == page else "secondary"):
-                st.session_state.current_page = page
-                st.rerun()
-
-    st.divider()
 
     if cur == "Dashboard":
         tab_dashboard()
