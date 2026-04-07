@@ -1,6 +1,6 @@
 """
 app.py - snappymarketer: AI Marketing Platform
-Main Streamlit application with 5 tabs: Dashboard | Research | Proposal | Agents | Workflows
+Main Streamlit application: Dashboard | Research | Proposal | Agents | Workflows | Clients | Recordings
 """
 
 import os
