@@ -1242,12 +1242,13 @@ def tab_agents():
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # Output area
+    # ── Current agent output ──────────────────────────────────────────────────
     agent_outputs = st.session_state.get("agent_outputs", {})
     if agent_id in agent_outputs:
         st.divider()
         out = agent_outputs[agent_id]
-        st.markdown(f"### Output ({out['timestamp']})")
+        saved_label = " · saved" if out.get("saved") else ""
+        st.markdown(f"### Output ({out['timestamp']}{saved_label})")
         st.caption(f"Task: {out['task']}")
         st.markdown(out["output"])
         st.download_button(
@@ -1258,17 +1259,34 @@ def tab_agents():
             use_container_width=True,
         )
 
-    # All recent outputs (other agents)
-    if len(agent_outputs) > 1:
+    # ── Prior Agent Outputs ───────────────────────────────────────────────────
+    if agent_outputs:
         st.divider()
-        st.markdown("### Other Agent Outputs This Session")
-        for aid, out_data in agent_outputs.items():
-            if aid == agent_id:
-                continue  # already shown above
-            meta = AGENT_REGISTRY.get(aid, {})
-            with st.expander(f"{meta.get('name', aid)}  ·  {out_data['timestamp']}"):
-                st.caption(f"Task: {out_data['task']}")
-                st.markdown(out_data["output"][:800] + "..." if len(out_data["output"]) > 800 else out_data["output"])
+        st.markdown("### Prior Agent Outputs")
+        st.caption("All saved runs for this client — click to expand.")
+
+        if not any(aid != agent_id for aid in agent_outputs):
+            if agent_id not in agent_outputs:
+                st.info("No prior outputs yet. Run an agent above to get started.")
+        else:
+            for aid, out_data in agent_outputs.items():
+                if aid == agent_id:
+                    continue  # already shown above
+                meta = AGENT_REGISTRY.get(aid, {})
+                saved_tag = " 💾" if out_data.get("saved") else ""
+                with st.expander(f"{meta.get('name', aid)}  ·  {out_data['timestamp']}{saved_tag}"):
+                    st.caption(f"Task: {out_data['task']}")
+                    st.markdown(out_data["output"])
+                    st.download_button(
+                        "Download",
+                        data=out_data["output"],
+                        file_name=f"{aid}_output.md",
+                        mime="text/markdown",
+                        key=f"dl_prior_{aid}",
+                    )
+    elif not agent_outputs:
+        st.divider()
+        st.info("No prior outputs yet. Run an agent above to get started.")
 
 # =============================================================================
 #  TAB 5 - WORKFLOWS
