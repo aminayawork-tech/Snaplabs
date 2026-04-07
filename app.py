@@ -1129,20 +1129,25 @@ def tab_agents():
 
     agent_list = get_agent_list()
 
-    # Check for prefill from Quick Wins
-    prefill_task = st.session_state.pop("agent_prefill_task", None)
-    prefill_id   = st.session_state.pop("agent_prefill_id", None)
+    # ── Handle prefill from Quick Wins ────────────────────────────────────────
+    # When Quick Wins sends a prefill, move it into a keyed session state entry
+    # BEFORE rendering any widgets. Using pop() on every rerun would clear the
+    # value on the button-click rerun, losing the task text.
+    if "agent_prefill_task" in st.session_state:
+        st.session_state["_agent_task_value"] = st.session_state.pop("agent_prefill_task")
+        st.session_state["_agent_prefill_id"] = st.session_state.pop("agent_prefill_id", "content")
+        st.session_state["_agent_auto_run"]   = True
 
-    # Agent selector
+    # ── Agent selector ─────────────────────────────────────────────────────────
     col1, col2 = st.columns([1, 2])
     with col1:
         st.markdown("### Select Agent")
         agent_names = [a['name'] for a in agent_list]
-        # Default to prefilled agent if provided
         default_agent_idx = 0
-        if prefill_id:
+        pinned_id = st.session_state.get("_agent_prefill_id")
+        if pinned_id:
             for idx, a in enumerate(agent_list):
-                if a["id"] == prefill_id:
+                if a["id"] == pinned_id:
                     default_agent_idx = idx
                     break
         selected_idx = st.radio("", agent_names, index=default_agent_idx, label_visibility="collapsed")
@@ -1155,9 +1160,11 @@ def tab_agents():
         agent_id = selected_agent_meta["id"]
         default_tasks = AGENT_REGISTRY.get(agent_id, {}).get("default_tasks", [])
 
-        # Task input — prefill from Quick Wins if available
-        if prefill_task:
-            task = st.text_area("Task (from Quick Win)", value=prefill_task, height=120)
+        # ── Task input ─────────────────────────────────────────────────────────
+        # Keyed text_area: value lives in st.session_state["_agent_task_value"]
+        # so it persists across all reruns (including the "Run Agent" click rerun).
+        if "_agent_task_value" in st.session_state:
+            task = st.text_area("Task (from Quick Win)", key="_agent_task_value", height=120)
         elif default_tasks:
             task_options = ["Custom task..."] + default_tasks
             task_select = st.selectbox("Quick task", task_options)
@@ -1172,10 +1179,17 @@ def tab_agents():
 
         run_btn = st.button(f"Run {selected_agent_meta['name']}", type="primary", use_container_width=True)
 
-        if run_btn:
+        # Auto-run flag set when coming from Quick Wins
+        auto_run = st.session_state.pop("_agent_auto_run", False)
+
+        if run_btn or auto_run:
             if not task.strip():
                 st.error("Please enter a task.")
                 return
+
+            # Clear prefill state so next manual visit to Agents is clean
+            st.session_state.pop("_agent_task_value", None)
+            st.session_state.pop("_agent_prefill_id", None)
 
             with st.spinner(f"Running {selected_agent_meta['name']}..."):
                 try:
