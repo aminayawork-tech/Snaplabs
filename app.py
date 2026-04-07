@@ -207,9 +207,13 @@ footer + div { display: none !important; }
     color: #4f46e5 !important; line-height: 1 !important;
     width: auto !important; height: auto !important; display: block !important;
 }
-/* Catch-all */
+/* Catch-all – header no-padding buttons (sidebar toggle) */
 button[data-testid="stBaseButton-headerNoPadding"] span,
-button[data-testid="stBaseButton-headerNoPadding"] p { font-size: 0 !important; color: transparent !important; }
+button[data-testid="stBaseButton-headerNoPadding"] p,
+button[data-testid="stBaseButton-headerNoPadding"] { font-size: 0 !important; color: transparent !important; }
+/* Extra belt-and-suspenders: hide any span that contains icon text */
+[data-testid="stSidebarToggleButton"] span { display: none !important; }
+[data-testid="stSidebarCollapsedControl"] span { display: none !important; }
 </style>
 """
 
@@ -346,6 +350,33 @@ def render_sidebar():
 
         st.divider()
         st.caption("snappymarketer · Claude + Firecrawl")
+
+        # JS: strip icon text nodes from sidebar toggle buttons at runtime
+        import streamlit.components.v1 as _cv1
+        _cv1.html("""
+<script>
+(function stripIconText() {
+    var selectors = [
+        '[data-testid="stSidebarToggleButton"]',
+        '[data-testid="stSidebarCollapsedControl"] button'
+    ];
+    selectors.forEach(function(sel) {
+        var btns = window.parent.document.querySelectorAll(sel);
+        btns.forEach(function(btn) {
+            btn.childNodes.forEach(function(node) {
+                if (node.nodeType === 3) node.textContent = '';
+            });
+            var spans = btn.querySelectorAll('span, p');
+            spans.forEach(function(s) {
+                s.style.fontSize = '0';
+                s.style.color = 'transparent';
+                s.style.display = 'none';
+            });
+        });
+    });
+    setTimeout(stripIconText, 800);
+})();
+</script>""", height=0)
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 1 – DASHBOARD
@@ -1294,19 +1325,38 @@ setTimeout(function() {
     if not prior_runs:
         st.caption("No other agent outputs yet for this client.")
     else:
-        st.caption(f"{len(prior_runs)} saved run(s) — click to expand.")
-        for aid, out_data in prior_runs:
+        st.caption(f"{len(prior_runs)} saved run(s)")
+        for i, (aid, out_data) in enumerate(prior_runs):
             meta = AGENT_REGISTRY.get(aid, {})
-            label = f"{meta.get('name', aid)}  ·  {out_data['timestamp']}"
-            with st.expander(label):
-                st.caption(f"Task: {out_data['task']}")
+            agent_name = meta.get("name", aid)
+            timestamp  = out_data.get("timestamp", "")
+            task_text  = out_data.get("task", "")
+            # Card header
+            st.markdown(f"""
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+     padding:0.75rem 1rem;margin:0.5rem 0 0.25rem 0;">
+  <div style="font-weight:600;font-size:0.92rem;color:#4f46e5;">{agent_name}</div>
+  <div style="font-size:0.78rem;color:#94a3b8;margin-top:2px;">{timestamp}</div>
+  <div style="font-size:0.82rem;color:#64748b;margin-top:0.35rem;">
+    <strong>Task:</strong> {task_text[:120]}{"…" if len(task_text) > 120 else ""}
+  </div>
+</div>""", unsafe_allow_html=True)
+            # Expandable output using Streamlit native (no icon text)
+            show_key = f"show_prior_{aid}_{i}"
+            if show_key not in st.session_state:
+                st.session_state[show_key] = False
+            toggle_label = "▲ Hide output" if st.session_state[show_key] else "▼ Show output"
+            if st.button(toggle_label, key=f"toggle_{aid}_{i}", type="secondary"):
+                st.session_state[show_key] = not st.session_state[show_key]
+                st.rerun()
+            if st.session_state[show_key]:
                 st.markdown(out_data["output"])
                 st.download_button(
                     "Download",
                     data=out_data["output"],
                     file_name=f"{aid}_output.md",
                     mime="text/markdown",
-                    key=f"dl_prior_{aid}",
+                    key=f"dl_prior_{aid}_{i}",
                 )
 
 
