@@ -1121,22 +1121,24 @@ def tab_agents():
         if saved:
             result = {"success": True, "research": saved["research_data"]}
 
-    # ── Load saved agent runs from DB into session state (avoids re-running) ──
+    # ── Load saved agent runs from DB ─────────────────────────────────────────
+    # Reload whenever the active client changes (track which client we loaded for).
     client_id = st.session_state.active_client_id
-    if client_id and "agent_outputs_loaded" not in st.session_state:
-        saved_runs = DB["get_agent_runs_by_client"](client_id, limit=20)
-        if saved_runs and "agent_outputs" in st.session_state:
-            for run in saved_runs:
-                aid = run["agent_type"]
-                # Only restore if not already in session (fresh run takes priority)
-                if aid not in st.session_state.agent_outputs:
-                    st.session_state.agent_outputs[aid] = {
-                        "output":    run["output"],
-                        "task":      run["task"],
-                        "timestamp": run["timestamp"],
-                        "saved":     True,  # mark as loaded from DB
-                    }
-        st.session_state.agent_outputs_loaded = True  # only load once per session
+    loaded_for = st.session_state.get("_agent_outputs_loaded_for", -1)
+    if client_id and client_id != loaded_for:
+        saved_runs = DB["get_agent_runs_by_client"](client_id, limit=30)
+        for run in saved_runs:
+            aid = run["agent_type"]
+            # Fresh in-session runs take priority over DB-loaded ones
+            existing = st.session_state.agent_outputs.get(aid, {})
+            if not existing or existing.get("saved"):
+                st.session_state.agent_outputs[aid] = {
+                    "output":    run["output"],
+                    "task":      run["task"],
+                    "timestamp": run["timestamp"],
+                    "saved":     True,
+                }
+        st.session_state._agent_outputs_loaded_for = client_id
 
     research_data = result.get("research", {}) if result else {}
     biz_name = research_data.get("business_name", "")
@@ -1273,33 +1275,29 @@ setTimeout(function() {
         )
 
     # ── Prior Agent Outputs ───────────────────────────────────────────────────
-    if agent_outputs:
-        st.divider()
-        st.markdown("### Prior Agent Outputs")
-        st.caption("All saved runs for this client — click to expand.")
+    st.divider()
+    st.markdown("### Prior Agent Outputs")
 
-        if not any(aid != agent_id for aid in agent_outputs):
-            if agent_id not in agent_outputs:
-                st.info("No prior outputs yet. Run an agent above to get started.")
-        else:
-            for aid, out_data in agent_outputs.items():
-                if aid == agent_id:
-                    continue  # already shown above
-                meta = AGENT_REGISTRY.get(aid, {})
-                saved_tag = " 💾" if out_data.get("saved") else ""
-                with st.expander(f"{meta.get('name', aid)}  ·  {out_data['timestamp']}{saved_tag}"):
-                    st.caption(f"Task: {out_data['task']}")
-                    st.markdown(out_data["output"])
-                    st.download_button(
-                        "Download",
-                        data=out_data["output"],
-                        file_name=f"{aid}_output.md",
-                        mime="text/markdown",
-                        key=f"dl_prior_{aid}",
-                    )
-    elif not agent_outputs:
-        st.divider()
-        st.info("No prior outputs yet. Run an agent above to get started.")
+    prior_runs = [(aid, od) for aid, od in agent_outputs.items() if aid != agent_id]
+
+    if not prior_runs:
+        st.caption("No other agent outputs yet for this client.")
+    else:
+        st.caption(f"{len(prior_runs)} saved run(s) — click to expand.")
+        for aid, out_data in prior_runs:
+            meta = AGENT_REGISTRY.get(aid, {})
+            label = f"{meta.get('name', aid)}  ·  {out_data['timestamp']}"
+            with st.expander(label):
+                st.caption(f"Task: {out_data['task']}")
+                st.markdown(out_data["output"])
+                st.download_button(
+                    "Download",
+                    data=out_data["output"],
+                    file_name=f"{aid}_output.md",
+                    mime="text/markdown",
+                    key=f"dl_prior_{aid}",
+                )
+
 
 # =============================================================================
 #  TAB 5 - WORKFLOWS
