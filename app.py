@@ -87,6 +87,17 @@ label { color: #64748b !important; font-size: 0.82rem !important; font-weight: 5
     background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important;
     border-radius: 8px !important; color: #4f46e5 !important; font-weight: 600 !important;
 }
+/* Hide Material Icons text ("arrow_right", "expand_more" etc.) inside expander headers
+   when the font fails to load — keep only the SVG rotate arrow */
+.streamlit-expanderHeader span[data-testid="stExpanderToggleIcon"],
+[data-testid="stExpander"] summary [data-testid="stExpanderToggleIcon"],
+[data-testid="stExpander"] summary span.material-icons,
+[data-testid="stExpander"] summary span.material-icons-round {
+    font-size: 0 !important; width: 16px !important; height: 16px !important;
+    overflow: hidden !important; display: inline-block !important;
+}
+/* Ensure the SVG inside expanders remains visible */
+[data-testid="stExpander"] summary svg { display: inline-block !important; }
 .stTabs [data-baseweb="tab-list"] {
     background: #f1f5f9; border-radius: 10px; padding: 4px; gap: 4px;
 }
