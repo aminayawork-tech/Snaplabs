@@ -1236,15 +1236,28 @@ def tab_agents():
                                 input_data={"task": task},
                                 client_id=st.session_state.active_client_id,
                             )
+                        st.session_state._scroll_to_output = True
                         st.rerun()
                     else:
                         st.error(f"Agent failed: {result_agent.get('error')}")
                 except Exception as e:
                     st.error(f"Error: {e}")
 
+    # ── Scroll to output after run ────────────────────────────────────────────
+    if st.session_state.pop("_scroll_to_output", False):
+        import streamlit.components.v1 as _c
+        _c.html("""
+<script>
+setTimeout(function() {
+    var el = window.parent.document.getElementById('agent-output-anchor');
+    if (el) { el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+}, 200);
+</script>""", height=0)
+
     # ── Current agent output ──────────────────────────────────────────────────
     agent_outputs = st.session_state.get("agent_outputs", {})
     if agent_id in agent_outputs:
+        st.markdown('<div id="agent-output-anchor"></div>', unsafe_allow_html=True)
         st.divider()
         out = agent_outputs[agent_id]
         saved_label = " · saved" if out.get("saved") else ""
