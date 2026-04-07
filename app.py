@@ -208,7 +208,7 @@ def _import_db():
         init_db, get_all_clients, get_client_by_id, create_client,
         delete_client, get_research_for_client, get_latest_research,
         save_research, save_proposal, get_proposals_for_client,
-        save_agent_run, save_workflow_run,
+        save_agent_run, get_agent_runs_by_client, save_workflow_run,
     )
     return dict(
         init_db=init_db, get_all_clients=get_all_clients,
@@ -218,7 +218,9 @@ def _import_db():
         get_latest_research=get_latest_research,
         save_research=save_research, save_proposal=save_proposal,
         get_proposals_for_client=get_proposals_for_client,
-        save_agent_run=save_agent_run, save_workflow_run=save_workflow_run,
+        save_agent_run=save_agent_run,
+        get_agent_runs_by_client=get_agent_runs_by_client,
+        save_workflow_run=save_workflow_run,
     )
 
 @st.cache_resource
@@ -1119,6 +1121,23 @@ def tab_agents():
         if saved:
             result = {"success": True, "research": saved["research_data"]}
 
+    # ── Load saved agent runs from DB into session state (avoids re-running) ──
+    client_id = st.session_state.active_client_id
+    if client_id and "agent_outputs_loaded" not in st.session_state:
+        saved_runs = DB["get_agent_runs_by_client"](client_id, limit=20)
+        if saved_runs and "agent_outputs" in st.session_state:
+            for run in saved_runs:
+                aid = run["agent_type"]
+                # Only restore if not already in session (fresh run takes priority)
+                if aid not in st.session_state.agent_outputs:
+                    st.session_state.agent_outputs[aid] = {
+                        "output":    run["output"],
+                        "task":      run["task"],
+                        "timestamp": run["timestamp"],
+                        "saved":     True,  # mark as loaded from DB
+                    }
+        st.session_state.agent_outputs_loaded = True  # only load once per session
+
     research_data = result.get("research", {}) if result else {}
     biz_name = research_data.get("business_name", "")
 
@@ -1229,35 +1248,23 @@ def tab_agents():
         st.divider()
         out = agent_outputs[agent_id]
         st.markdown(f"### Output ({out['timestamp']})")
-        st.markdown(f"**Task:** {out['task']}")
+        st.caption(f"Task: {out['task']}")
         st.markdown(out["output"])
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                "Download Output",
-                data=out["output"],
-                file_name=f"{agent_id}_output.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
-        with col2:
-            st.download_button(
-                "Download Markdown",
-                data=out["output"],
-                file_name=f"{agent_id}_output.md",
-                mime="text/markdown",
-                use_container_width=True,
-                key=f"dl2_{agent_id}",
-            )
-        st.divider()
-        st.markdown("**Output Preview:**")
-        st.markdown(out["output"])
+        st.download_button(
+            "Download Output",
+            data=out["output"],
+            file_name=f"{agent_id}_output.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
-    # All recent outputs
+    # All recent outputs (other agents)
     if len(agent_outputs) > 1:
         st.divider()
-        st.markdown("### All Agent Outputs This Session")
+        st.markdown("### Other Agent Outputs This Session")
         for aid, out_data in agent_outputs.items():
+            if aid == agent_id:
+                continue  # already shown above
             meta = AGENT_REGISTRY.get(aid, {})
             with st.expander(f"{meta.get('name', aid)}  ·  {out_data['timestamp']}"):
                 st.caption(f"Task: {out_data['task']}")
@@ -1442,6 +1449,38 @@ def tab_workflows():
 
         st.markdown("---")
 
+        # Email Integration
+        st.markdown("#### Email")
+        st.markdown("""
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:1.2rem 1.4rem;margin:0.5rem 0;">
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+    <span style="font-size:1.5rem;">&#9993;</span>
+    <span style="font-weight:700;font-size:1rem;color:#1e293b;">Email (SMTP)</span>
+    <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">Not Connected</span>
+  </div>
+  <p style="color:#64748b;font-size:0.85rem;margin:0;">Send agent reports and proposals directly to clients via email. Works with Gmail, Outlook, or any SMTP provider.</p>
+</div>""", unsafe_allow_html=True)
+        em_col1, em_col2 = st.columns(2)
+        with em_col1:
+            smtp_host = st.text_input("SMTP Host", value=st.session_state.get("smtp_host", ""), placeholder="smtp.gmail.com", key="smtp_host_input")
+            smtp_user = st.text_input("Email Address", value=st.session_state.get("smtp_user", ""), placeholder="you@gmail.com", key="smtp_user_input")
+        with em_col2:
+            smtp_port = st.text_input("Port", value=st.session_state.get("smtp_port", "587"), key="smtp_port_input")
+            smtp_pass = st.text_input("Password / App Password", value=st.session_state.get("smtp_pass", ""), type="password", placeholder="Gmail app password", key="smtp_pass_input")
+        smtp_from = st.text_input("From Name", value=st.session_state.get("smtp_from", ""), placeholder="SnapLabs Marketing", key="smtp_from_input")
+        if st.button("Save Email Connection", type="primary", key="smtp_save"):
+            if smtp_host and smtp_user and smtp_pass:
+                st.session_state.smtp_host = smtp_host
+                st.session_state.smtp_port = smtp_port
+                st.session_state.smtp_user = smtp_user
+                st.session_state.smtp_pass = smtp_pass
+                st.session_state.smtp_from = smtp_from
+                st.success(f"Email connected: {smtp_user} via {smtp_host}:{smtp_port}")
+            else:
+                st.error("Please fill in Host, Email, and Password.")
+
+        st.markdown("---")
+
         # Google Search Console (info only)
         st.markdown("#### More Integrations (Coming Soon)")
         st.markdown("""
@@ -1604,10 +1643,9 @@ def _render_workflow_results(results: dict):
 #  MAIN ENTRY POINT
 # =============================================================================
 MAIN_PAGES = {
-    "Dashboard":  "⊞",
-    "Research":   "◎",
-    "Clients":    "◉",
-    "Recordings": "▶",
+    "Dashboard": "⊞",
+    "Research":  "◎",
+    "Clients":   "◉",
 }
 WORKFLOW_PAGES = {
     "Proposal":   "◻",
@@ -1709,8 +1747,6 @@ def main():
         tab_research()
     elif cur == "Clients":
         tab_clients()
-    elif cur == "Recordings":
-        tab_recordings()
     elif cur == "Proposal":
         tab_proposal()
     elif cur == "Agents":

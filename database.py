@@ -456,6 +456,39 @@ def save_agent_run(
         db.close()
 
 
+def get_agent_runs_by_client(client_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+    """Return the most recent agent runs for a client, newest first."""
+    db = get_db()
+    try:
+        runs = (
+            db.query(AgentRun)
+            .filter(AgentRun.client_id == client_id)
+            .order_by(AgentRun.completed_at.desc())
+            .limit(limit)
+            .all()
+        )
+        result = []
+        for r in runs:
+            input_data = {}
+            try:
+                if r.input:
+                    input_data = json.loads(r.input) if isinstance(r.input, str) else r.input
+            except Exception:
+                pass
+            result.append({
+                "id": r.id,
+                "agent_type": r.agent_type,
+                "agent_name": r.agent_name or r.agent_type,
+                "output": r.output_data or "",
+                "task": input_data.get("task", ""),
+                "timestamp": r.completed_at.strftime("%Y-%m-%d %H:%M") if r.completed_at else "",
+                "status": r.status,
+            })
+        return result
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Workflow Run CRUD
 # ---------------------------------------------------------------------------
