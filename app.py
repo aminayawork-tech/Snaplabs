@@ -298,8 +298,8 @@ def render_sidebar():
                 st.session_state.current_page = page
                 st.rerun()
 
-        # ── WORKFLOWS ─────────────────────────────────────────────────────
-        st.markdown('<div class="sidebar-section-label">Workflows</div>', unsafe_allow_html=True)
+        # ── TOOLS ─────────────────────────────────────────────────────────
+        st.markdown('<div class="sidebar-section-label">Tools</div>', unsafe_allow_html=True)
         for page, icon in WORKFLOW_PAGES.items():
             is_active = cur == page
             if st.button(f"{icon}  {page}", key=f"sidenav_{page}",
@@ -310,30 +310,30 @@ def render_sidebar():
 
         st.divider()
 
-        # ── Active Client selector ─────────────────────────────────────────
-        st.markdown('<div style="font-size:0.75rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;">Active Client</div>', unsafe_allow_html=True)
+        # ── Active Website selector ────────────────────────────────────────
+        st.markdown('<div style="font-size:0.75rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;">Active Website</div>', unsafe_allow_html=True)
         clients = DB["get_all_clients"]()
         if clients:
             client_options = {c["name"]: c["id"] for c in clients}
-            client_labels = ["— Select client —"] + list(client_options.keys())
-            selected = st.selectbox("Client", client_labels, label_visibility="collapsed")
-            if selected != "— Select client —":
+            client_labels = ["— Select website —"] + list(client_options.keys())
+            selected = st.selectbox("Website", client_labels, label_visibility="collapsed")
+            if selected != "— Select website —":
                 st.session_state.active_client_id = client_options[selected]
                 st.session_state.active_client_name = selected
         else:
-            st.caption("No clients yet. Add one in Research.")
+            st.caption("No websites yet. Run an audit to add your first one.")
 
         if st.session_state.active_client_id:
             st.success(f"{st.session_state.active_client_name}  ✓")
             _, col_del = st.columns([4, 1])
             with col_del:
-                if st.button("✕", key="delete_client_btn", help="Remove this client"):
+                if st.button("✕", key="delete_client_btn", help="Remove this website"):
                     st.session_state["_confirm_delete"] = True
             if st.session_state.get("_confirm_delete"):
-                st.warning(f"Delete **{st.session_state.active_client_name}**?")
+                st.warning(f"Remove **{st.session_state.active_client_name}**?")
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("Delete", key="confirm_del", type="primary"):
+                    if st.button("Remove", key="confirm_del", type="primary"):
                         try:
                             DB["delete_client"](st.session_state.active_client_id)
                         except Exception:
@@ -484,19 +484,19 @@ def tab_dashboard():
         st.markdown("""
 <div style="background:#faf5ff;border:2px dashed #c4b5fd;border-radius:12px;
      padding:1.5rem;text-align:center;color:#6d28d9;">
-  <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.4rem;">No client selected</div>
+  <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.4rem;">No website selected</div>
   <div style="font-size:0.88rem;opacity:0.8;">
-    Select a client from the sidebar (or run a Research Audit first) to unlock the full AI Marketing Team.
+    Select your website from the sidebar (or run an audit first) to unlock the full AI Marketing Team.
   </div>
 </div>""", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Run Research Audit", type="primary", use_container_width=True):
-                st.session_state.current_page = "Research"
+                st.session_state.current_page = "Audit"
                 st.rerun()
         with col2:
             if st.button("View Clients", use_container_width=True):
-                st.session_state.current_page = "Clients"
+                st.session_state.current_page = "Websites"
                 st.rerun()
     else:
         st.markdown(f"""
@@ -566,44 +566,44 @@ def tab_dashboard():
 </div>""", unsafe_allow_html=True)
         if len(all_runs) > 8:
             if st.button("View Full Activity Log"):
-                st.session_state.current_page = "Activity"
+                st.session_state.current_page = "Results"
                 st.rerun()
 
     with col_right:
         st.markdown("### Quick Actions")
         if st.button("New Research Audit", type="primary", use_container_width=True):
-            st.session_state.current_page = "Research"
+            st.session_state.current_page = "Audit"
             st.rerun()
         if st.button("Generate Proposal", use_container_width=True):
-            st.session_state.current_page = "Proposal"
+            st.session_state.current_page = "Agents"
             st.rerun()
         if st.button("Run Single Agent", use_container_width=True):
             st.session_state.current_page = "Agents"
             st.rerun()
         if st.button("View Activity Log", use_container_width=True):
-            st.session_state.current_page = "Activity"
+            st.session_state.current_page = "Results"
             st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 2 - RESEARCH
 # ═══════════════════════════════════════════════════════════════════════════
 def tab_research():
-    st.header("Research & Audit")
-    st.caption("Scrape any website with Firecrawl then get a full marketing intelligence report powered by Claude.")
+    st.header("Website Audit")
+    st.caption("Enter your website URL for a full AI-powered marketing audit — SEO, competitors, content gaps, quick wins and more.")
 
     col1, col2 = st.columns([3, 1])
     with col1:
         url = st.text_input(
-            "Website URL",
+            "Your Website URL",
             value=st.session_state.get("last_url", ""),
-            placeholder="https://empyreanservices.com/",
+            placeholder="https://yourbusiness.com/",
         )
     with col2:
         deep_crawl = st.checkbox("Deep Crawl", help="Crawl up to 10 pages (uses ~10 Firecrawl credits)")
 
     col3, col4 = st.columns([2, 2])
     with col3:
-        client_name = st.text_input("Client Name (for saving)", placeholder="e.g. Empyrean Services")
+        client_name = st.text_input("Business Name (for saving)", placeholder="e.g. My Business")
     with col4:
         crawl_limit = st.slider("Max pages (deep crawl)", 5, 20, 10) if deep_crawl else 10
 
@@ -1121,7 +1121,7 @@ def tab_proposal():
     if not research_data:
         st.warning("No research data found. Run a Research Audit first, then come back here.")
         if st.button("Go to Research"):
-            st.session_state.current_page = "Research"
+            st.session_state.current_page = "Audit"
             st.rerun()
         return
 
@@ -1860,50 +1860,99 @@ def _render_workflow_results(results: dict):
 # =============================================================================
 MAIN_PAGES = {
     "Dashboard": "⊞",
-    "Research":  "◎",
-    "Clients":   "◉",
-    "Activity":  "◷",
+    "Audit":     "◎",
+    "Results":   "◷",
+    "Websites":  "◉",
 }
 WORKFLOW_PAGES = {
-    "Proposal":   "◻",
-    "Agents":     "◈",
-    "Workflows":  "⟳",
+    "Agents":    "◈",
+    "Workflows": "⟳",
 }
-PAGES = {**MAIN_PAGES, **WORKFLOW_PAGES}  # for any code still referencing PAGES
+PAGES = {**MAIN_PAGES, **WORKFLOW_PAGES}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  CLIENTS PAGE
 # ─────────────────────────────────────────────────────────────────────────────
-def tab_clients():
-    st.header("Clients")
-    st.caption("Manage all your clients and their research history.")
+def tab_websites():
+    st.header("My Websites")
+    st.caption("All websites you've audited. Select one to load its data into the AI tools.")
 
-    clients = DB["get_all_clients"]()
+    websites = DB["get_all_clients"]()
 
-    if not clients:
-        st.info("No clients yet. Run a Research Audit to add your first client.")
-        if st.button("Go to Research", type="primary"):
-            st.session_state.current_page = "Research"
+    if not websites:
+        st.markdown("""
+<div style="background:#faf5ff;border:2px dashed #c4b5fd;border-radius:12px;
+     padding:2rem;text-align:center;color:#6d28d9;">
+  <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.4rem;">No websites audited yet</div>
+  <div style="font-size:0.88rem;opacity:0.8;">
+    Run your first audit to analyse your website and unlock the AI marketing tools.
+  </div>
+</div>""", unsafe_allow_html=True)
+        if st.button("Audit My Website", type="primary"):
+            st.session_state.current_page = "Audit"
             st.rerun()
         return
 
-    for c in clients:
-        with st.container():
-            col1, col2, col3 = st.columns([3, 2, 1])
-            with col1:
-                st.markdown(f"**{c['name']}**")
-                st.caption(c.get("website_url", ""))
-            with col2:
-                st.caption(f"Industry: {c.get('industry','—')}")
-                st.caption(f"Added: {str(c.get('created_at',''))[:10]}")
-            with col3:
-                if st.button("Select", key=f"sel_{c['id']}"):
-                    st.session_state.active_client_id = c["id"]
-                    st.session_state.active_client_name = c["name"]
-                    st.session_state.current_page = "Research"
+    all_runs = DB["get_all_agent_runs"](limit=200)
+    run_counts = {}
+    for r in all_runs:
+        if r["client_id"]:
+            run_counts[r["client_id"]] = run_counts.get(r["client_id"], 0) + 1
+
+    for c in websites:
+        n_runs   = run_counts.get(c["id"], 0)
+        is_active = c["id"] == st.session_state.active_client_id
+        border = "#4f46e5" if is_active else "#e2e8f0"
+        st.markdown(f"""
+<div style="background:#fff;border:2px solid {border};border-radius:12px;
+     padding:1rem 1.2rem;margin:0.5rem 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <div>
+      <div style="font-weight:700;font-size:0.95rem;color:#1e293b;">{c['name']}</div>
+      <div style="font-size:0.8rem;color:#64748b;">{c.get('website_url','')}</div>
+      <div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">
+        Audited {str(c.get('created_at',''))[:10]} &nbsp;·&nbsp; {n_runs} agent run(s)
+      </div>
+    </div>
+    {"<span style='background:#ede9fe;color:#4f46e5;border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700;'>Active</span>" if is_active else ""}
+  </div>
+</div>""", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            if st.button("Load & View Audit", key=f"sel_{c['id']}", type="primary" if is_active else "secondary"):
+                st.session_state.active_client_id   = c["id"]
+                st.session_state.active_client_name = c["name"]
+                st.session_state.current_page = "Audit"
+                st.rerun()
+        with col2:
+            if st.button("View Results", key=f"res_{c['id']}"):
+                st.session_state.active_client_id   = c["id"]
+                st.session_state.active_client_name = c["name"]
+                st.session_state.current_page = "Results"
+                st.rerun()
+        with col3:
+            if st.button("Remove", key=f"del_{c['id']}"):
+                st.session_state[f"_confirm_del_{c['id']}"] = True
+        if st.session_state.get(f"_confirm_del_{c['id']}"):
+            st.warning(f"Remove **{c['name']}** and all its data?")
+            ca, cb = st.columns(2)
+            with ca:
+                if st.button("Yes, remove", key=f"yes_del_{c['id']}", type="primary"):
+                    try:
+                        DB["delete_client"](c["id"])
+                    except Exception:
+                        pass
+                    if st.session_state.active_client_id == c["id"]:
+                        st.session_state.active_client_id   = None
+                        st.session_state.active_client_name = ""
+                        st.session_state.research_result    = None
+                    st.session_state.pop(f"_confirm_del_{c['id']}", None)
                     st.rerun()
-            st.divider()
+            with cb:
+                if st.button("Cancel", key=f"no_del_{c['id']}"):
+                    st.session_state.pop(f"_confirm_del_{c['id']}", None)
+                    st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1954,17 +2003,30 @@ def tab_recordings():
 # ─────────────────────────────────────────────────────────────────────────────
 def tab_activity():
     from agents import AGENT_REGISTRY
-    st.header("Activity Log")
-    st.caption("Every agent run across all clients — newest first.")
+    st.header("Results")
+    st.caption("Everything the AI has done for your business — newest first.")
 
     all_runs = DB["get_all_agent_runs"](limit=200)
-    clients  = {c["id"]: c["name"] for c in DB["get_all_clients"]()}
+    websites = {c["id"]: c["name"] for c in DB["get_all_clients"]()}
 
     if not all_runs:
-        st.info("No agent activity yet. Run a Research Audit and activate some agents to get started.")
-        if st.button("Go to Dashboard", type="primary"):
-            st.session_state.current_page = "Dashboard"
-            st.rerun()
+        st.markdown("""
+<div style="background:#faf5ff;border:2px dashed #c4b5fd;border-radius:12px;
+     padding:2rem;text-align:center;color:#6d28d9;">
+  <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.4rem;">No results yet</div>
+  <div style="font-size:0.88rem;opacity:0.8;">
+    Audit your website and activate the AI Marketing Team to start seeing results here.
+  </div>
+</div>""", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Audit My Website", type="primary", use_container_width=True):
+                st.session_state.current_page = "Audit"
+                st.rerun()
+        with col2:
+            if st.button("Go to Dashboard", use_container_width=True):
+                st.session_state.current_page = "Dashboard"
+                st.rerun()
         return
 
     # ── Filter bar ────────────────────────────────────────────────────────
@@ -1973,14 +2035,14 @@ def tab_activity():
         agent_types = ["All agents"] + sorted({r["agent_name"] for r in all_runs})
         filter_agent = st.selectbox("Filter by agent", agent_types, key="act_filter_agent")
     with col2:
-        client_names = ["All clients"] + [v for v in clients.values()]
-        filter_client = st.selectbox("Filter by client", client_names, key="act_filter_client")
+        website_names = ["All websites"] + list(websites.values())
+        filter_website = st.selectbox("Filter by website", website_names, key="act_filter_client")
 
     filtered = all_runs
     if filter_agent != "All agents":
         filtered = [r for r in filtered if r["agent_name"] == filter_agent]
-    if filter_client != "All clients":
-        cid = next((k for k, v in clients.items() if v == filter_client), None)
+    if filter_website != "All websites":
+        cid = next((k for k, v in websites.items() if v == filter_website), None)
         filtered = [r for r in filtered if r["client_id"] == cid]
 
     st.caption(f"Showing {len(filtered)} run(s)")
@@ -1988,7 +2050,7 @@ def tab_activity():
 
     # ── Run list ──────────────────────────────────────────────────────────
     for i, run in enumerate(filtered):
-        client_label = clients.get(run["client_id"], "No client")
+        website_label = websites.get(run["client_id"], "No client")
         task_preview = run["task"][:120] + ("…" if len(run["task"]) > 120 else "")
         output_preview = run["output"][:200] + ("…" if len(run["output"]) > 200 else "")
 
@@ -2004,7 +2066,7 @@ def tab_activity():
     </span>
     <span style="background:#f0fdf4;color:#15803d;border-radius:6px;
          padding:3px 10px;font-size:0.75rem;font-weight:600;">
-      {client_label}
+      {website_label}
     </span>
     <span style="color:#94a3b8;font-size:0.75rem;margin-left:auto;">{run['timestamp']}</span>
   </div>
@@ -2049,18 +2111,16 @@ def main():
 
     if cur == "Dashboard":
         tab_dashboard()
-    elif cur == "Research":
+    elif cur == "Audit":
         tab_research()
-    elif cur == "Clients":
-        tab_clients()
-    elif cur == "Proposal":
-        tab_proposal()
+    elif cur == "Results":
+        tab_activity()
+    elif cur == "Websites":
+        tab_websites()
     elif cur == "Agents":
         tab_agents()
     elif cur == "Workflows":
         tab_workflows()
-    elif cur == "Activity":
-        tab_activity()
 
 
 if __name__ == "__main__":
