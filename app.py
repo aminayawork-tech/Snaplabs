@@ -1887,6 +1887,7 @@ def tab_websites():
     Run your first audit to analyse your website and unlock the AI marketing tools.
   </div>
 </div>""", unsafe_allow_html=True)
+        st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
         if st.button("Audit My Website", type="primary"):
             st.session_state.current_page = "Audit"
             st.rerun()
