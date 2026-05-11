@@ -223,7 +223,7 @@ def _import_db():
         init_db, get_all_clients, get_client_by_id, create_client,
         delete_client, get_research_for_client, get_latest_research,
         save_research, save_proposal, get_proposals_for_client,
-        save_agent_run, get_agent_runs_by_client, save_workflow_run,
+        save_agent_run, get_agent_runs_by_client, get_all_agent_runs, save_workflow_run,
     )
     return dict(
         init_db=init_db, get_all_clients=get_all_clients,
@@ -235,6 +235,7 @@ def _import_db():
         get_proposals_for_client=get_proposals_for_client,
         save_agent_run=save_agent_run,
         get_agent_runs_by_client=get_agent_runs_by_client,
+        get_all_agent_runs=get_all_agent_runs,
         save_workflow_run=save_workflow_run,
     )
 
@@ -381,82 +382,207 @@ def render_sidebar():
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 1 – DASHBOARD
 # ═══════════════════════════════════════════════════════════════════════════
-def tab_dashboard():
-    st.header("Dashboard")
-    st.caption("Your all-in-one AI marketing command centre.")
+def _run_full_marketing_team(client_id: int, research_data: dict, biz_name: str):
+    """Run all 7 specialist agents in sequence against the active client's research."""
+    from agents import run_agent, AGENT_REGISTRY
 
-    clients = DB["get_all_clients"]()
-    total_clients = len(clients)
+    AGENT_TASKS = {
+        "content_engine": f"Create a comprehensive content strategy for {biz_name}: 3 blog post outlines targeting the top SEO keywords, a content calendar for the next 30 days, and key messaging for each audience segment identified in the research.",
+        "seo":            f"Provide a complete SEO improvement plan for {biz_name}: fix the critical technical issues, target the top 10 keywords, and outline a 90-day backlink strategy based on the competitor analysis.",
+        "paid_ads":       f"Design a Google Ads + Meta Ads campaign for {biz_name}: campaign structure, ad groups, 5 headline variants, ad copy for each service, and recommended monthly budget allocation.",
+        "social_media":   f"Create a 30-day social media content calendar for {biz_name}: posts for LinkedIn, Instagram and Facebook using the brand story, services, and audience insights from the research.",
+        "email_sms":      f"Write a 5-email welcome + nurture sequence for {biz_name} new leads: subject lines, preview text, body copy, and a clear CTA for each email.",
+        "lead_gen":       f"Design a lead generation funnel for {biz_name}: landing page headline + copy, lead magnet idea, form fields, and a follow-up sequence outline.",
+        "review_referral": f"Build a review acquisition and referral program for {biz_name}: outreach templates for past clients, a referral incentive structure, and a Google / Yelp review request script.",
+    }
+
+    progress_placeholder = st.empty()
+    results_store = []
+
+    for i, (aid, task) in enumerate(AGENT_TASKS.items()):
+        meta = AGENT_REGISTRY.get(aid, {})
+        agent_name = meta.get("name", aid)
+        progress_placeholder.info(f"Running {i+1}/7 — {agent_name}...")
+
+        try:
+            result = run_agent(
+                agent_id=aid,
+                task=task,
+                research_data=research_data,
+                max_tokens=2000,
+            )
+            if result.get("success"):
+                if "agent_outputs" not in st.session_state:
+                    st.session_state.agent_outputs = {}
+                st.session_state.agent_outputs[aid] = {
+                    "output":    result["output"],
+                    "task":      task,
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                }
+                DB["save_agent_run"](
+                    agent_type=aid,
+                    agent_name=agent_name,
+                    output=result["output"],
+                    input_data={"task": task},
+                    client_id=client_id,
+                )
+                results_store.append({"agent": agent_name, "status": "done"})
+            else:
+                results_store.append({"agent": agent_name, "status": "error", "error": result.get("error", "")})
+        except Exception as e:
+            results_store.append({"agent": agent_name, "status": "error", "error": str(e)})
+
+    progress_placeholder.empty()
+    st.session_state._ditm_results = results_store
+    st.session_state._ditm_done    = True
+    st.session_state._agent_outputs_loaded_for = -1  # force reload on next Agents visit
+
+
+def tab_dashboard():
+    st.markdown("""
+<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);border-radius:16px;
+     padding:2rem 2.5rem;margin-bottom:1.5rem;color:#fff;">
+  <div style="font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:0.4rem;">
+    snappymarketer
+  </div>
+  <div style="font-size:1rem;opacity:0.88;margin-bottom:1.2rem;">
+    AI Marketing Platform — audit, strategise, and execute in minutes.
+  </div>
+  <div style="font-size:0.85rem;opacity:0.75;">
+    Select a client from the sidebar, then hit <strong>Do It For Me</strong> to run all 7 agents at once.
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    clients    = DB["get_all_clients"]()
+    all_runs   = DB["get_all_agent_runs"](limit=200)
+    total_runs = len(all_runs)
+    last_run   = all_runs[0]["timestamp"] if all_runs else "—"
+    client_id  = st.session_state.active_client_id
 
     # ── KPI Row ────────────────────────────────────────────────────────────
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Total Clients", total_clients)
-    with c2:
-        st.metric("Agents Available", "8")
-    with c3:
-        st.metric("Workflow Templates", "5")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.metric("Total Clients",    len(clients))
+    with c2: st.metric("Agent Runs",       total_runs)
+    with c3: st.metric("Agents Available", "7")
+    with c4: st.metric("Last Activity",    last_run[:10] if last_run != "—" else "—")
 
     st.divider()
 
-    # ── Recent clients table ───────────────────────────────────────────────
+    # ── Do It For Me ──────────────────────────────────────────────────────
+    st.markdown("### Do It For Me")
+
+    result = st.session_state.get("research_result")
+    if not result and client_id:
+        saved = DB["get_latest_research"](client_id)
+        if saved:
+            result = {"success": True, "research": saved["research_data"]}
+
+    research_data = result.get("research", {}) if result else {}
+    biz_name      = research_data.get("business_name", "your client")
+
+    if not client_id or not research_data:
+        st.markdown("""
+<div style="background:#faf5ff;border:2px dashed #c4b5fd;border-radius:12px;
+     padding:1.5rem;text-align:center;color:#6d28d9;">
+  <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.4rem;">No client selected</div>
+  <div style="font-size:0.88rem;opacity:0.8;">
+    Select a client from the sidebar (or run a Research Audit first) to unlock the full AI Marketing Team.
+  </div>
+</div>""", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Run Research Audit", type="primary", use_container_width=True):
+                st.session_state.current_page = "Research"
+                st.rerun()
+        with col2:
+            if st.button("View Clients", use_container_width=True):
+                st.session_state.current_page = "Clients"
+                st.rerun()
+    else:
+        st.markdown(f"""
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
+     padding:1rem 1.2rem;margin-bottom:0.75rem;">
+  <strong style="color:#15803d;">Client ready:</strong>
+  <span style="color:#166534;"> {biz_name}</span>
+  <span style="color:#4ade80;font-size:0.82rem;margin-left:0.5rem;">
+    — research loaded, 7 agents will run
+  </span>
+</div>""", unsafe_allow_html=True)
+
+        if st.button("Activate AI Marketing Team — Do It For Me", type="primary", use_container_width=True):
+            st.session_state._ditm_done    = False
+            st.session_state._ditm_results = []
+            with st.spinner("Running full AI Marketing Team… this takes 2–3 minutes"):
+                _run_full_marketing_team(client_id, research_data, biz_name)
+            st.rerun()
+
+        # Show results from last run
+        if st.session_state.get("_ditm_done"):
+            results = st.session_state.get("_ditm_results", [])
+            done  = sum(1 for r in results if r["status"] == "done")
+            errs  = sum(1 for r in results if r["status"] == "error")
+            st.success(f"Done! {done}/7 agents completed. {errs} error(s).")
+            cols = st.columns(len(results)) if results else []
+            for i, r in enumerate(results):
+                with cols[i]:
+                    color = "#4f46e5" if r["status"] == "done" else "#ef4444"
+                    icon  = "✓" if r["status"] == "done" else "✗"
+                    st.markdown(f"""
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;
+     padding:0.6rem;text-align:center;font-size:0.78rem;">
+  <div style="color:{color};font-weight:700;font-size:1rem;">{icon}</div>
+  <div style="color:#1e293b;font-weight:600;">{r['agent'].replace(' Agent','')}</div>
+</div>""", unsafe_allow_html=True)
+            if done > 0:
+                if st.button("View All Agent Outputs", type="primary"):
+                    st.session_state.current_page = "Agents"
+                    st.rerun()
+
+    st.divider()
+
+    # ── Recent activity + quick actions ───────────────────────────────────
     col_left, col_right = st.columns([2, 1])
 
     with col_left:
-        st.markdown("### Recent Clients")
-        if not clients:
-            st.info("No clients yet. Head to the **Research** tab to add your first one!")
+        st.markdown("### Recent Activity")
+        if not all_runs:
+            st.caption("No agent activity yet.")
         else:
-            import pandas as pd
-            df = pd.DataFrame(clients)[["name", "website_url", "industry", "created_at"]].copy()
-            df.columns = ["Client", "Website", "Industry", "Added"]
-            df["Added"] = df["Added"].str[:10]
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            for run in all_runs[:8]:
+                st.markdown(f"""
+<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;
+     border-bottom:1px solid #f1f5f9;">
+  <div style="background:#ede9fe;color:#4f46e5;border-radius:6px;
+       padding:3px 8px;font-size:0.72rem;font-weight:700;white-space:nowrap;">
+    {run['agent_name'].replace(' Agent','')}
+  </div>
+  <div style="flex:1;font-size:0.82rem;color:#475569;overflow:hidden;
+       text-overflow:ellipsis;white-space:nowrap;">
+    {run['task'][:80]}{"…" if len(run['task']) > 80 else ""}
+  </div>
+  <div style="font-size:0.75rem;color:#94a3b8;white-space:nowrap;">
+    {run['timestamp']}
+  </div>
+</div>""", unsafe_allow_html=True)
+        if len(all_runs) > 8:
+            if st.button("View Full Activity Log"):
+                st.session_state.current_page = "Activity"
+                st.rerun()
 
     with col_right:
         st.markdown("### Quick Actions")
-        if st.button("New Research", use_container_width=True):
+        if st.button("New Research Audit", type="primary", use_container_width=True):
             st.session_state.current_page = "Research"
             st.rerun()
         if st.button("Generate Proposal", use_container_width=True):
             st.session_state.current_page = "Proposal"
             st.rerun()
-        if st.button("Run Agent", use_container_width=True):
+        if st.button("Run Single Agent", use_container_width=True):
             st.session_state.current_page = "Agents"
             st.rerun()
-        if st.button("Run Workflow", use_container_width=True):
-            st.session_state.current_page = "Workflows"
+        if st.button("View Activity Log", use_container_width=True):
+            st.session_state.current_page = "Activity"
             st.rerun()
-
-    st.divider()
-
-    # ── Platform overview cards ────────────────────────────────────────────
-    st.markdown("### Platform Overview")
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("""
-<div class="metric-card">
-<h4>Research Engine</h4>
-<p>Scrape any website with Firecrawl, then get a full AI marketing audit including keywords, gaps, competitors & quick wins.</p>
-<small>Powered by Firecrawl + Claude</small>
-</div>""", unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("""
-<div class="metric-card">
-<h4>Proposal Generator</h4>
-<p>Turn your audit into a polished client proposal with custom pricing, PDF export, and follow-up email.</p>
-<small>One-click PDF download</small>
-</div>""", unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("""
-<div class="metric-card">
-<h4>AI Agent Squad</h4>
-<p>8 specialist agents: Content, SEO, Ads, Lead Gen, Email, Social, Reviews & Custom. Chain them into powerful workflows.</p>
-<small>Powered by Claude AI</small>
-</div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TAB 2 - RESEARCH
@@ -1736,6 +1862,7 @@ MAIN_PAGES = {
     "Dashboard": "⊞",
     "Research":  "◎",
     "Clients":   "◉",
+    "Activity":  "◷",
 }
 WORKFLOW_PAGES = {
     "Proposal":   "◻",
@@ -1822,6 +1949,95 @@ def tab_recordings():
 """)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  ACTIVITY LOG PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+def tab_activity():
+    from agents import AGENT_REGISTRY
+    st.header("Activity Log")
+    st.caption("Every agent run across all clients — newest first.")
+
+    all_runs = DB["get_all_agent_runs"](limit=200)
+    clients  = {c["id"]: c["name"] for c in DB["get_all_clients"]()}
+
+    if not all_runs:
+        st.info("No agent activity yet. Run a Research Audit and activate some agents to get started.")
+        if st.button("Go to Dashboard", type="primary"):
+            st.session_state.current_page = "Dashboard"
+            st.rerun()
+        return
+
+    # ── Filter bar ────────────────────────────────────────────────────────
+    col1, col2 = st.columns([2, 2])
+    with col1:
+        agent_types = ["All agents"] + sorted({r["agent_name"] for r in all_runs})
+        filter_agent = st.selectbox("Filter by agent", agent_types, key="act_filter_agent")
+    with col2:
+        client_names = ["All clients"] + [v for v in clients.values()]
+        filter_client = st.selectbox("Filter by client", client_names, key="act_filter_client")
+
+    filtered = all_runs
+    if filter_agent != "All agents":
+        filtered = [r for r in filtered if r["agent_name"] == filter_agent]
+    if filter_client != "All clients":
+        cid = next((k for k, v in clients.items() if v == filter_client), None)
+        filtered = [r for r in filtered if r["client_id"] == cid]
+
+    st.caption(f"Showing {len(filtered)} run(s)")
+    st.divider()
+
+    # ── Run list ──────────────────────────────────────────────────────────
+    for i, run in enumerate(filtered):
+        client_label = clients.get(run["client_id"], "No client")
+        task_preview = run["task"][:120] + ("…" if len(run["task"]) > 120 else "")
+        output_preview = run["output"][:200] + ("…" if len(run["output"]) > 200 else "")
+
+        # Card header
+        st.markdown(f"""
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;
+     padding:0.9rem 1.1rem;margin:0.4rem 0 0.2rem 0;
+     box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+  <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+    <span style="background:#ede9fe;color:#4f46e5;border-radius:6px;
+         padding:3px 10px;font-size:0.75rem;font-weight:700;">
+      {run['agent_name']}
+    </span>
+    <span style="background:#f0fdf4;color:#15803d;border-radius:6px;
+         padding:3px 10px;font-size:0.75rem;font-weight:600;">
+      {client_label}
+    </span>
+    <span style="color:#94a3b8;font-size:0.75rem;margin-left:auto;">{run['timestamp']}</span>
+  </div>
+  <div style="margin-top:0.45rem;font-size:0.82rem;color:#475569;">
+    <strong>Task:</strong> {task_preview}
+  </div>
+  <div style="margin-top:0.3rem;font-size:0.8rem;color:#64748b;font-style:italic;">
+    {output_preview}
+  </div>
+</div>""", unsafe_allow_html=True)
+
+        # Show full output toggle
+        show_key = f"act_show_{run['id']}_{i}"
+        if show_key not in st.session_state:
+            st.session_state[show_key] = False
+        col_a, col_b = st.columns([1, 6])
+        with col_a:
+            label = "▲ Hide" if st.session_state[show_key] else "▼ Full output"
+            if st.button(label, key=f"act_toggle_{run['id']}_{i}", type="secondary"):
+                st.session_state[show_key] = not st.session_state[show_key]
+                st.rerun()
+        with col_b:
+            st.download_button(
+                "Download",
+                data=run["output"],
+                file_name=f"{run['agent_type']}_{run['timestamp'][:10]}.md",
+                mime="text/markdown",
+                key=f"act_dl_{run['id']}_{i}",
+            )
+        if st.session_state[show_key]:
+            st.markdown(run["output"])
+
+
 def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
 
@@ -1843,6 +2059,8 @@ def main():
         tab_agents()
     elif cur == "Workflows":
         tab_workflows()
+    elif cur == "Activity":
+        tab_activity()
 
 
 if __name__ == "__main__":
