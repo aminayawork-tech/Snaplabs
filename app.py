@@ -461,7 +461,7 @@ def tab_dashboard():
 
     # ── KPI Row ────────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.metric("Total Clients",    len(clients))
+    with c1: st.metric("Total Websites",   len(clients))
     with c2: st.metric("Agent Runs",       total_runs)
     with c3: st.metric("Agents Available", "7")
     with c4: st.metric("Last Activity",    last_run[:10] if last_run != "—" else "—")
@@ -489,20 +489,19 @@ def tab_dashboard():
     Select your website from the sidebar (or run an audit first) to unlock the full AI Marketing Team.
   </div>
 </div>""", unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Run Research Audit", type="primary", use_container_width=True):
-                st.session_state.current_page = "Audit"
-                st.rerun()
-        with col2:
-            if st.button("View Clients", use_container_width=True):
-                st.session_state.current_page = "Websites"
-                st.rerun()
+        st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
+        if st.button("Audit My Website", type="primary", use_container_width=True):
+            st.session_state.current_page = "Audit"
+            st.rerun()
+        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
+        if st.button("View Websites", use_container_width=True):
+            st.session_state.current_page = "Websites"
+            st.rerun()
     else:
         st.markdown(f"""
 <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
      padding:1rem 1.2rem;margin-bottom:0.75rem;">
-  <strong style="color:#15803d;">Client ready:</strong>
+  <strong style="color:#15803d;">Website ready:</strong>
   <span style="color:#166534;"> {biz_name}</span>
   <span style="color:#4ade80;font-size:0.82rem;margin-left:0.5rem;">
     — research loaded, 7 agents will run
@@ -571,16 +570,15 @@ def tab_dashboard():
 
     with col_right:
         st.markdown("### Quick Actions")
-        if st.button("New Research Audit", type="primary", use_container_width=True):
+        if st.button("New Website Audit", type="primary", use_container_width=True):
             st.session_state.current_page = "Audit"
             st.rerun()
-        if st.button("Generate Proposal", use_container_width=True):
-            st.session_state.current_page = "Agents"
-            st.rerun()
+        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
         if st.button("Run Single Agent", use_container_width=True):
             st.session_state.current_page = "Agents"
             st.rerun()
-        if st.button("View Activity Log", use_container_width=True):
+        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
+        if st.button("View Results", use_container_width=True):
             st.session_state.current_page = "Results"
             st.rerun()
 
@@ -2018,15 +2016,14 @@ def tab_activity():
     Audit your website and activate the AI Marketing Team to start seeing results here.
   </div>
 </div>""", unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Audit My Website", type="primary", use_container_width=True):
-                st.session_state.current_page = "Audit"
-                st.rerun()
-        with col2:
-            if st.button("Go to Dashboard", use_container_width=True):
-                st.session_state.current_page = "Dashboard"
-                st.rerun()
+        st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
+        if st.button("Audit My Website", type="primary", use_container_width=True):
+            st.session_state.current_page = "Audit"
+            st.rerun()
+        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
+        if st.button("Go to Dashboard", use_container_width=True):
+            st.session_state.current_page = "Dashboard"
+            st.rerun()
         return
 
     # ── Filter bar ────────────────────────────────────────────────────────
