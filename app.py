@@ -303,32 +303,42 @@ hr { border-color: #e2e8f0 !important; margin: 1.25rem 0 !important; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-/* ── Expanders: replace Streamlit's icon (shows as "_arrow_down" text) ──
-   Hide everything inside the toggle icon div, then inject a CSS SVG chevron
-   via background-image — works with no font dependency at all.          ── */
-[data-testid="stExpanderToggleIcon"] > * { display: none !important; }
-[data-testid="stExpanderToggleIcon"] {
-    width: 20px !important; height: 20px !important;
-    flex-shrink: 0 !important;
-    background-size: 15px 15px !important;
-    background-repeat: no-repeat !important;
-    background-position: center !important;
+/* ── Custom section headers (replaces st.expander entirely) ── */
+.sec-hdr { margin-bottom: 0 !important; }
+.sec-hdr > div > button[data-testid="stBaseButton-secondary"] {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    color: #1e293b !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 0.65rem 1rem !important;
+    min-height: 46px !important;
+    width: 100% !important;
+    box-shadow: none !important;
 }
-/* Collapsed → chevron-right */
-details:not([open]) [data-testid="stExpanderToggleIcon"] {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") !important;
+.sec-hdr > div > button[data-testid="stBaseButton-secondary"]:hover {
+    background: #faf5ff !important;
+    border-color: #a5b4fc !important;
+    color: #4f46e5 !important;
+    transform: none !important;
 }
-/* Expanded → chevron-down (purple) */
-details[open] [data-testid="stExpanderToggleIcon"] {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+.sec-body {
+    border: 1.5px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-radius: 0 0 10px 10px !important;
+    padding: 1rem !important;
+    margin-bottom: 0.6rem !important;
+    background: #ffffff !important;
 }
-/* Expander header: move chevron to right side */
-[data-testid="stExpanderHeader"] {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+/* When section is open, square the bottom of the header button */
+.sec-hdr-open > div > button[data-testid="stBaseButton-secondary"] {
+    border-radius: 10px 10px 0 0 !important;
+    border-color: #a5b4fc !important;
+    color: #4f46e5 !important;
 }
-[data-testid="stExpanderHeader"] > div:first-child { flex: 1 !important; }
 
 /* ── Chat input: align with content area on desktop ── */
 @media (min-width: 769px) {
@@ -516,6 +526,76 @@ def _load_client_silent(client_id: int):
 # ════════════════════════════════════════════════════════════════════════════
 #  VIEW: HOME
 # ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════════════════════
+#  CUSTOM SECTION (replaces st.expander — no Streamlit icon dependency)
+#  Uses two adjacent columns: left = HTML title, right = chevron button.
+#  CSS glues them together into one seamless header bar.
+# ════════════════════════════════════════════════════════════════════════════
+_CHEV_DOWN = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" '
+    'stroke-linecap="round" stroke-linejoin="round" width="15" height="15">'
+    '<polyline points="6 9 12 15 18 9"/></svg>'
+)
+_CHEV_RIGHT = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" '
+    'stroke-linecap="round" stroke-linejoin="round" width="15" height="15">'
+    '<polyline points="9 18 15 12 9 6"/></svg>'
+)
+
+
+def _section(title: str, key: str, default_open: bool = False) -> bool:
+    """Render a collapsible section. Returns True when open."""
+    is_open = st.session_state.get(f"_s_{key}", default_open)
+    chev  = _CHEV_DOWN  if is_open else _CHEV_RIGHT
+    bc    = "#a5b4fc"   if is_open else "#e2e8f0"
+    bg    = "#faf5ff"   if is_open else "#ffffff"
+    tc    = "#4f46e5"   if is_open else "#1e293b"
+    cc    = "#4f46e5"   if is_open else "#94a3b8"
+    br_l  = "10px 0 0 10px" if is_open else "10px 0 0 10px"
+    br_r  = "0 10px 10px 0" if is_open else "0 10px 10px 0"
+
+    # Glue the two columns together: remove gap + align heights
+    st.markdown("""
+<style>
+div[data-testid="stHorizontalBlock"]:has(> div[data-testid="stColumn"] > div > div > [class*="sec-title-"]) {
+    gap: 0 !important;
+    align-items: stretch !important;
+}
+</style>""", unsafe_allow_html=True)
+
+    col_title, col_btn = st.columns([0.91, 0.09])
+    with col_title:
+        st.markdown(
+            f'<div class="sec-title-{key}" style="height:46px;display:flex;align-items:center;'
+            f'padding:0 0.85rem;background:{bg};'
+            f'border-top:1.5px solid {bc};border-left:1.5px solid {bc};border-bottom:1.5px solid {bc};'
+            f'border-radius:{br_l};'
+            f'font-weight:600;font-size:0.875rem;color:{tc};">'
+            f'{title}</div>',
+            unsafe_allow_html=True,
+        )
+    with col_btn:
+        # Chevron button — CSS squares off the left edge to merge with title div
+        st.markdown(
+            f'<style>'
+            f'div[data-testid="stColumn"]:has(> div > div > button[title="sec_{key}"])'
+            f' button{{border-radius:{br_r}!important;border-left:none!important;'
+            f'background:{bg}!important;border-color:{bc}!important;'
+            f'color:{cc}!important;height:46px!important;min-height:46px!important;'
+            f'padding:0!important;display:flex!important;align-items:center!important;'
+            f'justify-content:center!important;box-shadow:none!important;}}'
+            f'div[data-testid="stColumn"]:has(> div > div > button[title="sec_{key}"])'
+            f' button:hover{{background:#ede9fe!important;color:#4f46e5!important;}}'
+            f'</style>',
+            unsafe_allow_html=True,
+        )
+        if st.button(chev, key=f"_sec_{key}", help=f"sec_{key}", use_container_width=True):
+            st.session_state[f"_s_{key}"] = not is_open
+            st.rerun()
+
+    return is_open
+
+
 def view_home():
     # Hero
     st.markdown("""
@@ -846,27 +926,30 @@ def view_results():
     st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
 
     # ── Audit sections ───────────────────────────────────────────────────────
-    with st.expander("**Overview — Business, Gaps & Strengths**", expanded=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            services_list = data.get("services_offered", []) or []
-            if services_list:
-                st.markdown("**Services**")
-                for s in services_list:
-                    st.markdown(f"- {s}")
-            strengths = data.get("current_marketing_strengths", []) or []
-            if strengths:
-                st.markdown("**Strengths**")
-                for s in strengths:
-                    st.markdown(f"- {s}")
-        with col2:
-            gaps = data.get("current_marketing_gaps", []) or []
-            if gaps:
-                st.markdown("**Marketing Gaps**")
-                for g in gaps:
-                    st.markdown(f"- {g}")
+    if _section("Overview — Business, Gaps & Strengths", "overview", default_open=True):
+        with st.container():
+            st.markdown('<div class="sec-body">', unsafe_allow_html=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                services_list = data.get("services_offered", []) or []
+                if services_list:
+                    st.markdown("**Services**")
+                    for s in services_list:
+                        st.markdown(f"- {s}")
+                strengths = data.get("current_marketing_strengths", []) or []
+                if strengths:
+                    st.markdown("**Strengths**")
+                    for s in strengths:
+                        st.markdown(f"- {s}")
+            with col2:
+                gaps = data.get("current_marketing_gaps", []) or []
+                if gaps:
+                    st.markdown("**Marketing Gaps**")
+                    for g in gaps:
+                        st.markdown(f"- {g}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    with st.expander("**SEO & Keywords**"):
+    if _section("SEO & Keywords", "seo"):
         seo = data.get("seo_analysis", {}) or {}
         keywords = (
             data.get("top_10_longtail_keywords", [])
@@ -903,7 +986,7 @@ def view_results():
         if not keywords and not tech_issues:
             st.caption("No SEO data found in audit.")
 
-    with st.expander("**Competitors**"):
+    if _section("Competitors", "competitors"):
         comp_list = (
             data.get("competitor_analysis", [])
             or data.get("competitors", [])
@@ -928,7 +1011,7 @@ def view_results():
         else:
             st.caption("No competitor data found.")
 
-    with st.expander("**Quick Wins — Actionable Opportunities**"):
+    if _section("Quick Wins — Actionable Opportunities", "quickwins"):
         wins = data.get("quick_win_opportunities", []) or []
         if wins:
             for i, w in enumerate(wins, 1):
@@ -954,7 +1037,7 @@ def view_results():
         else:
             st.caption("No quick wins identified.")
 
-    with st.expander("**Target Audience**"):
+    if _section("Target Audience", "audience"):
         personas = data.get("target_audience", []) or []
         if personas:
             for p in personas[:4]:
@@ -974,7 +1057,7 @@ def view_results():
         else:
             st.caption("No audience data found.")
 
-    with st.expander("**Download Report**"):
+    if _section("Download Report", "download"):
         summary_md = _build_summary_markdown(data)
         dl1, dl2 = st.columns(2)
         with dl1:
@@ -1074,7 +1157,7 @@ def view_results():
         for aid, out in outputs.items():
             meta = AGENT_META.get(aid, {"label": aid})
             ts = out.get("timestamp", "")
-            with st.expander(f"**{meta['label']} Agent** — {ts}"):
+            if _section(f"{meta['label']} Agent — {ts}", f"agent_out_{aid}"):
                 st.markdown(out.get("output", ""))
 
     st.divider()
