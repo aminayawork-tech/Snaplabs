@@ -26,11 +26,94 @@ APP_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
-/* ── Hide sidebar completely ── */
+/* ── Hide Streamlit sidebar + toggle completely ── */
 [data-testid="stSidebar"],
 [data-testid="stSidebarToggleButton"],
 [data-testid="stSidebarCollapsedControl"],
 button[data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+
+/* ══════════════════════════════════════════════════
+   DESKTOP: fixed left sidebar nav (≥769px)
+══════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  .nav-bottom { display: none !important; }
+  .nav-sidebar {
+    position: fixed; left: 0; top: 0; width: 220px; height: 100vh;
+    background: #ffffff; border-right: 1px solid #e2e8f0;
+    z-index: 9999; padding: 1.4rem 0.85rem 1.4rem;
+    display: flex; flex-direction: column; overflow-y: auto;
+    box-shadow: 1px 0 0 #e2e8f0;
+  }
+  /* Push main content right of the sidebar */
+  .block-container {
+    margin-left: 230px !important;
+    max-width: 720px !important;
+    padding-top: 1.5rem !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE: fixed bottom tab bar (≤768px)
+══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .nav-sidebar { display: none !important; }
+  .nav-bottom {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 62px; background: #ffffff;
+    border-top: 1.5px solid #e2e8f0; z-index: 9999;
+    display: flex !important; align-items: stretch;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
+  }
+  .block-container { padding-bottom: 74px !important; max-width: 100% !important; }
+}
+
+/* ── Nav shared ── */
+.nav-sidebar a, .nav-bottom a { text-decoration: none !important; color: inherit !important; }
+
+/* ── Sidebar brand ── */
+.nav-brand-row {
+  display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.2rem;
+}
+.nav-brand-icon {
+  width: 33px; height: 33px; border-radius: 9px;
+  background: linear-gradient(135deg,#4f46e5,#7c3aed);
+  color: #fff; font-weight: 800; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.nav-brand-name { font-weight: 800; font-size: 1.05rem; color: #1e293b; line-height: 1.2; }
+.nav-brand-name span { color: #4f46e5; }
+.nav-tagline {
+  font-size: 0.63rem; color: #94a3b8; text-transform: uppercase;
+  letter-spacing: 0.09em; margin-bottom: 1.25rem; padding-left: 2px;
+}
+.nav-divider { height: 1px; background: #f1f5f9; margin: 0.5rem 0 0.75rem; }
+
+/* ── Sidebar nav items ── */
+.nav-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.75rem; border-radius: 9px; margin-bottom: 2px;
+  font-size: 0.875rem; font-weight: 500; color: #64748b;
+  transition: background 0.13s, color 0.13s; cursor: pointer;
+}
+.nav-item:hover { background: #f1f5f9 !important; color: #4f46e5 !important; }
+.nav-item-active { background: #ede9fe !important; color: #4f46e5 !important; font-weight: 700 !important; }
+.nav-item-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-footer {
+  margin-top: auto; padding-top: 1rem;
+  font-size: 0.68rem; color: #cbd5e1; line-height: 1.6;
+}
+
+/* ── Bottom tab items ── */
+.nav-tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  font-size: 0.68rem; font-weight: 500; color: #94a3b8;
+  transition: color 0.13s; padding: 6px 4px 8px; cursor: pointer;
+}
+.nav-tab:hover { color: #4f46e5; }
+.nav-tab-active { color: #4f46e5 !important; font-weight: 700 !important; }
+.nav-tab-icon { font-size: 1.3rem; line-height: 1; }
+.nav-tab-label { font-size: 0.65rem; }
 
 /* ── App background ── */
 [data-testid="stAppViewContainer"] { background: #f8fafc !important; }
@@ -257,51 +340,83 @@ def _agent_task(aid: str, biz_name: str) -> str:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  HEADER
+#  NAV  (desktop left sidebar + mobile bottom tab bar)
 # ════════════════════════════════════════════════════════════════════════════
-def render_header(show_back: bool = False, back_view: str = "home"):
-    clients = DB["get_all_clients"]()
-    n = len(clients)
+def render_nav(current_view: str):
+    client_id = st.session_state.active_client_id
+    audit_href = f"?nav=results&client={client_id}" if client_id else "?nav=home"
 
-    col_logo, col_actions = st.columns([3, 2])
-    with col_logo:
-        st.markdown("""
-<div style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0 0.4rem;">
-  <div style="width:34px;height:34px;border-radius:9px;
-       background:linear-gradient(135deg,#4f46e5,#7c3aed);
-       display:flex;align-items:center;justify-content:center;
-       color:#fff;font-weight:800;font-size:1.05rem;flex-shrink:0;">S</div>
-  <span style="font-weight:800;font-size:1.15rem;letter-spacing:-0.3px;">
-    <span style="color:#1e293b;">Snappy</span><span style="color:#4f46e5;">marketer</span>
-  </span>
-</div>""", unsafe_allow_html=True)
+    def _si(icon, label, href, view_key):
+        active = "nav-item-active" if current_view == view_key else ""
+        return (
+            f'<a href="{href}" class="nav-item {active}">'
+            f'<span class="nav-item-icon">{icon}</span>{label}</a>'
+        )
 
-    with col_actions:
-        btn_col1, btn_col2 = st.columns(2)
-        with btn_col1:
-            if show_back:
-                if st.button("← Back", key="hdr_back", use_container_width=True):
-                    st.session_state.view = back_view
-                    st.rerun()
-        with btn_col2:
-            label = f"My Audits ({n})" if n > 0 else "My Audits"
-            if st.button(label, key="hdr_saved", use_container_width=True):
-                st.session_state.view = "saved"
-                st.rerun()
+    def _tab(icon, label, href, view_key):
+        active = "nav-tab-active" if current_view == view_key else ""
+        return (
+            f'<a href="{href}" class="nav-tab {active}">'
+            f'<span class="nav-tab-icon">{icon}</span>'
+            f'<span class="nav-tab-label">{label}</span></a>'
+        )
 
-    st.markdown(
-        '<div style="height:3px;background:linear-gradient(90deg,#4f46e5,#7c3aed,transparent);'
-        'border-radius:2px;margin-bottom:1.25rem;"></div>',
-        unsafe_allow_html=True,
+    sidebar_items  = (
+        _si("🏠", "Home",       "?nav=home",  "home")
+        + _si("📊", "Audit",    audit_href,   "results")
+        + _si("🗂️", "Saved",    "?nav=saved", "saved")
     )
+    bottom_tabs = (
+        _tab("🏠", "Home",    "?nav=home",  "home")
+        + _tab("📊", "Audit",  audit_href,   "results")
+        + _tab("🗂️", "Saved",  "?nav=saved", "saved")
+    )
+
+    st.markdown(f"""
+<!-- Desktop left sidebar -->
+<div class="nav-sidebar">
+  <div class="nav-brand-row">
+    <div class="nav-brand-icon">S</div>
+    <div class="nav-brand-name">Snappy<span>marketer</span></div>
+  </div>
+  <div class="nav-tagline">AI Marketing Platform</div>
+  <div class="nav-divider"></div>
+  {sidebar_items}
+  <div class="nav-footer">snappymarketer<br>Powered by Claude + Firecrawl</div>
+</div>
+
+<!-- Mobile bottom tab bar -->
+<div class="nav-bottom">{bottom_tabs}</div>
+""", unsafe_allow_html=True)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  SILENT CLIENT LOADER  (used when arriving via URL query param)
+# ════════════════════════════════════════════════════════════════════════════
+def _load_client_silent(client_id: int):
+    """Load client research from DB into session state without calling st.rerun()."""
+    clients = DB["get_all_clients"]()
+    client = next((c for c in clients if c["id"] == client_id), None)
+    if not client:
+        return
+    saved = DB["get_latest_research"](client_id)
+    if saved:
+        st.session_state.research_result = {
+            "success": True,
+            "research": saved["research_data"],
+            "scraped_markdown": saved.get("scraped_markdown", ""),
+            "pages_crawled": saved.get("pages_crawled", 1),
+        }
+        st.session_state.active_client_id = client_id
+        st.session_state.active_client_name = client["name"]
+        st.session_state.agent_outputs = {}
+        st.session_state._agent_outputs_loaded_for = -1
 
 
 # ════════════════════════════════════════════════════════════════════════════
 #  VIEW: HOME
 # ════════════════════════════════════════════════════════════════════════════
 def view_home():
-    render_header()
-
     # Hero
     st.markdown("""
 <div style="text-align:center;padding:1.75rem 1rem 1.5rem;">
@@ -411,8 +526,6 @@ def view_home():
 #  VIEW: RUNNING (audit in progress)
 # ════════════════════════════════════════════════════════════════════════════
 def view_running():
-    render_header()
-
     pending = st.session_state.get("_pending_audit", {})
     url = pending.get("url", "")
     biz_name = pending.get("biz_name", "")
@@ -530,8 +643,6 @@ def view_results():
     score = data.get("overall_marketing_score", {})
     score_val = score.get("score", 0) if isinstance(score, dict) else 0
     score_color = "#22c55e" if score_val >= 70 else "#f59e0b" if score_val >= 50 else "#ef4444"
-
-    render_header(show_back=True, back_view="home")
 
     # ── Business card + score ────────────────────────────────────────────────
     industry = data.get("industry", "") or ""
@@ -910,8 +1021,6 @@ Answer questions about their marketing strategy, SEO, competitors, content gaps,
 #  VIEW: SAVED AUDITS
 # ════════════════════════════════════════════════════════════════════════════
 def view_saved():
-    render_header(show_back=True, back_view="home")
-
     st.markdown("## My Saved Audits")
     st.caption("All your past website audits. Open one to continue working with AI agents and chat.")
 
@@ -1095,7 +1204,30 @@ def _build_summary_markdown(data: dict) -> str:
 def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
 
+    # ── Query-param routing (used by nav <a href> links) ──────────────────
+    nav_param    = st.query_params.get("nav")
+    client_param = st.query_params.get("client")
+
+    # Load client from DB when arriving via URL (new session or page refresh)
+    if client_param:
+        try:
+            cid = int(client_param)
+            if (st.session_state.active_client_id != cid
+                    or not st.session_state.get("research_result")):
+                _load_client_silent(cid)
+        except (ValueError, TypeError):
+            pass
+
+    # Set the view from the URL param
+    if nav_param in ("home", "results", "saved"):
+        want = nav_param
+        if want == "results" and not st.session_state.get("research_result"):
+            want = "home"
+        st.session_state.view = want
+
     view = st.session_state.get("view", "home")
+
+    render_nav(view)
 
     if view == "home":
         view_home()
