@@ -536,54 +536,47 @@ _CHEV_RIGHT = "▸"
 
 
 def _section(title: str, key: str, default_open: bool = False) -> bool:
-    """Render a collapsible section. Returns True when open."""
-    is_open = st.session_state.get(f"_s_{key}", default_open)
-    chev  = _CHEV_DOWN  if is_open else _CHEV_RIGHT
-    bc    = "#a5b4fc"   if is_open else "#e2e8f0"
-    bg    = "#faf5ff"   if is_open else "#ffffff"
-    tc    = "#4f46e5"   if is_open else "#1e293b"
-    cc    = "#4f46e5"   if is_open else "#94a3b8"
-    br_l  = "10px 0 0 10px" if is_open else "10px 0 0 10px"
-    br_r  = "0 10px 10px 0" if is_open else "0 10px 10px 0"
+    """Render a collapsible section header. Returns True when open."""
+    is_open  = st.session_state.get(f"_s_{key}", default_open)
+    chev_css = '"▾"' if is_open else '"▸"'
+    bc   = "#a5b4fc" if is_open else "#e2e8f0"
+    bg   = "#faf5ff" if is_open else "#ffffff"
+    tc   = "#4f46e5" if is_open else "#1e293b"
+    cc   = "#4f46e5" if is_open else "#94a3b8"
 
-    # Glue the two columns together: remove gap + align heights
-    st.markdown("""
-<style>
-div[data-testid="stHorizontalBlock"]:has(> div[data-testid="stColumn"] > div > div > [class*="sec-title-"]) {
-    gap: 0 !important;
-    align-items: stretch !important;
-}
-</style>""", unsafe_allow_html=True)
-
-    col_title, col_btn = st.columns([0.91, 0.09])
-    with col_title:
-        st.markdown(
-            f'<div class="sec-title-{key}" style="height:46px;display:flex;align-items:center;'
-            f'padding:0 0.85rem;background:{bg};'
-            f'border-top:1.5px solid {bc};border-left:1.5px solid {bc};border-bottom:1.5px solid {bc};'
-            f'border-radius:{br_l};'
-            f'font-weight:600;font-size:0.875rem;color:{tc};">'
-            f'{title}</div>',
-            unsafe_allow_html=True,
-        )
-    with col_btn:
-        # Chevron button — CSS squares off the left edge to merge with title div
-        st.markdown(
-            f'<style>'
-            f'div[data-testid="stColumn"]:has(> div > div > button[title="sec_{key}"])'
-            f' button{{border-radius:{br_r}!important;border-left:none!important;'
-            f'background:{bg}!important;border-color:{bc}!important;'
-            f'color:{cc}!important;height:46px!important;min-height:46px!important;'
-            f'padding:0!important;display:flex!important;align-items:center!important;'
-            f'justify-content:center!important;box-shadow:none!important;}}'
-            f'div[data-testid="stColumn"]:has(> div > div > button[title="sec_{key}"])'
-            f' button:hover{{background:#ede9fe!important;color:#4f46e5!important;}}'
-            f'</style>',
-            unsafe_allow_html=True,
-        )
-        if st.button(chev, key=f"_sec_{key}", help=f"sec_{key}", use_container_width=True):
-            st.session_state[f"_s_{key}"] = not is_open
-            st.rerun()
+    # Single full-width button; CSS places title left + chevron right via ::after
+    st.markdown(
+        f'<style>'
+        f'button[title="sec_{key}"] {{'
+        f'  display:flex!important; flex-direction:row!important;'
+        f'  justify-content:space-between!important; align-items:center!important;'
+        f'  width:100%!important; height:46px!important;'
+        f'  padding:0 0.85rem!important;'
+        f'  background:{bg}!important; border:1.5px solid {bc}!important;'
+        f'  border-radius:10px!important; box-shadow:none!important;'
+        f'  text-align:left!important;'
+        f'}}'
+        f'button[title="sec_{key}"] p {{'
+        f'  margin:0!important; text-align:left!important; flex:1!important;'
+        f'  font-weight:600!important; font-size:0.875rem!important; color:{tc}!important;'
+        f'}}'
+        f'button[title="sec_{key}"]::after {{'
+        f'  content:{chev_css}; color:{cc}!important;'
+        f'  font-size:1.1rem!important; flex-shrink:0!important;'
+        f'}}'
+        f'button[title="sec_{key}"]:hover {{'
+        f'  background:#ede9fe!important;'
+        f'}}'
+        f'button[title="sec_{key}"]:hover p,'
+        f'button[title="sec_{key}"]:hover::after {{'
+        f'  color:#4f46e5!important;'
+        f'}}'
+        f'</style>',
+        unsafe_allow_html=True,
+    )
+    if st.button(title, key=f"_sec_{key}", help=f"sec_{key}", use_container_width=True):
+        st.session_state[f"_s_{key}"] = not is_open
+        st.rerun()
 
     return is_open
 
