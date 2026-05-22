@@ -24,6 +24,8 @@ st.set_page_config(
 APP_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
 /* ── Hide Streamlit sidebar + toggle completely ── */
@@ -302,6 +304,22 @@ hr { border-color: #e2e8f0 !important; margin: 1.25rem 0 !important; }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* ── Expander: hide arrow icon when Material Symbols font unavailable ── */
+[data-testid="stExpanderToggleIcon"] {
+  overflow: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
+  width: 16px !important; height: 16px !important;
+}
+[data-testid="stExpanderToggleIcon"] svg { width: 16px !important; height: 16px !important; }
+
+/* ── Chat input: align with content area on desktop ── */
+@media (min-width: 769px) {
+  [data-testid="stBottom"],
+  .stChatFloatingInputContainer { padding-left: 230px !important; }
+}
 
 /* ── Hide Streamlit footer ── */
 footer, [data-testid="stStatusWidget"] { display: none !important; }
@@ -599,16 +617,76 @@ def view_running():
     deep_crawl = pending.get("deep_crawl", False)
     crawl_limit = 10 if deep_crawl else 1
 
+    # ── Loading UI ───────────────────────────────────────────────────────────
     st.markdown(f"""
-<div style="text-align:center;padding:2rem 1rem 1.25rem;">
-  <div style="font-size:1.4rem;font-weight:700;color:#1e293b;margin-bottom:0.4rem;">
-    Auditing your website...
-  </div>
-  <div style="font-size:0.88rem;color:#64748b;">{url}</div>
+<style>
+@keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+@keyframes pulse {{ 0%,100%{{opacity:1}} 50%{{opacity:.4}} }}
+.audit-spinner {{
+  width:48px;height:48px;border-radius:50%;
+  border:3px solid #ede9fe;border-top-color:#4f46e5;
+  animation:spin 0.9s linear infinite;margin:0 auto 1.25rem;
+}}
+.audit-step {{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.6rem 1rem;border-radius:10px;margin-bottom:0.4rem;
+  background:#fff;border:1px solid #e2e8f0;font-size:0.88rem;
+}}
+.audit-step-icon {{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:0.7rem;
+}}
+.step-waiting {{ background:#f8fafc;color:#94a3b8; }}
+.step-active  {{ background:#faf5ff;border-color:#a5b4fc;color:#4f46e5;animation:pulse 1.5s ease-in-out infinite; }}
+.step-active .audit-step-icon {{ background:#4f46e5;color:#fff; }}
+.step-done    {{ background:#f0fdf4;border-color:#86efac;color:#166534; }}
+.step-done .audit-step-icon {{ background:#22c55e;color:#fff; }}
+</style>
+<div style="max-width:460px;margin:3rem auto 0;text-align:center;">
+  <div class="audit-spinner"></div>
+  <div style="font-size:1.4rem;font-weight:700;color:#1e293b;margin-bottom:0.3rem;">Auditing your website</div>
+  <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:1.75rem;">{url}</div>
 </div>""", unsafe_allow_html=True)
 
-    progress_bar = st.progress(0)
-    status_box = st.empty()
+    STEPS = [
+        "Scraping website content",
+        "Extracting pages & structure",
+        "Running AI marketing analysis",
+        "Building your audit report",
+    ]
+
+    step_box = st.empty()
+
+    def render_steps(active_idx: int, done_up_to: int):
+        html = '<div style="max-width:460px;margin:0 auto;">'
+        for i, label in enumerate(STEPS):
+            if i < done_up_to:
+                cls, icon = "step-done", "✓"
+            elif i == active_idx:
+                cls, icon = "step-active", str(i + 1)
+            else:
+                cls, icon = "step-waiting", str(i + 1)
+            html += (
+                f'<div class="audit-step {cls}">'
+                f'<div class="audit-step-icon">{icon}</div>'
+                f'<span>{label}</span></div>'
+            )
+        html += '</div>'
+        step_box.markdown(html, unsafe_allow_html=True)
+
+    render_steps(0, 0)
+
+    progress_bar = st.progress(10)
+
+    # Map raw progress messages to step indices
+    def _on_progress(msg: str):
+        m = msg.lower()
+        if "scraped" in m or "fallback" in m:
+            render_steps(1, 1)
+            progress_bar.progress(35)
+        elif "analysis" in m or "claude" in m or "sending" in m:
+            render_steps(2, 2)
+            progress_bar.progress(60)
 
     client_id = None
     if biz_name:
@@ -623,16 +701,15 @@ def view_running():
     try:
         from research_agent import run_research
 
-        progress_bar.progress(10)
-        status_box.info("Scraping your website...")
-
         result = run_research(
             url=url,
             deep_crawl=deep_crawl,
             crawl_limit=crawl_limit,
-            progress_callback=lambda msg: status_box.info(msg),
+            progress_callback=_on_progress,
         )
-        progress_bar.progress(90)
+
+        render_steps(3, 3)
+        progress_bar.progress(95)
 
         if result.get("success"):
             st.session_state.research_result = result
@@ -652,9 +729,9 @@ def view_running():
                     scrape_source=result.get("scrape_source", "firecrawl"),
                 )
 
+            render_steps(4, 4)
             progress_bar.progress(100)
-            status_box.success("Audit complete!")
-            time.sleep(0.4)
+            time.sleep(0.3)
             st.session_state._pending_audit = {}
             st.session_state.view = "results"
             st.rerun()
