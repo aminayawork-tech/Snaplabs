@@ -172,7 +172,10 @@ h1 a, h2 a, h3 a, h4 a { display: none !important; }
     border-color: #a5b4fc !important;
 }
 .stButton > button p,
-.stButton > button span { color: inherit !important; font-weight: inherit !important; font-size: inherit !important; }
+.stButton > button span,
+.stButton > button div { color: inherit !important; font-weight: inherit !important; font-size: inherit !important; }
+.stButton > button[kind="primary"],
+.stButton > button[kind="primary"] * { color: #ffffff !important; }
 
 /* ── Inputs ── */
 .stTextInput > div > div > input {
