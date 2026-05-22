@@ -24,8 +24,6 @@ st.set_page_config(
 APP_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
 /* ── Hide Streamlit sidebar + toggle completely ── */
@@ -305,15 +303,32 @@ hr { border-color: #e2e8f0 !important; margin: 1.25rem 0 !important; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-/* ── Expander: hide arrow icon when Material Symbols font unavailable ── */
+/* ── Expanders: replace Streamlit's icon (shows as "_arrow_down" text) ──
+   Hide everything inside the toggle icon div, then inject a CSS SVG chevron
+   via background-image — works with no font dependency at all.          ── */
+[data-testid="stExpanderToggleIcon"] > * { display: none !important; }
 [data-testid="stExpanderToggleIcon"] {
-  overflow: hidden !important;
-  font-size: 0 !important;
-  line-height: 0 !important;
-  color: transparent !important;
-  width: 16px !important; height: 16px !important;
+    width: 20px !important; height: 20px !important;
+    flex-shrink: 0 !important;
+    background-size: 15px 15px !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
 }
-[data-testid="stExpanderToggleIcon"] svg { width: 16px !important; height: 16px !important; }
+/* Collapsed → chevron-right */
+details:not([open]) [data-testid="stExpanderToggleIcon"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") !important;
+}
+/* Expanded → chevron-down (purple) */
+details[open] [data-testid="stExpanderToggleIcon"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+}
+/* Expander header: move chevron to right side */
+[data-testid="stExpanderHeader"] {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+[data-testid="stExpanderHeader"] > div:first-child { flex: 1 !important; }
 
 /* ── Chat input: align with content area on desktop ── */
 @media (min-width: 769px) {
@@ -434,14 +449,14 @@ def render_nav(current_view: str):
     def _si(svg, label, href, view_key):
         active = "nav-item-active" if current_view == view_key else ""
         return (
-            f'<a href="{href}" class="nav-item {active}">'
+            f'<a href="{href}" target="_self" class="nav-item {active}">'
             f'<span class="nav-item-icon">{svg}</span>{label}</a>'
         )
 
     def _tab(svg, label, href, view_key):
         active = "nav-tab-active" if current_view == view_key else ""
         return (
-            f'<a href="{href}" class="nav-tab {active}">'
+            f'<a href="{href}" target="_self" class="nav-tab {active}">'
             f'<span class="nav-tab-icon">{svg}</span>'
             f'<span class="nav-tab-label">{label}</span></a>'
         )
