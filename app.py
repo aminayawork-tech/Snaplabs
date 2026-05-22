@@ -150,11 +150,41 @@ h1 a, h2 a, h3 a, h4 a { display: none !important; }
     transition: all 0.15s ease !important;
     cursor: pointer !important;
 }
-.stButton > button[kind="primary"] {
+/* Primary buttons — use data-testid since Streamlit doesn't expose kind as attr */
+button[data-testid="stBaseButton-primary"],
+[data-testid="stFormSubmitButton"] button {
     background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    color: #fff !important;
+    color: #ffffff !important;
     border: none !important;
     box-shadow: 0 2px 8px rgba(79,70,229,0.25) !important;
+}
+button[data-testid="stBaseButton-primary"]:hover,
+[data-testid="stFormSubmitButton"] button:hover {
+    box-shadow: 0 4px 16px rgba(79,70,229,0.4) !important;
+    transform: translateY(-1px) !important;
+}
+button[data-testid="stBaseButton-primary"] *,
+[data-testid="stFormSubmitButton"] button * { color: #ffffff !important; }
+/* Secondary buttons */
+button[data-testid="stBaseButton-secondary"] {
+    background: #ffffff !important;
+    color: #475569 !important;
+    border: 1.5px solid #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+button[data-testid="stBaseButton-secondary"]:hover {
+    background: #f5f3ff !important;
+    color: #4f46e5 !important;
+    border-color: #a5b4fc !important;
+}
+/* Fallback for older Streamlit attribute selectors */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    color: #ffffff !important; border: none !important;
+}
+.stButton > button[kind="secondary"] {
+    background: #ffffff !important; color: #475569 !important;
+    border: 1.5px solid #e2e8f0 !important;
 }
 .stButton > button[kind="primary"]:hover {
     box-shadow: 0 4px 16px rgba(79,70,229,0.4) !important;
@@ -174,8 +204,6 @@ h1 a, h2 a, h3 a, h4 a { display: none !important; }
 .stButton > button p,
 .stButton > button span,
 .stButton > button div { color: inherit !important; font-weight: inherit !important; font-size: inherit !important; }
-.stButton > button[kind="primary"],
-.stButton > button[kind="primary"] * { color: #ffffff !important; }
 
 /* ── Inputs ── */
 .stTextInput > div > div > input {
@@ -1244,25 +1272,33 @@ def main():
     st.markdown(APP_CSS, unsafe_allow_html=True)
 
     # ── Query-param routing (used by nav <a href> links) ──────────────────
+    # Only process params when they actually change (i.e. a real nav click or
+    # fresh page load). Comparing to _last_nav_param prevents the params from
+    # overriding in-session view changes (e.g. view="running" during an audit).
     nav_param    = st.query_params.get("nav")
     client_param = st.query_params.get("client")
 
-    # Load client from DB when arriving via URL (new session or page refresh)
-    if client_param:
-        try:
-            cid = int(client_param)
-            if (st.session_state.active_client_id != cid
-                    or not st.session_state.get("research_result")):
-                _load_client_silent(cid)
-        except (ValueError, TypeError):
-            pass
+    last_nav    = st.session_state.get("_last_nav_param",    "__unset__")
+    last_client = st.session_state.get("_last_client_param", "__unset__")
 
-    # Set the view from the URL param
-    if nav_param in ("home", "results", "saved"):
-        want = nav_param
-        if want == "results" and not st.session_state.get("research_result"):
-            want = "home"
-        st.session_state.view = want
+    if nav_param != last_nav or client_param != last_client:
+        st.session_state._last_nav_param    = nav_param
+        st.session_state._last_client_param = client_param
+
+        if client_param:
+            try:
+                cid = int(client_param)
+                if (st.session_state.active_client_id != cid
+                        or not st.session_state.get("research_result")):
+                    _load_client_silent(cid)
+            except (ValueError, TypeError):
+                pass
+
+        if nav_param in ("home", "results", "saved"):
+            want = nav_param
+            if want == "results" and not st.session_state.get("research_result"):
+                want = "home"
+            st.session_state.view = want
 
     view = st.session_state.get("view", "home")
 
