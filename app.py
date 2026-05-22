@@ -90,14 +90,18 @@ button[data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
 
 /* ── Sidebar nav items ── */
 .nav-item {
-  display: flex; align-items: center; gap: 0.6rem;
+  display: flex; align-items: center; gap: 0.65rem;
   padding: 0.55rem 0.75rem; border-radius: 9px; margin-bottom: 2px;
   font-size: 0.875rem; font-weight: 500; color: #64748b;
   transition: background 0.13s, color 0.13s; cursor: pointer;
 }
 .nav-item:hover { background: #f1f5f9 !important; color: #4f46e5 !important; }
 .nav-item-active { background: #ede9fe !important; color: #4f46e5 !important; font-weight: 700 !important; }
-.nav-item-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-item-icon {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-item-icon svg { width: 18px; height: 18px; stroke: currentColor; }
 .nav-footer {
   margin-top: auto; padding-top: 1rem;
   font-size: 0.68rem; color: #cbd5e1; line-height: 1.6;
@@ -106,13 +110,17 @@ button[data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
 /* ── Bottom tab items ── */
 .nav-tab {
   flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
+  align-items: center; justify-content: center; gap: 3px;
   font-size: 0.68rem; font-weight: 500; color: #94a3b8;
   transition: color 0.13s; padding: 6px 4px 8px; cursor: pointer;
 }
 .nav-tab:hover { color: #4f46e5; }
 .nav-tab-active { color: #4f46e5 !important; font-weight: 700 !important; }
-.nav-tab-icon { font-size: 1.3rem; line-height: 1; }
+.nav-tab-icon {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-tab-icon svg { width: 22px; height: 22px; stroke: currentColor; }
 .nav-tab-label { font-size: 0.65rem; }
 
 /* ── App background ── */
@@ -316,14 +324,22 @@ for _k, _v in DEFAULTS.items():
         st.session_state[_k] = _v
 
 # ── Agent config ─────────────────────────────────────────────────────────────
+_SVG_PENCIL  = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+_SVG_SEARCH  = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+_SVG_MEGAPHONE = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>'
+_SVG_SHARE   = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
+_SVG_MAIL    = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'
+_SVG_TARGET  = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+_SVG_STAR    = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+
 AGENT_META = {
-    "content_engine": {"label": "Content",      "emoji": "✍️"},
-    "seo":            {"label": "SEO",           "emoji": "🔍"},
-    "paid_ads":       {"label": "Paid Ads",      "emoji": "📢"},
-    "social_media":   {"label": "Social Media",  "emoji": "📱"},
-    "email_sms":      {"label": "Email / SMS",   "emoji": "📧"},
-    "lead_gen":       {"label": "Lead Gen",      "emoji": "🎯"},
-    "review_referral":{"label": "Reviews",       "emoji": "⭐"},
+    "content_engine":  {"label": "Content",     "svg": _SVG_PENCIL},
+    "seo":             {"label": "SEO",          "svg": _SVG_SEARCH},
+    "paid_ads":        {"label": "Paid Ads",     "svg": _SVG_MEGAPHONE},
+    "social_media":    {"label": "Social Media", "svg": _SVG_SHARE},
+    "email_sms":       {"label": "Email / SMS",  "svg": _SVG_MAIL},
+    "lead_gen":        {"label": "Lead Gen",     "svg": _SVG_TARGET},
+    "review_referral": {"label": "Reviews",      "svg": _SVG_STAR},
 }
 
 def _agent_task(aid: str, biz_name: str) -> str:
@@ -342,34 +358,54 @@ def _agent_task(aid: str, biz_name: str) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 #  NAV  (desktop left sidebar + mobile bottom tab bar)
 # ════════════════════════════════════════════════════════════════════════════
+_SVG_HOME = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/>'
+    '<path d="M9 21V12h6v9"/>'
+    '</svg>'
+)
+_SVG_AUDIT = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<line x1="18" y1="20" x2="18" y2="10"/>'
+    '<line x1="12" y1="20" x2="12" y2="4"/>'
+    '<line x1="6" y1="20" x2="6" y2="14"/>'
+    '</svg>'
+)
+_SVG_SAVED = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'
+    '</svg>'
+)
+
+
 def render_nav(current_view: str):
     client_id = st.session_state.active_client_id
     audit_href = f"?nav=results&client={client_id}" if client_id else "?nav=home"
 
-    def _si(icon, label, href, view_key):
+    def _si(svg, label, href, view_key):
         active = "nav-item-active" if current_view == view_key else ""
         return (
             f'<a href="{href}" class="nav-item {active}">'
-            f'<span class="nav-item-icon">{icon}</span>{label}</a>'
+            f'<span class="nav-item-icon">{svg}</span>{label}</a>'
         )
 
-    def _tab(icon, label, href, view_key):
+    def _tab(svg, label, href, view_key):
         active = "nav-tab-active" if current_view == view_key else ""
         return (
             f'<a href="{href}" class="nav-tab {active}">'
-            f'<span class="nav-tab-icon">{icon}</span>'
+            f'<span class="nav-tab-icon">{svg}</span>'
             f'<span class="nav-tab-label">{label}</span></a>'
         )
 
-    sidebar_items  = (
-        _si("🏠", "Home",       "?nav=home",  "home")
-        + _si("📊", "Audit",    audit_href,   "results")
-        + _si("🗂️", "Saved",    "?nav=saved", "saved")
+    sidebar_items = (
+        _si(_SVG_HOME,  "Home",  "?nav=home",  "home")
+        + _si(_SVG_AUDIT, "Audit",  audit_href,   "results")
+        + _si(_SVG_SAVED, "Saved",  "?nav=saved", "saved")
     )
     bottom_tabs = (
-        _tab("🏠", "Home",    "?nav=home",  "home")
-        + _tab("📊", "Audit",  audit_href,   "results")
-        + _tab("🗂️", "Saved",  "?nav=saved", "saved")
+        _tab(_SVG_HOME,  "Home",  "?nav=home",  "home")
+        + _tab(_SVG_AUDIT, "Audit",  audit_href,   "results")
+        + _tab(_SVG_SAVED, "Saved",  "?nav=saved", "saved")
     )
 
     st.markdown(f"""
@@ -867,7 +903,7 @@ def view_results():
         meta = AGENT_META[aid]
         has_output = bool(st.session_state.agent_outputs.get(aid))
         done_badge = " ✓" if has_output else ""
-        label = f"{meta['emoji']} {meta['label']}{done_badge}"
+        label = f"{meta['label']}{done_badge}"
         with cols[i % 3]:
             if st.button(label, key=f"agent_btn_{aid}", use_container_width=True):
                 task = _agent_task(aid, biz_name)
@@ -913,9 +949,9 @@ def view_results():
     if outputs:
         st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
         for aid, out in outputs.items():
-            meta = AGENT_META.get(aid, {"emoji": "◈", "label": aid})
+            meta = AGENT_META.get(aid, {"label": aid})
             ts = out.get("timestamp", "")
-            with st.expander(f"**{meta['emoji']} {meta['label']} Agent** — {ts}"):
+            with st.expander(f"**{meta['label']} Agent** — {ts}"):
                 st.markdown(out.get("output", ""))
 
     st.divider()
