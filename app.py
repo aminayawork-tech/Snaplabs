@@ -64,7 +64,13 @@ button[data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
     display: flex !important; align-items: stretch;
     box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
   }
-  .block-container { padding-bottom: 74px !important; max-width: 100% !important; }
+  /* Higher specificity than .main .block-container to win on mobile */
+  .main .block-container {
+    padding: 0.75rem 0.85rem 80px !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
 }
 
 /* ── Nav shared ── */
@@ -123,14 +129,23 @@ button[data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
 .nav-tab-icon svg { width: 22px; height: 22px; stroke: currentColor; }
 .nav-tab-label { font-size: 0.65rem; }
 
+/* ── Prevent horizontal overflow causing mobile zoom-out ── */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+* { box-sizing: border-box !important; }
+
 /* ── App background ── */
-[data-testid="stAppViewContainer"] { background: #f8fafc !important; }
+[data-testid="stAppViewContainer"] { background: #f8fafc !important; overflow-x: hidden !important; }
 [data-testid="stHeader"] { background: transparent !important; box-shadow: none !important; }
 
 /* ── Max width / centered ── */
 .main .block-container {
     max-width: 740px !important;
     padding: 1rem 1.25rem 4rem !important;
+    word-break: break-word !important;
+    overflow-x: hidden !important;
 }
 
 /* ── Typography ── */
@@ -544,37 +559,44 @@ def _section(title: str, key: str, default_open: bool = False) -> bool:
     tc   = "#4f46e5" if is_open else "#1e293b"
     cc   = "#4f46e5" if is_open else "#94a3b8"
 
-    # Single full-width button; CSS places title left + chevron right via ::after
+    # Invisible anchor div + CSS in ONE markdown call → becomes one element-container.
+    # The immediately adjacent element-container holds the button (no help= → no tooltip).
+    # CSS :has() adjacent-sibling selector targets that button without any title attribute.
     st.markdown(
+        f'<div class="sec-anc-{key}" style="display:none;height:0;overflow:hidden"></div>'
         f'<style>'
-        f'button[title="sec_{key}"] {{'
-        f'  display:flex!important; flex-direction:row!important;'
-        f'  justify-content:space-between!important; align-items:center!important;'
-        f'  width:100%!important; height:46px!important;'
-        f'  padding:0 0.85rem!important;'
-        f'  background:{bg}!important; border:1.5px solid {bc}!important;'
-        f'  border-radius:10px!important; box-shadow:none!important;'
-        f'  text-align:left!important;'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button {{'
+        f'  display:flex!important;flex-direction:row!important;'
+        f'  justify-content:space-between!important;align-items:center!important;'
+        f'  width:100%!important;height:46px!important;padding:0 0.85rem!important;'
+        f'  background:{bg}!important;border:1.5px solid {bc}!important;'
+        f'  border-radius:10px!important;box-shadow:none!important;text-align:left!important;'
         f'}}'
-        f'button[title="sec_{key}"] p {{'
-        f'  margin:0!important; text-align:left!important; flex:1!important;'
-        f'  font-weight:600!important; font-size:0.875rem!important; color:{tc}!important;'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button p {{'
+        f'  margin:0!important;text-align:left!important;flex:1!important;'
+        f'  font-weight:600!important;font-size:0.875rem!important;color:{tc}!important;'
         f'}}'
-        f'button[title="sec_{key}"]::after {{'
-        f'  content:{chev_css}; color:{cc}!important;'
-        f'  font-size:1.1rem!important; flex-shrink:0!important;'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button::after {{'
+        f'  content:{chev_css};color:{cc}!important;font-size:1.1rem!important;flex-shrink:0!important;'
         f'}}'
-        f'button[title="sec_{key}"]:hover {{'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button:hover {{'
         f'  background:#ede9fe!important;'
         f'}}'
-        f'button[title="sec_{key}"]:hover p,'
-        f'button[title="sec_{key}"]:hover::after {{'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button:hover p,'
+        f'[data-testid="element-container"]:has(.sec-anc-{key})'
+        f' + [data-testid="element-container"] button:hover::after {{'
         f'  color:#4f46e5!important;'
         f'}}'
         f'</style>',
         unsafe_allow_html=True,
     )
-    if st.button(title, key=f"_sec_{key}", help=f"sec_{key}", use_container_width=True):
+    # No help= parameter → zero tooltip
+    if st.button(title, key=f"_sec_{key}", use_container_width=True):
         st.session_state[f"_s_{key}"] = not is_open
         st.rerun()
 
