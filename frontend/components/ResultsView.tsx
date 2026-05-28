@@ -1,5 +1,5 @@
 "use client";
-import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput } from "@/lib/types";
+import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput, Keyword } from "@/lib/types";
 import Section from "./Section";
 import AgentGrid from "./AgentGrid";
 import ChatPanel from "./ChatPanel";
@@ -109,15 +109,30 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
 
       <Section title="SEO & Keywords">
         {keywords.length > 0 && (
-          <div className="mb-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Target Keywords</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="mb-4">
+            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Long-tail Keyword Opportunities</p>
+            <div className="flex flex-col gap-2">
               {keywords.slice(0, 15).map((kw, i) => {
-                const txt = typeof kw === "string" ? kw : (kw as { keyword: string }).keyword ?? String(kw);
+                const obj = typeof kw === "string" ? { keyword: kw } : (kw as Keyword);
+                const diff = (obj.difficulty ?? "").toLowerCase();
+                const intent = (obj.intent ?? "").toLowerCase();
+                const vol = obj.monthly_searches ?? "";
+                const diffColor = diff === "low" ? "bg-green-100 text-green-700" : diff === "medium" ? "bg-amber-100 text-amber-700" : diff === "high" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500";
+                const intentColor = intent === "transactional" ? "bg-purple-100 text-purple-700" : intent === "commercial" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500";
                 return (
-                  <span key={i} className="bg-brand-100 text-brand px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {txt}
-                  </span>
+                  <div key={i} className="border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-semibold text-slate-800 flex-1 min-w-[160px]">{obj.keyword}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {vol && (
+                        <span className="flex items-center gap-1 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                          {vol}/mo
+                        </span>
+                      )}
+                      {diff && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${diffColor}`}>{diff} difficulty</span>}
+                      {intent && <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${intentColor}`}>{intent}</span>}
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -125,8 +140,8 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         )}
         {techIssues.length > 0 && (
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Technical Issues to Fix</p>
-            <ul className="list-disc list-inside text-sm text-slate-600 space-y-0.5">
+            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">Technical Issues to Fix</p>
+            <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
               {techIssues.slice(0, 8).map((t, i) => <li key={i}>{t}</li>)}
             </ul>
           </div>
@@ -138,20 +153,49 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
 
       <Section title="Competitors">
         {competitors.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {competitors.slice(0, 6).map((comp, i) => {
               if (typeof comp !== "object") return <p key={i} className="text-sm text-slate-600">- {String(comp)}</p>;
               const cName     = comp.name ?? comp.competitor_name ?? "Competitor";
               const cUrl      = comp.url ?? comp.website ?? "";
               const strength  = comp.strengths ?? comp.key_strength ?? comp.strength ?? "";
               const weakness  = comp.weaknesses ?? comp.weakness ?? "";
+              const traffic   = comp.estimated_traffic ?? "";
+              const rankingKws = comp.top_ranking_keywords ?? [];
               return (
-                <div key={i} className="border border-slate-200 rounded-xl px-4 py-3">
-                  <p className="font-extrabold text-[#6b21d6] text-base">{cName}
-                    {cUrl && <span className="font-normal text-slate-400 text-xs ml-2">{cUrl}</span>}
-                  </p>
-                  {strength && <p className="text-sm text-slate-700 mt-1"><span className="font-bold text-[#6b21d6]">Strength:</span> {String(strength).slice(0, 200)}</p>}
-                  {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#6b21d6]">Weakness:</span> {String(weakness).slice(0, 200)}</p>}
+                <div key={i} className="border border-slate-200 rounded-xl px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="font-extrabold text-[#6b21d6] text-base leading-tight">{cName}</p>
+                    {traffic && (
+                      <span className="flex-shrink-0 text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        ~{traffic}
+                      </span>
+                    )}
+                  </div>
+                  {cUrl && (
+                    <a
+                      href={cUrl.startsWith("http") ? cUrl : `https://${cUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-brand underline underline-offset-2 hover:text-brand-600 break-all"
+                    >
+                      {cUrl}
+                    </a>
+                  )}
+                  {strength && <p className="text-sm text-slate-700 mt-2"><span className="font-bold text-[#6b21d6]">Strength:</span> {String(strength).slice(0, 220)}</p>}
+                  {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#6b21d6]">Weakness:</span> {String(weakness).slice(0, 220)}</p>}
+                  {rankingKws.length > 0 && (
+                    <div className="mt-2.5">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Likely ranking for</p>
+                      <div className="flex flex-wrap gap-1">
+                        {rankingKws.slice(0, 6).map((kw, ki) => (
+                          <span key={ki} className="bg-brand-50 text-brand text-xs font-medium px-2 py-0.5 rounded-full border border-brand-200">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -9,6 +9,13 @@ export interface Client {
   industry?: string;
 }
 
+export interface Keyword {
+  keyword: string;
+  intent?: string;
+  difficulty?: string;
+  monthly_searches?: string;
+}
+
 export interface Competitor {
   name?: string;
   competitor_name?: string;
@@ -19,6 +26,8 @@ export interface Competitor {
   strength?: string;
   weaknesses?: string;
   weakness?: string;
+  top_ranking_keywords?: string[];
+  estimated_traffic?: string;
 }
 
 export interface QuickWin {
@@ -50,7 +59,7 @@ export interface ResearchData {
     target_keywords?: (string | { keyword: string })[];
     technical_issues?: string[];
   };
-  top_10_longtail_keywords?: (string | { keyword: string })[];
+  top_10_longtail_keywords?: (string | Keyword)[];
   target_keywords?: string[];
   technical_seo_issues?: string[];
   competitor_analysis?: Competitor[];

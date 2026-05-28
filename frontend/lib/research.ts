@@ -22,10 +22,22 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
   "current_marketing_strengths": ["strength 1","strength 2"],
   "current_marketing_gaps": ["gap 1","gap 2","gap 3"],
   "top_10_longtail_keywords": [
-    {"keyword":"...","intent":"informational|commercial|transactional","difficulty":"low|medium|high"}
+    {
+      "keyword": "...",
+      "intent": "informational|commercial|transactional",
+      "difficulty": "low|medium|high",
+      "monthly_searches": "estimated range e.g. '100-500', '1K-5K', '10K-50K', '50K+'"
+    }
   ],
   "competitor_analysis": [
-    {"name":"...","strengths":"...","weaknesses":"...","estimated_traffic":"..."}
+    {
+      "name": "...",
+      "url": "https://theirwebsite.com",
+      "strengths": "...",
+      "weaknesses": "...",
+      "estimated_traffic": "e.g. '10K-50K/mo'",
+      "top_ranking_keywords": ["keyword they likely rank for 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]
+    }
   ],
   "quick_win_opportunities": [
     {"tactic":"...","timeline":"...","expected_impact":"...","effort":"low|medium|high"}
