@@ -23,13 +23,15 @@ interface WinCardProps {
   index: number;
   researchData: AuditResult["data"];
   bizName: string;
+  personas: AudiencePersona[];
   onAgentOutput?: (agentId: string, output: AgentOutput) => void;
 }
 
-function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinCardProps) {
+function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutput }: WinCardProps) {
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<AgentOutput | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<number | "all">("all");
 
   const title    = win.tactic ?? win.title ?? win.opportunity ?? `Win #${index + 1}`;
   const effort   = (win.effort ?? "").toLowerCase();
@@ -42,13 +44,30 @@ function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinC
   const effortColor = effort.includes("low")
     ? "bg-green-500" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
 
-  const taskOverride = [title, impact].filter(Boolean).join(" — Expected outcome: ");
+  const buildTaskOverride = () => {
+    const base = [title, impact].filter(Boolean).join(" — Expected outcome: ");
+    if (selectedPersona === "all" || personas.length === 0) return base;
+    const p = personas[selectedPersona as number];
+    if (!p) return base;
+    const parts = [
+      `Persona: ${p.persona_name ?? "Target audience"}`,
+      p.demographics && `Demographics: ${p.demographics}`,
+      (p.pain_points ?? []).length > 0 && `Pain points: ${(p.pain_points ?? []).join(", ")}`,
+      p.where_to_reach && `Where to reach them: ${p.where_to_reach}`,
+    ].filter(Boolean).join("\n");
+    return `${base}\n\nTARGET AUDIENCE FOR THIS CONTENT:\n${parts}`;
+  };
 
   const activate = async () => {
     if (running) return;
     setRunning(true);
     try {
-      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName, task_override: taskOverride });
+      const res = await api.agents.run({
+        agent_id: agentId,
+        research_data: researchData,
+        biz_name: bizName,
+        task_override: buildTaskOverride(),
+      });
       if (res.success && res.output) {
         const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
         const out: AgentOutput = { output: res.output, timestamp: ts };
@@ -84,6 +103,53 @@ function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinC
 
       {open && (
         <div className="border-t border-slate-100 px-4 py-4 bg-slate-50">
+
+          {/* Audience selector */}
+          {personas.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">Who are we targeting?</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setSelectedPersona("all"); setOutput(null); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    selectedPersona === "all"
+                      ? "bg-[#6b21d6] text-white border-[#6b21d6]"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-[#c4a8e8]"
+                  }`}
+                >
+                  All audiences
+                </button>
+                {personas.map((p, pi) => (
+                  <button
+                    key={pi}
+                    onClick={() => { setSelectedPersona(pi); setOutput(null); }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                      selectedPersona === pi
+                        ? "bg-[#6b21d6] text-white border-[#6b21d6]"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-[#c4a8e8]"
+                    }`}
+                  >
+                    {p.persona_name ?? `Segment ${pi + 1}`}
+                  </button>
+                ))}
+              </div>
+              {selectedPersona !== "all" && personas[selectedPersona as number] && (
+                <div className="mt-2 bg-white border border-[#c4a8e8] rounded-xl px-3 py-2.5 text-xs text-slate-600">
+                  <span className="font-bold text-[#6b21d6]">Demographics: </span>
+                  {personas[selectedPersona as number].demographics}
+                  {(personas[selectedPersona as number].pain_points ?? []).length > 0 && (
+                    <><br /><span className="font-bold text-[#6b21d6]">Pain points: </span>
+                    {(personas[selectedPersona as number].pain_points ?? []).slice(0, 3).join(" · ")}</>
+                  )}
+                  {personas[selectedPersona as number].where_to_reach && (
+                    <><br /><span className="font-bold text-[#6b21d6]">Where to reach: </span>
+                    {personas[selectedPersona as number].where_to_reach}</>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {steps.length > 0 && (
             <div className="mb-4">
               <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">How to Complete</p>
@@ -350,6 +416,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
                   index={i}
                   researchData={data}
                   bizName={bizName}
+                  personas={personas}
                   onAgentOutput={onAgentOutput}
                 />
               )
