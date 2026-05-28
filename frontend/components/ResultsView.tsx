@@ -1,8 +1,138 @@
 "use client";
+import { useState } from "react";
 import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput, Keyword } from "@/lib/types";
+import { AGENTS } from "@/lib/types";
+import { api } from "@/lib/api";
 import Section from "./Section";
 import AgentGrid from "./AgentGrid";
 import ChatPanel from "./ChatPanel";
+
+function guessAgentId(tactic: string): string {
+  const t = tactic.toLowerCase();
+  if (/review|testimonial|referral|houzz|google review/.test(t)) return "review_referral";
+  if (/email|sms|newsletter|nurture|drip/.test(t)) return "email_sms";
+  if (/instagram|linkedin|social|tiktok|facebook|pinterest/.test(t)) return "social_media";
+  if (/paid|ppc|google ads|facebook ads|retarget|ad spend/.test(t)) return "paid_ads";
+  if (/lead|landing page|form|capture|cta|funnel/.test(t)) return "lead_gen";
+  if (/blog|content|article|post|copy|write/.test(t)) return "content_engine";
+  return "seo";
+}
+
+interface WinCardProps {
+  win: QuickWin;
+  index: number;
+  researchData: AuditResult["data"];
+  bizName: string;
+  onAgentOutput?: (agentId: string, output: AgentOutput) => void;
+}
+
+function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinCardProps) {
+  const [open, setOpen] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [output, setOutput] = useState<AgentOutput | null>(null);
+
+  const title    = win.tactic ?? win.title ?? win.opportunity ?? `Win #${index + 1}`;
+  const effort   = (win.effort ?? "").toLowerCase();
+  const impact   = win.expected_impact ?? win.impact ?? "";
+  const timeline = win.timeline ?? "";
+  const steps    = win.how_to_steps ?? [];
+  const agentId  = guessAgentId(title);
+  const agentMeta = AGENTS.find((a) => a.id === agentId);
+
+  const effortColor = effort.includes("low")
+    ? "bg-green-500" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
+
+  const activate = async () => {
+    if (running) return;
+    setRunning(true);
+    try {
+      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName });
+      if (res.success && res.output) {
+        const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        const out: AgentOutput = { output: res.output, timestamp: ts };
+        setOutput(out);
+        onAgentOutput?.(agentId, out);
+      }
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition"
+      >
+        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f3eef8] text-[#6b21d6] text-xs font-extrabold flex items-center justify-center mt-0.5">
+          {index + 1}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-800 text-sm leading-snug">{title}</p>
+          {impact && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{String(impact)}</p>}
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {effort && <span className={`${effortColor} text-white text-[0.68rem] font-bold px-2 py-0.5 rounded`}>{effort} effort</span>}
+            {timeline && <span className="bg-brand-100 text-brand text-[0.68rem] font-semibold px-2 py-0.5 rounded">{timeline}</span>}
+          </div>
+        </div>
+        <span className={`flex-shrink-0 text-slate-400 mt-1 transition-transform duration-150 ${open ? "rotate-180" : ""}`}>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 px-4 py-4 bg-slate-50">
+          {steps.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">How to Complete</p>
+              <ol className="space-y-2">
+                {steps.map((s, si) => (
+                  <li key={si} className="flex gap-2.5 text-sm text-slate-700">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-[#c4a8e8] text-[#6b21d6] text-xs font-bold flex items-center justify-center mt-0.5">
+                      {si + 1}
+                    </span>
+                    <span>{s.replace(/^Step \d+:\s*/i, "")}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {!output ? (
+            <button
+              onClick={activate}
+              disabled={running}
+              className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition"
+            >
+              {running ? (
+                <>
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
+                  Running {agentMeta?.label ?? agentId} Agent…
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Activate {agentMeta?.label ?? agentId} Agent
+                </>
+              )}
+            </button>
+          ) : (
+            <div>
+              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">
+                {agentMeta?.label} Agent Output · {output.timestamp}
+              </p>
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                {output.output}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   result: AuditResult;
@@ -208,32 +338,20 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
       <Section title="Quick Wins — Actionable Opportunities">
         {wins.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {wins.map((w, i) => {
-              if (typeof w !== "object") return <p key={i} className="text-sm text-slate-600">- {String(w)}</p>;
-              const title   = w.tactic ?? w.title ?? w.opportunity ?? `Win #${i + 1}`;
-              const effort  = (w.effort ?? "").toLowerCase();
-              const impact  = w.expected_impact ?? w.impact ?? "";
-              const timeline = w.timeline ?? "";
-              const effortColor = effort.includes("low") ? "bg-green-500" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
-              return (
-                <div key={i} className="border border-slate-200 rounded-xl px-4 py-3">
-                  <p className="font-semibold text-slate-800 text-sm mb-1">{i + 1}. {title}</p>
-                  {impact && <p className="text-xs text-slate-600 mb-2">{String(impact).slice(0, 160)}</p>}
-                  <div className="flex gap-1.5">
-                    {effort && (
-                      <span className={`${effortColor} text-white text-[0.68rem] font-bold px-2 py-0.5 rounded`}>
-                        {effort} effort
-                      </span>
-                    )}
-                    {timeline && (
-                      <span className="bg-brand-100 text-brand text-[0.68rem] font-semibold px-2 py-0.5 rounded">
-                        {timeline}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {wins.map((w, i) =>
+              typeof w !== "object" ? (
+                <p key={i} className="text-sm text-slate-600">- {String(w)}</p>
+              ) : (
+                <QuickWinCard
+                  key={i}
+                  win={w}
+                  index={i}
+                  researchData={data}
+                  bizName={bizName}
+                  onAgentOutput={onAgentOutput}
+                />
+              )
+            )}
           </div>
         ) : (
           <p className="text-sm text-slate-400">No quick wins identified.</p>

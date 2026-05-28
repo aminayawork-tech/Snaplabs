@@ -40,7 +40,13 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
     }
   ],
   "quick_win_opportunities": [
-    {"tactic":"...","timeline":"...","expected_impact":"...","effort":"low|medium|high"}
+    {
+      "tactic": "...",
+      "timeline": "...",
+      "expected_impact": "...",
+      "effort": "low|medium|high",
+      "how_to_steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
+    }
   ],
   "overall_marketing_score": {"score":0,"max_score":100,"summary":"One sentence summary"}
 }

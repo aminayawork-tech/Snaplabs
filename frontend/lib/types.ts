@@ -38,6 +38,7 @@ export interface QuickWin {
   expected_impact?: string;
   impact?: string;
   timeline?: string;
+  how_to_steps?: string[];
 }
 
 export interface AudiencePersona {
