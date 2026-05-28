@@ -9,11 +9,11 @@ import clsx from "clsx";
 interface Props {
   researchData: ResearchData;
   bizName: string;
-  clientId?: number;
   initialOutputs?: Record<string, AgentOutput>;
+  onAgentOutput?: (agentId: string, output: AgentOutput) => void;
 }
 
-export default function AgentGrid({ researchData, bizName, clientId, initialOutputs = {} }: Props) {
+export default function AgentGrid({ researchData, bizName, initialOutputs = {}, onAgentOutput }: Props) {
   const [outputs, setOutputs] = useState<Record<string, AgentOutput>>(initialOutputs);
   const [running, setRunning] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
@@ -23,10 +23,12 @@ export default function AgentGrid({ researchData, bizName, clientId, initialOutp
     if (running || runningAll) return;
     setRunning(agentId);
     try {
-      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName, client_id: clientId });
+      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName });
       if (res.success && res.output) {
         const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-        setOutputs((o) => ({ ...o, [agentId]: { output: res.output!, timestamp: ts } }));
+        const out: AgentOutput = { output: res.output, timestamp: ts };
+        setOutputs((o) => ({ ...o, [agentId]: out }));
+        onAgentOutput?.(agentId, out);
       }
     } finally {
       setRunning(null);
@@ -37,14 +39,16 @@ export default function AgentGrid({ researchData, bizName, clientId, initialOutp
     if (running || runningAll) return;
     setRunningAll(true);
     try {
-      for await (const ev of api.agents.runAll({ research_data: researchData, biz_name: bizName, client_id: clientId })) {
+      for await (const ev of api.agents.runAll({ research_data: researchData, biz_name: bizName })) {
         if (ev.type === "agent_start") {
           const meta = AGENTS.find((a) => a.id === ev.agent_id);
           setAllProgress(`Running ${(ev.index as number) + 1}/${ev.total as number}: ${meta?.label ?? ev.agent_id}...`);
         }
         if (ev.type === "agent_done") {
           const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-          setOutputs((o) => ({ ...o, [ev.agent_id as string]: { output: ev.output as string, timestamp: ts } }));
+          const out: AgentOutput = { output: ev.output as string, timestamp: ts };
+          setOutputs((o) => ({ ...o, [ev.agent_id as string]: out }));
+          onAgentOutput?.(ev.agent_id as string, out);
         }
       }
       setAllProgress("All agents complete!");

@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
-import type { Client } from "@/lib/types";
+import { storage } from "@/lib/storage";
+import type { SavedAudit } from "@/lib/storage";
 
 interface Props {
-  onOpen: (clientId: number) => void;
+  onOpen: (id: string) => void;
 }
 
 function scoreColor(s: number) {
@@ -12,25 +12,20 @@ function scoreColor(s: number) {
 }
 
 export default function SavedView({ onOpen }: Props) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [audits, setAudits] = useState<SavedAudit[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  const load = () => api.clients.list().then(setClients).catch(() => {});
+  useEffect(() => { setAudits(storage.list()); }, []);
 
-  useEffect(() => { load(); }, []);
-
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: string) => {
     if (!confirm("Delete this audit? This cannot be undone.")) return;
     setDeleting(id);
-    try {
-      await api.clients.delete(id);
-      setClients((c) => c.filter((x) => x.id !== id));
-    } finally {
-      setDeleting(null);
-    }
+    storage.delete(id);
+    setAudits((a) => a.filter((x) => x.id !== id));
+    setDeleting(null);
   };
 
-  if (clients.length === 0) {
+  if (audits.length === 0) {
     return (
       <div className="view-enter">
         <h2 className="text-xl font-bold text-slate-800 mb-1">My Saved Audits</h2>
@@ -49,18 +44,17 @@ export default function SavedView({ onOpen }: Props) {
       <p className="text-sm text-slate-400 mb-5">Open one to continue working with AI agents and chat.</p>
 
       <div className="flex flex-col gap-3">
-        {clients.map((c) => {
-          const score = c.score ?? 0;
+        {audits.map((a) => {
+          const score = a.score ?? 0;
           const sc = scoreColor(score);
-          const date = c.created_at ? c.created_at.slice(0, 10) : "";
-          const sub  = [c.industry, date].filter(Boolean).join(" · ");
+          const date = a.created_at ? a.created_at.slice(0, 10) : "";
+          const sub  = [a.industry, date].filter(Boolean).join(" · ");
 
           return (
             <div
-              key={c.id}
+              key={a.id}
               className="bg-white border border-slate-200 rounded-2xl px-4 py-3.5 flex items-center gap-3 shadow-sm"
             >
-              {/* Score circle */}
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-white font-extrabold text-sm flex-shrink-0"
                 style={{ background: sc }}
@@ -68,17 +62,15 @@ export default function SavedView({ onOpen }: Props) {
                 {score || "?"}
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-800 text-sm truncate">{c.name}</p>
-                <p className="text-xs text-slate-400 truncate">{sub || c.website_url}</p>
-                <p className="text-xs text-slate-400 truncate">{c.website_url}</p>
+                <p className="font-bold text-slate-800 text-sm truncate">{a.name}</p>
+                <p className="text-xs text-slate-400 truncate">{sub || a.website_url}</p>
+                <p className="text-xs text-slate-400 truncate">{a.website_url}</p>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
-                  onClick={() => onOpen(c.id)}
+                  onClick={() => onOpen(a.id)}
                   className="p-2 text-slate-400 hover:text-brand transition"
                   title="Open audit"
                 >
@@ -88,24 +80,20 @@ export default function SavedView({ onOpen }: Props) {
                   </svg>
                 </button>
                 <button
-                  onClick={() => handleDelete(c.id)}
-                  disabled={deleting === c.id}
+                  onClick={() => handleDelete(a.id)}
+                  disabled={deleting === a.id}
                   className="p-2 text-slate-400 hover:text-red-500 transition disabled:opacity-40"
                   title="Delete audit"
                 >
-                  {deleting === c.id ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-red-300 border-t-red-500 spin" />
-                  ) : (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6l-1 14H6L5 6"/>
-                      <path d="M10 11v6M14 11v6"/>
-                      <path d="M9 6V4h6v2"/>
-                    </svg>
-                  )}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
                 </button>
                 <button
-                  onClick={() => onOpen(c.id)}
+                  onClick={() => onOpen(a.id)}
                   className="p-2 text-slate-400 hover:text-brand transition"
                   title="Expand"
                 >

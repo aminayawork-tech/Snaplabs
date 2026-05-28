@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
-import type { Client, View } from "@/lib/types";
+import { storage } from "@/lib/storage";
+import type { SavedAudit } from "@/lib/storage";
+import type { View } from "@/lib/types";
 
 interface Props {
   onStartAudit: (url: string, bizName: string, deepCrawl: boolean) => void;
-  onOpenSaved: (clientId: number) => void;
+  onOpenSaved: (id: string) => void;
   onNav: (v: View) => void;
 }
 
@@ -14,10 +15,10 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
   const [bizName, setBizName]   = useState("");
   const [deepCrawl, setDeepCrawl] = useState(false);
   const [error, setError]       = useState("");
-  const [clients, setClients]   = useState<Client[]>([]);
+  const [audits, setAudits]     = useState<SavedAudit[]>([]);
 
   useEffect(() => {
-    api.clients.list().then(setClients).catch(() => {});
+    setAudits(storage.list());
   }, []);
 
   const submit = (e: React.FormEvent) => {
@@ -96,19 +97,19 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
       </form>
 
       {/* Recent audits */}
-      {clients.length > 0 && (
+      {audits.length > 0 && (
         <div>
           <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-3">
             Recent Audits
           </p>
           <div className="flex flex-col gap-2">
-            {clients.slice(0, 5).map((c) => {
-              const score = c.score ?? 0;
+            {audits.slice(0, 5).map((a) => {
+              const score = a.score ?? 0;
               const scoreColor =
                 score >= 70 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
               return (
                 <div
-                  key={c.id}
+                  key={a.id}
                   className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm"
                 >
                   <div
@@ -118,11 +119,11 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
                     {score || "?"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 text-sm truncate">{c.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{c.website_url}</p>
+                    <p className="font-semibold text-slate-800 text-sm truncate">{a.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{a.website_url}</p>
                   </div>
                   <button
-                    onClick={() => onOpenSaved(c.id)}
+                    onClick={() => onOpenSaved(a.id)}
                     className="text-xs font-semibold text-brand bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition flex-shrink-0"
                   >
                     Open →

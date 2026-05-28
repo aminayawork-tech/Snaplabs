@@ -8,14 +8,15 @@ interface Props {
   result: AuditResult;
   bizName: string;
   initialAgentOutputs?: Record<string, AgentOutput>;
+  onAgentOutput?: (agentId: string, output: AgentOutput) => void;
 }
 
 function scoreColor(s: number) {
   return s >= 70 ? "#22c55e" : s >= 50 ? "#f59e0b" : "#ef4444";
 }
 
-export default function ResultsView({ result, bizName, initialAgentOutputs }: Props) {
-  const { data, pages_crawled, client_id } = result;
+export default function ResultsView({ result, bizName, initialAgentOutputs, onAgentOutput }: Props) {
+  const { data, pages_crawled } = result;
 
   const rawScore = data.overall_marketing_score;
   const scoreVal = typeof rawScore === "number" ? rawScore : (rawScore?.score ?? 0);
@@ -244,8 +245,8 @@ export default function ResultsView({ result, bizName, initialAgentOutputs }: Pr
       <AgentGrid
         researchData={data}
         bizName={bizName}
-        clientId={client_id}
         initialOutputs={initialAgentOutputs}
+        onAgentOutput={onAgentOutput}
       />
 
       <hr className="border-slate-100 my-6" />

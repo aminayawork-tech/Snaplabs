@@ -1,22 +1,8 @@
-import type { Client, ResearchData } from "./types";
+import type { ResearchData } from "./types";
 
-const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
-
-// ── Generic fetch helpers ────────────────────────────────────────────────────
-
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-async function del(path: string): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await res.text());
-}
-
+// All API calls go to Next.js route handlers — no separate backend needed
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -25,14 +11,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-// ── SSE stream reader ────────────────────────────────────────────────────────
-
 export async function* streamSSE(
   path: string,
   body: unknown,
   signal?: AbortSignal
 ): AsyncGenerator<Record<string, unknown>> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -58,41 +42,22 @@ export async function* streamSSE(
       if (!line.startsWith("data: ")) continue;
       const payload = line.slice(6);
       if (payload === "[DONE]") return;
-      try {
-        yield JSON.parse(payload) as Record<string, unknown>;
-      } catch {
-        // skip malformed
-      }
+      try { yield JSON.parse(payload); } catch { /* skip malformed */ }
     }
   }
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 export const api = {
-  clients: {
-    list: () => get<Client[]>("/clients"),
-    get:  (id: number) =>
-      get<{ client: Client; research: { research_data: ResearchData; pages_crawled?: number } | null; agent_runs: AgentRunRow[] }>(`/clients/${id}`),
-    delete: (id: number) => del(`/clients/${id}`),
-  },
-
   audit: (body: { url: string; biz_name: string; deep_crawl: boolean }, signal?: AbortSignal) =>
-    streamSSE("/audit", body, signal),
+    streamSSE("/api/audit", body, signal),
 
   agents: {
-    run: (body: { agent_id: string; research_data: ResearchData; biz_name: string; client_id?: number }) =>
-      post<{ success: boolean; output?: string; error?: string }>("/agents/run", body),
-    runAll: (body: { research_data: ResearchData; biz_name: string; client_id?: number }, signal?: AbortSignal) =>
-      streamSSE("/agents/run-all", body, signal),
+    run: (body: { agent_id: string; research_data: ResearchData; biz_name: string }) =>
+      post<{ success: boolean; output?: string; error?: string }>("/api/agents/run", body),
+    runAll: (body: { research_data: ResearchData; biz_name: string }, signal?: AbortSignal) =>
+      streamSSE("/api/agents/run-all", body, signal),
   },
 
   chat: (body: { message: string; research_data: ResearchData; history: { role: string; content: string }[] }, signal?: AbortSignal) =>
-    streamSSE("/chat", body, signal),
+    streamSSE("/api/chat", body, signal),
 };
-
-export interface AgentRunRow {
-  agent_type: string;
-  output: string;
-  timestamp: string;
-}
