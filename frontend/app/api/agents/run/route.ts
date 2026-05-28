@@ -4,7 +4,7 @@ import { runAgent } from "@/lib/agentRunner";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const { agent_id, research_data, biz_name } = await req.json();
-  const result = await runAgent(agent_id, biz_name ?? "", research_data);
+  const { agent_id, research_data, biz_name, task_override } = await req.json();
+  const result = await runAgent(agent_id, biz_name ?? "", research_data, task_override);
   return Response.json(result);
 }

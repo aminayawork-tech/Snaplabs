@@ -19,16 +19,25 @@ export function getTask(agentId: string, bizName: string): string {
 export async function runAgent(
   agentId: string,
   bizName: string,
-  researchData: Record<string, unknown>
+  researchData: Record<string, unknown>,
+  taskOverride?: string
 ): Promise<{ success: boolean; output?: string; error?: string }> {
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
-    const task = getTask(agentId, bizName);
+    const biz = bizName || "this business";
+
+    const task = taskOverride
+      ? `Complete this specific marketing task for ${biz} in full. Produce ready-to-use output — actual copy, templates, scripts, or plans — that can be used immediately. Do not outline or summarize; write the real thing.\n\nTASK: ${taskOverride}`
+      : getTask(agentId, biz);
+
+    const system = taskOverride
+      ? `You are a senior marketing specialist executing a specific task for ${biz}. Use every detail from the audit data below to make your output specific to this business — use their real service names, real audience, real location, real competitors where relevant. Output should be complete and ready to hand off or publish.\n\nAudit Data:\n${JSON.stringify(researchData).slice(0, 12000)}`
+      : `You are a specialized marketing AI agent. Generate specific, actionable marketing content.\n\nAudit Data:\n${JSON.stringify(researchData).slice(0, 12000)}`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      system: `You are a specialized marketing AI agent. Generate specific, actionable marketing content.\n\nAudit Data:\n${JSON.stringify(researchData).slice(0, 8000)}`,
+      max_tokens: 4096,
+      system,
       messages: [{ role: "user", content: task }],
     });
 

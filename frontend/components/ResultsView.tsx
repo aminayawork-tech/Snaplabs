@@ -42,11 +42,13 @@ function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinC
   const effortColor = effort.includes("low")
     ? "bg-green-500" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
 
+  const taskOverride = [title, impact].filter(Boolean).join(" — Expected outcome: ");
+
   const activate = async () => {
     if (running) return;
     setRunning(true);
     try {
-      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName });
+      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName, task_override: taskOverride });
       if (res.success && res.output) {
         const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
         const out: AgentOutput = { output: res.output, timestamp: ts };
@@ -107,14 +109,14 @@ function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinC
               {running ? (
                 <>
                   <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
-                  Running {agentMeta?.label ?? agentId} Agent…
+                  Working on it…
                 </>
               ) : (
                 <>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                   </svg>
-                  Activate {agentMeta?.label ?? agentId} Agent
+                  Do This For Me — {agentMeta?.label ?? agentId} Agent
                 </>
               )}
             </button>
@@ -123,7 +125,7 @@ function QuickWinCard({ win, index, researchData, bizName, onAgentOutput }: WinC
               <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">
                 {agentMeta?.label} Agent Output · {output.timestamp}
               </p>
-              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto">
                 {output.output}
               </div>
             </div>
