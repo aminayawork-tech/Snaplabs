@@ -531,6 +531,12 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           >
             Export PDF
           </button>
+          <button
+            onClick={() => window.print()}
+            className="flex-1 text-center bg-white border border-slate-200 hover:border-brand-300 text-slate-700 hover:text-brand text-sm font-semibold py-2.5 rounded-xl transition"
+          >
+            Print
+          </button>
         </div>
       </Section>
 
