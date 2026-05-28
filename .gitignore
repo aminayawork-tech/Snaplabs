@@ -3,3 +3,9 @@
 __pycache__/
 *.pyc
 /tmp/
+
+# Node / Next.js
+node_modules/
+.next/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
