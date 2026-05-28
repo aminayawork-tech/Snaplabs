@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
         const response = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: 4096,
+          max_tokens: 8192,
           system,
           messages: [{ role: "user", content: task }],
         });
