@@ -31,6 +31,7 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<AgentOutput | null>(null);
+  const [agentError, setAgentError] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<number | "all">("all");
 
   const title    = win.tactic ?? win.title ?? win.opportunity ?? `Win #${index + 1}`;
@@ -61,6 +62,7 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
   const activate = async () => {
     if (running) return;
     setRunning(true);
+    setAgentError("");
     try {
       const res = await api.agents.run({
         agent_id: agentId,
@@ -73,7 +75,11 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
         const out: AgentOutput = { output: res.output, timestamp: ts };
         setOutput(out);
         onAgentOutput?.(agentId, out);
+      } else {
+        setAgentError(res.error ?? "Agent returned no output. Please try again.");
       }
+    } catch (e) {
+      setAgentError(String(e));
     } finally {
       setRunning(false);
     }
@@ -166,27 +172,33 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
             </div>
           )}
 
-          {!output ? (
-            <button
-              onClick={activate}
-              disabled={running}
-              className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition"
-            >
-              {running ? (
-                <>
-                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
-                  Working on it…
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                  Do This For Me — {agentMeta?.label ?? agentId} Agent
-                </>
-              )}
-            </button>
-          ) : (
+          {agentError && (
+            <div className="mb-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 text-sm">
+              {agentError}
+            </div>
+          )}
+
+          <button
+            onClick={activate}
+            disabled={running}
+            className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition mb-3"
+          >
+            {running ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
+                Working on it… (may take ~30s)
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                {output ? "Re-run — " : "Do This For Me — "}{agentMeta?.label ?? agentId} Agent
+              </>
+            )}
+          </button>
+
+          {output && (
             <div>
               <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">
                 {agentMeta?.label} Agent Output · {output.timestamp}
