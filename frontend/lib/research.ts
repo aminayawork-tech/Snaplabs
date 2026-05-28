@@ -26,26 +26,26 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
       "keyword": "...",
       "intent": "informational|commercial|transactional",
       "difficulty": "low|medium|high",
-      "monthly_searches": "estimated range e.g. '100-500', '1K-5K', '10K-50K', '50K+'"
+      "monthly_searches": "e.g. '100-500' or '1K-5K'"
     }
   ],
   "competitor_analysis": [
     {
       "name": "...",
       "url": "https://theirwebsite.com",
-      "strengths": "...",
-      "weaknesses": "...",
+      "strengths": "one sentence",
+      "weaknesses": "one sentence",
       "estimated_traffic": "e.g. '10K-50K/mo'",
-      "top_ranking_keywords": ["keyword they likely rank for 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]
+      "top_ranking_keywords": ["keyword 1", "keyword 2", "keyword 3"]
     }
   ],
   "quick_win_opportunities": [
     {
       "tactic": "...",
       "timeline": "...",
-      "expected_impact": "...",
+      "expected_impact": "one sentence",
       "effort": "low|medium|high",
-      "how_to_steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
+      "how_to_steps": ["Step 1: ...", "Step 2: ..."]
     }
   ],
   "overall_marketing_score": {"score":0,"max_score":100,"summary":"One sentence summary"}
@@ -95,16 +95,32 @@ export async function runResearch(
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: SYSTEM,
       messages: [{ role: "user", content: PROMPT.replace("{url}", url).replace("{markdown}", markdown.slice(0, 30000)) }],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { success: false, error: "Could not parse AI response" };
+    if (!match) return { success: false, error: "Could not extract JSON from AI response. Please try again." };
 
-    const research = JSON.parse(match[0]);
+    let research: Record<string, unknown>;
+    try {
+      research = JSON.parse(match[0]);
+    } catch {
+      // Response was truncated — try trimming to last valid field boundary
+      const raw = match[0];
+      const lastComma = raw.lastIndexOf('",');
+      if (lastComma > 100) {
+        try {
+          research = JSON.parse(raw.slice(0, lastComma + 1) + '"}}');
+        } catch {
+          return { success: false, error: "Audit response was truncated. Please try again (reduce crawl pages or disable deep crawl)." };
+        }
+      } else {
+        return { success: false, error: "Audit response was truncated. Please try again." };
+      }
+    }
     return { success: true, research, pages_crawled: pagesCrawled };
   } catch (e) {
     return { success: false, error: String(e) };
