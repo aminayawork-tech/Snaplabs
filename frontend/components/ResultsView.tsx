@@ -4,6 +4,7 @@ import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput, K
 import { AGENTS } from "@/lib/types";
 import { api } from "@/lib/api";
 import { renderMarkdown } from "@/lib/renderMarkdown";
+import { exportPDF } from "@/lib/exportPDF";
 import Section from "./Section";
 import AgentGrid from "./AgentGrid";
 import ChatPanel from "./ChatPanel";
@@ -524,6 +525,12 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           >
             Download JSON
           </a>
+          <button
+            onClick={() => exportPDF(data, bizName, scoreVal, pages_crawled)}
+            className="flex-1 text-center bg-[#6b21d6] hover:bg-[#5b17be] text-white text-sm font-semibold py-2.5 rounded-xl transition"
+          >
+            Export PDF
+          </button>
         </div>
       </Section>
 
