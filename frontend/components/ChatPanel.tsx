@@ -7,6 +7,55 @@ interface Props {
   researchData: ResearchData;
 }
 
+function inlineMarkdown(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) =>
+    p.startsWith("**") && p.endsWith("**")
+      ? <strong key={i}>{p.slice(2, -2)}</strong>
+      : p
+  );
+}
+
+function renderMarkdown(text: string): React.ReactNode {
+  const blocks = text.split(/\n{2,}/);
+  return blocks.map((block, bi) => {
+    const lines = block.split("\n");
+
+    if (/^#{1,3} /.test(lines[0])) {
+      const clean = lines[0].replace(/^#{1,3} /, "");
+      return <p key={bi} className="font-bold text-slate-800 mt-3 mb-0.5">{inlineMarkdown(clean)}</p>;
+    }
+
+    if (lines[0].trim() === "---") {
+      return <hr key={bi} className="border-slate-200 my-2" />;
+    }
+
+    const isBullets = lines.every((l) => /^[-*] /.test(l.trim()) || l.trim() === "");
+    if (isBullets) {
+      return (
+        <ul key={bi} className="list-disc list-inside space-y-1 my-1">
+          {lines.filter((l) => l.trim()).map((l, i) => (
+            <li key={i}>{inlineMarkdown(l.replace(/^[-*] /, ""))}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    const isNumbered = lines.every((l) => /^\d+\. /.test(l.trim()) || l.trim() === "");
+    if (isNumbered) {
+      return (
+        <ol key={bi} className="list-decimal list-inside space-y-1 my-1">
+          {lines.filter((l) => l.trim()).map((l, i) => (
+            <li key={i}>{inlineMarkdown(l.replace(/^\d+\. /, ""))}</li>
+          ))}
+        </ol>
+      );
+    }
+
+    return <p key={bi} className="my-1">{inlineMarkdown(block)}</p>;
+  });
+}
+
 function Bubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
   return (
@@ -18,7 +67,7 @@ function Bubble({ msg }: { msg: ChatMessage }) {
             : "bg-white border border-slate-200 text-slate-700 rounded-bl-sm"
         }`}
       >
-        {msg.content}
+        {isUser ? msg.content : renderMarkdown(msg.content)}
       </div>
     </div>
   );
@@ -65,14 +114,13 @@ export default function ChatPanel({ researchData }: Props) {
         Your full audit data is loaded as context. Ask anything about marketing strategy, SEO, competitors, or what to prioritise.
       </p>
 
-      {/* Messages */}
       {(messages.length > 0 || draft) && (
         <div className="bg-slate-50 rounded-2xl p-4 mb-3 max-h-[400px] overflow-y-auto">
           {messages.map((m, i) => <Bubble key={i} msg={m} />)}
           {draft && (
             <div className="flex justify-start mb-3">
               <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed bg-white border border-slate-200 text-slate-700">
-                {draft}
+                {renderMarkdown(draft)}
                 <span className="inline-block w-1 h-4 bg-brand ml-0.5 animate-pulse" />
               </div>
             </div>
@@ -81,7 +129,6 @@ export default function ChatPanel({ researchData }: Props) {
         </div>
       )}
 
-      {/* Input row */}
       <div className="flex gap-2">
         <input
           value={input}

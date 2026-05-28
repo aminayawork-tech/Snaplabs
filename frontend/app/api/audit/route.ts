@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { runResearch } from "@/lib/research";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 function sse(data: object) {

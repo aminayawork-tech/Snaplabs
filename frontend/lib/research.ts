@@ -51,14 +51,20 @@ export async function runResearch(
     let pagesCrawled = 1;
 
     if (deepCrawl) {
-      const result = await fc.crawlUrl(url, { limit: 10 });
+      const result = await fc.crawlUrl(url, { limit: 50 });
       if (result.success && Array.isArray(result.data)) {
         markdown = result.data.map((p: { markdown?: string }) => p.markdown ?? "").join("\n\n");
         pagesCrawled = result.data.length;
       }
     } else {
-      const result = await fc.scrapeUrl(url, { formats: ["markdown"] });
-      if (result.success) markdown = result.markdown ?? "";
+      const result = await fc.crawlUrl(url, { limit: 5 });
+      if (result.success && Array.isArray(result.data)) {
+        markdown = result.data.map((p: { markdown?: string }) => p.markdown ?? "").join("\n\n");
+        pagesCrawled = result.data.length;
+      } else {
+        const single = await fc.scrapeUrl(url, { formats: ["markdown"] });
+        if (single.success) markdown = single.markdown ?? "";
+      }
     }
 
     if (!markdown || markdown.trim().length < 30) {
@@ -73,7 +79,7 @@ export async function runResearch(
       model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: SYSTEM,
-      messages: [{ role: "user", content: PROMPT.replace("{url}", url).replace("{markdown}", markdown.slice(0, 14000)) }],
+      messages: [{ role: "user", content: PROMPT.replace("{url}", url).replace("{markdown}", markdown.slice(0, 30000)) }],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
