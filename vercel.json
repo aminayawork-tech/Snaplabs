@@ -1,9 +1,7 @@
 {
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "destination": "https://web-production-4ebbd.up.railway.app",
-      "permanent": false
-    }
-  ]
+  "framework": "nextjs",
+  "rootDirectory": "frontend",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install"
 }
