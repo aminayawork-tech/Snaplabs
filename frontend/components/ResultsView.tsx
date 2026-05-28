@@ -79,16 +79,16 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div>
             {services.length > 0 && (
               <>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Services</p>
-                <ul className="list-disc list-inside text-sm text-slate-600 space-y-0.5 mb-3">
+                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Services</p>
+                <ul className="list-disc list-inside text-sm text-slate-700 space-y-1 mb-3">
                   {services.map((s, i) => <li key={i}>{s}</li>)}
                 </ul>
               </>
             )}
             {strengths.length > 0 && (
               <>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Strengths</p>
-                <ul className="list-disc list-inside text-sm text-slate-600 space-y-0.5">
+                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Strengths</p>
+                <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
                   {strengths.map((s, i) => <li key={i}>{s}</li>)}
                 </ul>
               </>
@@ -97,8 +97,8 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div>
             {gaps.length > 0 && (
               <>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Marketing Gaps</p>
-                <ul className="list-disc list-inside text-sm text-slate-600 space-y-0.5">
+                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Marketing Gaps</p>
+                <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
                   {gaps.map((g, i) => <li key={i}>{g}</li>)}
                 </ul>
               </>
@@ -147,11 +147,11 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
               const weakness  = comp.weaknesses ?? comp.weakness ?? "";
               return (
                 <div key={i} className="border border-slate-200 rounded-xl px-4 py-3">
-                  <p className="font-bold text-slate-800 text-sm">{cName}
+                  <p className="font-extrabold text-[#6b21d6] text-base">{cName}
                     {cUrl && <span className="font-normal text-slate-400 text-xs ml-2">{cUrl}</span>}
                   </p>
-                  {strength && <p className="text-xs text-slate-600 mt-1"><b>Strength:</b> {String(strength).slice(0, 140)}</p>}
-                  {weakness && <p className="text-xs text-slate-600"><b>Weakness:</b> {String(weakness).slice(0, 140)}</p>}
+                  {strength && <p className="text-sm text-slate-700 mt-1"><span className="font-bold text-[#6b21d6]">Strength:</span> {String(strength).slice(0, 200)}</p>}
+                  {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#6b21d6]">Weakness:</span> {String(weakness).slice(0, 200)}</p>}
                 </div>
               );
             })}
@@ -201,15 +201,17 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div className="flex flex-col gap-4">
             {personas.slice(0, 4).map((p, i) => (
               <div key={i}>
-                <p className="font-bold text-slate-800 text-sm">{p.persona_name ?? `Segment ${i + 1}`}</p>
-                {p.demographics && <p className="text-xs text-slate-400 mt-0.5">{p.demographics}</p>}
+                <p className="font-extrabold text-[#6b21d6] text-base">{p.persona_name ?? `Segment ${i + 1}`}</p>
+                {p.demographics && <p className="text-sm text-slate-500 mt-0.5">{p.demographics}</p>}
                 {(p.pain_points ?? []).length > 0 && (
-                  <p className="text-xs text-slate-600 mt-1">
-                    Pain points: {(p.pain_points ?? []).slice(0, 4).join(" · ")}
+                  <p className="text-sm text-slate-700 mt-1.5">
+                    <span className="font-bold text-[#6b21d6]">Pain points:</span> {(p.pain_points ?? []).slice(0, 4).join(" · ")}
                   </p>
                 )}
                 {p.where_to_reach && (
-                  <p className="text-xs text-slate-600">Where to reach: {p.where_to_reach}</p>
+                  <p className="text-sm text-slate-700 mt-0.5">
+                    <span className="font-bold text-[#6b21d6]">Where to reach:</span> {p.where_to_reach}
+                  </p>
                 )}
                 {i < personas.length - 1 && <hr className="border-slate-100 mt-3" />}
               </div>
