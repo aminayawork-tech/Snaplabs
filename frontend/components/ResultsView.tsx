@@ -31,8 +31,10 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<AgentOutput | null>(null);
+  const [streamText, setStreamText] = useState("");
   const [agentError, setAgentError] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<number | "all">("all");
+  const abortRef = useState<AbortController | null>(null);
 
   const title    = win.tactic ?? win.title ?? win.opportunity ?? `Win #${index + 1}`;
   const effort   = (win.effort ?? "").toLowerCase();
@@ -61,28 +63,46 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
 
   const activate = async () => {
     if (running) return;
+    const ctrl = new AbortController();
+    abortRef[1](ctrl);
     setRunning(true);
     setAgentError("");
+    setOutput(null);
+    setStreamText("");
+    let full = "";
     try {
-      const res = await api.agents.run({
-        agent_id: agentId,
-        research_data: researchData,
-        biz_name: bizName,
-        task_override: buildTaskOverride(),
-      });
-      if (res.success && res.output) {
+      for await (const ev of api.agents.run(
+        { agent_id: agentId, research_data: researchData, biz_name: bizName, task_override: buildTaskOverride() },
+        ctrl.signal
+      )) {
+        if (ev.type === "text") {
+          full += ev.text as string;
+          setStreamText(full);
+        }
+        if (ev.type === "error") {
+          setAgentError(ev.text as string);
+        }
+      }
+      if (full) {
         const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-        const out: AgentOutput = { output: res.output, timestamp: ts };
+        const out: AgentOutput = { output: full, timestamp: ts };
         setOutput(out);
+        setStreamText("");
         onAgentOutput?.(agentId, out);
-      } else {
-        setAgentError(res.error ?? "Agent returned no output. Please try again.");
       }
     } catch (e) {
-      setAgentError(String(e));
+      if ((e as Error).name !== "AbortError") setAgentError(String(e));
     } finally {
       setRunning(false);
     }
+  };
+
+  const clearOutput = () => {
+    abortRef[0]?.abort();
+    setOutput(null);
+    setStreamText("");
+    setAgentError("");
+    setRunning(false);
   };
 
   return (
@@ -178,33 +198,55 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
             </div>
           )}
 
-          <button
-            onClick={activate}
-            disabled={running}
-            className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition mb-3"
-          >
-            {running ? (
-              <>
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
-                Working on it… (may take ~30s)
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                {output ? "Re-run — " : "Do This For Me — "}{agentMeta?.label ?? agentId} Agent
-              </>
-            )}
-          </button>
+          {!output && !streamText && (
+            <button
+              onClick={activate}
+              disabled={running}
+              className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition"
+            >
+              {running ? (
+                <>
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white spin" />
+                  Writing… (streaming output below)
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Do This For Me — {agentMeta?.label ?? agentId} Agent
+                </>
+              )}
+            </button>
+          )}
 
-          {output && (
+          {(streamText || output) && (
             <div>
-              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">
-                {agentMeta?.label} Agent Output · {output.timestamp}
-              </p>
-              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto">
-                {output.output}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide">
+                  {agentMeta?.label} Agent Output{output ? ` · ${output.timestamp}` : ""}
+                  {running && <span className="inline-block w-1.5 h-3.5 bg-[#6b21d6] ml-1 animate-pulse align-middle" />}
+                </p>
+                <div className="flex gap-2">
+                  {!running && output && (
+                    <button
+                      onClick={activate}
+                      className="text-xs text-slate-400 hover:text-brand font-semibold transition"
+                    >
+                      Re-run
+                    </button>
+                  )}
+                  <button
+                    onClick={clearOutput}
+                    className="text-xs text-slate-400 hover:text-red-500 font-semibold transition"
+                    title="Clear output"
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto overflow-x-hidden break-words">
+                {streamText || output?.output}
               </div>
             </div>
           )}

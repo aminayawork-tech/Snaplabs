@@ -52,8 +52,8 @@ export const api = {
     streamSSE("/api/audit", body, signal),
 
   agents: {
-    run: (body: { agent_id: string; research_data: ResearchData; biz_name: string; task_override?: string }) =>
-      post<{ success: boolean; output?: string; error?: string }>("/api/agents/run", body),
+    run: (body: { agent_id: string; research_data: ResearchData; biz_name: string; task_override?: string }, signal?: AbortSignal) =>
+      streamSSE("/api/agents/run", body, signal),
     runAll: (body: { research_data: ResearchData; biz_name: string }, signal?: AbortSignal) =>
       streamSSE("/api/agents/run-all", body, signal),
   },

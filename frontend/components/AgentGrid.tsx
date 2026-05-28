@@ -22,11 +22,14 @@ export default function AgentGrid({ researchData, bizName, initialOutputs = {}, 
   const runAgent = async (agentId: string) => {
     if (running || runningAll) return;
     setRunning(agentId);
+    let full = "";
     try {
-      const res = await api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName });
-      if (res.success && res.output) {
+      for await (const ev of api.agents.run({ agent_id: agentId, research_data: researchData, biz_name: bizName })) {
+        if (ev.type === "text") full += ev.text as string;
+      }
+      if (full) {
         const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-        const out: AgentOutput = { output: res.output, timestamp: ts };
+        const out: AgentOutput = { output: full, timestamp: ts };
         setOutputs((o) => ({ ...o, [agentId]: out }));
         onAgentOutput?.(agentId, out);
       }
