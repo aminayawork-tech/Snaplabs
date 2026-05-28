@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput, Keyword } from "@/lib/types";
 import { AGENTS } from "@/lib/types";
 import { api } from "@/lib/api";
+import { renderMarkdown } from "@/lib/renderMarkdown";
 import Section from "./Section";
 import AgentGrid from "./AgentGrid";
 import ChatPanel from "./ChatPanel";
@@ -245,8 +246,8 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
                   </button>
                 </div>
               </div>
-              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto overflow-x-hidden break-words">
-                {streamText || output?.output}
+              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed max-h-[520px] overflow-y-auto">
+                {renderMarkdown(streamText || output?.output || "")}
               </div>
             </div>
           )}
