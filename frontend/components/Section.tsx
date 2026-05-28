@@ -17,20 +17,21 @@ export default function Section({ title, defaultOpen = false, children }: Props)
         onClick={() => setOpen((o) => !o)}
         className={clsx(
           "w-full flex items-center justify-between px-4 py-3 text-left",
-          "border rounded-xl font-semibold text-sm transition-all duration-150",
+          "border rounded-xl font-bold text-base transition-all duration-150",
           open
-            ? "bg-brand-50 border-brand-300 text-brand rounded-b-none"
-            : "bg-white border-slate-200 text-slate-800 hover:bg-brand-50 hover:border-brand-200"
+            ? "border-[#c4a8e8] rounded-b-none text-[#6b21d6]"
+            : "border-[#c4a8e8] text-[#6b21d6] hover:opacity-90"
         )}
+        style={{ background: "#f3eef8" }}
       >
         <span>{title}</span>
-        <span className={clsx("ml-2 text-base transition-transform duration-150 flex-shrink-0", open ? "text-brand" : "text-slate-400")}>
+        <span className={clsx("ml-2 text-lg transition-transform duration-150 flex-shrink-0 text-[#6b21d6]")}>
           {open ? "▾" : "▸"}
         </span>
       </button>
 
       {open && (
-        <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl px-4 py-4">
+        <div className="border border-[#c4a8e8] border-t-0 rounded-b-xl px-4 py-4 bg-white">
           {children}
         </div>
       )}
