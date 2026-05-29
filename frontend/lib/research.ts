@@ -29,6 +29,16 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
       "monthly_searches": "e.g. '100-500' or '1K-5K'"
     }
   ],
+  "people_also_ask": [
+    "Real question potential customers type into Google about this business or service?",
+    "Another specific question about pricing, process, or comparison?",
+    "Question about a common pain point this business solves?",
+    "Question comparing this service vs an alternative?",
+    "Question about how long, how much, or what to expect?",
+    "Question a first-time buyer would ask?",
+    "Question about credentials, trust, or results?",
+    "Question about location, availability, or getting started?"
+  ],
   "competitor_analysis": [
     {
       "name": "...",
@@ -51,7 +61,7 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
   "overall_marketing_score": {"score":0,"max_score":100,"summary":"One sentence summary"}
 }
 
-Be specific and actionable. Use real data from the scraped content.`;
+Be specific and actionable. Use real data from the scraped content. For people_also_ask, write questions exactly as a real person would type them into Google — specific to this business and industry.`;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchPAA(fc: any, keyword: string): Promise<string[]> {
@@ -127,7 +137,6 @@ export async function runResearch(
     try {
       research = JSON.parse(match[0]);
     } catch {
-      // Response was truncated — try trimming to last valid field boundary
       const raw = match[0];
       const lastComma = raw.lastIndexOf('",');
       if (lastComma > 100) {
@@ -141,16 +150,27 @@ export async function runResearch(
       }
     }
 
-    // Scrape Google PAA for top keywords in parallel
-    onProgress?.(3, "Fetching People Also Ask from Google");
+    // Normalize Claude's PAA (flat array) → Record<keyword, questions[]>
     const rawKws = (research.top_10_longtail_keywords ?? []) as (string | { keyword: string })[];
     const topKws = rawKws.slice(0, 4).map(k => (typeof k === "string" ? k : k.keyword)).filter(Boolean);
 
-    const paaResults = await Promise.allSettled(topKws.map(kw => fetchPAA(fc, kw)));
     const paa: Record<string, string[]> = {};
+    const claudePAA = research.people_also_ask;
+    if (Array.isArray(claudePAA)) {
+      const questions = (claudePAA as unknown[]).filter(q => typeof q === "string" && (q as string).trim().endsWith("?")) as string[];
+      if (questions.length > 0) {
+        const label = topKws[0] ?? "Common Questions";
+        paa[label] = questions;
+      }
+    }
+
+    // Try Google scraping in parallel — overwrites/supplements with real SERP data
+    onProgress?.(3, "Fetching People Also Ask from Google");
+    const paaResults = await Promise.allSettled(topKws.map(kw => fetchPAA(fc, kw)));
     paaResults.forEach((r, i) => {
       if (r.status === "fulfilled" && r.value.length > 0) paa[topKws[i]] = r.value;
     });
+
     if (Object.keys(paa).length > 0) research.people_also_ask = paa;
 
     return { success: true, research, pages_crawled: pagesCrawled };
