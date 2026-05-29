@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   else startTime.setFullYear(startTime.getFullYear() - 1);
 
   try {
-    // Phase 1: timeline + volume estimate in parallel
+    // Phase 1: timeline + volume estimate in parallel (only one Google Trends call)
     const [raw, peakMonthly] = await Promise.all([
       gt.interestOverTime({ keyword, startTime, geo }),
       estimatePeakMonthly(keyword, geo),
@@ -58,17 +58,15 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // Phase 2: related queries + regions in parallel
-    const [relResult, regResult] = await Promise.allSettled([
-      gt.relatedQueries({ keyword, geo }),
-      gt.interestByRegion({ keyword, geo, resolution: "COUNTRY" }),
-    ]);
+    // Small delay before Phase 2 to avoid Google Trends rate-limiting
+    await new Promise(r => setTimeout(r, 400));
 
-    // Related queries — top (with volume bars) + rising (for tags)
+    // Phase 2: related queries + regions sequentially to stay safe
     let relatedQueries: { query: string; value: number }[] = [];
     let risingQueries: string[] = [];
-    if (relResult.status === "fulfilled") {
-      const rankedList = JSON.parse(relResult.value).default?.rankedList ?? [];
+    try {
+      const relRaw = await gt.relatedQueries({ keyword, geo });
+      const rankedList = JSON.parse(relRaw).default?.rankedList ?? [];
       const topKws: { query: string; value: number }[] = rankedList[0]?.rankedKeyword ?? [];
       const risingKws: { query: string; value: number }[] = rankedList[1]?.rankedKeyword ?? [];
       relatedQueries = topKws.slice(0, 14).map(r => ({ query: r.query, value: r.value }));
@@ -76,18 +74,20 @@ export async function POST(req: NextRequest) {
       const merged = [...risingKws.filter(r => !topSet.has(r.query)), ...topKws]
         .filter((v, i, a) => a.findIndex(x => x.query === v.query) === i);
       risingQueries = merged.slice(0, 8).map(r => r.query);
-    }
+    } catch { /* skip */ }
 
-    // Interest by region
+    await new Promise(r => setTimeout(r, 300));
+
     let regions: { region: string; value: number }[] = [];
-    if (regResult.status === "fulfilled") {
-      const geoData = JSON.parse(regResult.value).default?.geoMapData ?? [];
+    try {
+      const regRaw = await gt.interestByRegion({ keyword, geo, resolution: "COUNTRY" });
+      const geoData = JSON.parse(regRaw).default?.geoMapData ?? [];
       regions = (geoData as { geoName: string; value: number[] }[])
         .filter(r => (r.value[0] ?? 0) > 0)
         .sort((a, b) => (b.value[0] ?? 0) - (a.value[0] ?? 0))
         .slice(0, 8)
         .map(r => ({ region: r.geoName, value: r.value[0] ?? 0 }));
-    }
+    } catch { /* skip */ }
 
     // YoY growth from timeline
     let yoyGrowth = 0;
