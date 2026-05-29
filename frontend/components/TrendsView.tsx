@@ -1,8 +1,18 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Keyword } from "@/lib/types";
 
-interface TrendResult {
+type VolumeTier = "high" | "medium" | "low";
+type TrendDir   = "rising" | "stable" | "declining";
+
+interface AIKeyword {
+  keyword: string;
+  trend: TrendDir;
+  growth: number;
+  volume: VolumeTier;
+}
+
+interface RealTrend {
   keyword: string;
   sparkline: number[];
   growth_pct: number;
@@ -10,30 +20,35 @@ interface TrendResult {
   rising_queries: string[];
 }
 
+interface Row extends AIKeyword {
+  real?: RealTrend;
+}
+
 const CATEGORIES = [
-  { name: "Food & Beverage",         desc: "Recipes, ingredients & food trends" },
-  { name: "Health & Wellness",        desc: "Fitness, supplements & mental health" },
-  { name: "Technology & AI",          desc: "Software, AI tools & digital trends" },
-  { name: "Fashion & Apparel",        desc: "Clothing, accessories & style" },
-  { name: "Home & Garden",            desc: "Interior design, renovation & plants" },
-  { name: "Beauty & Skincare",        desc: "Skincare, makeup & hair care" },
-  { name: "Finance & Investing",      desc: "Investing, budgeting & fintech" },
-  { name: "Education & Courses",      desc: "Online learning, skills & training" },
-  { name: "Sports & Fitness",         desc: "Workouts, gear & athletics" },
-  { name: "Travel & Hospitality",     desc: "Destinations, experiences & tourism" },
-  { name: "Marketing & Growth",       desc: "SEO, social media & brand building" },
-  { name: "Real Estate",              desc: "Buying, selling & property trends" },
-  { name: "E-commerce & Retail",      desc: "Shopping, products & consumer trends" },
-  { name: "Parenting & Family",       desc: "Childcare, education & family life" },
-  { name: "Legal & Professional",     desc: "Law, consulting & B2B services" },
-  { name: "Automotive",               desc: "Cars, EVs & maintenance trends" },
+  { name: "Food & Beverage",     desc: "Recipes, ingredients & food trends" },
+  { name: "Health & Wellness",   desc: "Fitness, supplements & mental health" },
+  { name: "Technology & AI",     desc: "Software, AI tools & digital trends" },
+  { name: "Fashion & Apparel",   desc: "Clothing, accessories & style" },
+  { name: "Home & Garden",       desc: "Interior design, renovation & plants" },
+  { name: "Beauty & Skincare",   desc: "Skincare, makeup & hair care" },
+  { name: "Finance & Investing", desc: "Investing, budgeting & fintech" },
+  { name: "Education & Courses", desc: "Online learning, skills & training" },
+  { name: "Sports & Fitness",    desc: "Workouts, gear & athletics" },
+  { name: "Travel & Hospitality",desc: "Destinations, experiences & tourism" },
+  { name: "Marketing & Growth",  desc: "SEO, social media & brand building" },
+  { name: "Real Estate",         desc: "Buying, selling & property trends" },
+  { name: "E-commerce & Retail", desc: "Shopping, products & consumer trends" },
+  { name: "Parenting & Family",  desc: "Childcare, education & family life" },
+  { name: "Legal & Professional",desc: "Law, consulting & B2B services" },
+  { name: "Automotive",          desc: "Cars, EVs & maintenance trends" },
 ];
 
-// ── Sparkline ────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 20;
+
+// ── Micro components ──────────────────────────────────────────────────────────
 function Sparkline({ data, growth }: { data: number[]; growth: number }) {
-  if (data.length < 2) return <span className="text-slate-300 text-sm">—</span>;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  if (data.length < 2) return null;
+  const min = Math.min(...data), max = Math.max(...data);
   const range = max - min || 1;
   const W = 90, H = 28;
   const pts = data.map((v, i) =>
@@ -43,74 +58,59 @@ function Sparkline({ data, growth }: { data: number[]; growth: number }) {
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle
-        cx={W} cy={H - ((data[data.length - 1] - min) / range) * (H - 4) - 2}
-        r="2.5" fill={color}
-      />
+      <circle cx={W} cy={H - ((data[data.length - 1] - min) / range) * (H - 4) - 2} r="2.5" fill={color} />
     </svg>
   );
 }
 
-function GrowthBadge({ pct }: { pct: number }) {
+function TrendArrow({ trend }: { trend: TrendDir }) {
+  if (trend === "rising")   return <span className="text-green-500 font-bold text-base">↑</span>;
+  if (trend === "declining")return <span className="text-red-500 font-bold text-base">↓</span>;
+  return <span className="text-slate-400 font-bold text-base">→</span>;
+}
+
+function GrowthBadge({ pct, estimated }: { pct: number; estimated?: boolean }) {
   const up = pct >= 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-      {up ? "▲" : "▼"} {Math.abs(pct)}%
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
+      {up ? "▲" : "▼"} {Math.abs(pct)}%{estimated ? <span className="font-normal opacity-70 ml-0.5">est</span> : null}
     </span>
   );
 }
 
-function InterestBar({ value }: { value: number }) {
-  return (
-    <div className="flex items-center gap-2 min-w-[90px]">
-      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className="h-full bg-[#6b21d6] rounded-full transition-all" style={{ width: `${value}%` }} />
-      </div>
-      <span className="text-xs text-slate-500 w-6 text-right tabular-nums">{value}</span>
-    </div>
-  );
+function VolumeBadge({ tier }: { tier: VolumeTier }) {
+  const map = { high: "bg-purple-100 text-purple-700", medium: "bg-blue-50 text-blue-700", low: "bg-slate-100 text-slate-500" };
+  return <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${map[tier]}`}>{tier}</span>;
 }
 
-// ── Category browser (home) ───────────────────────────────────────────────────
-function CategoryHome({
-  onSelect,
-  onSearch,
-}: {
-  onSelect: (cat: string) => void;
-  onSearch: (q: string) => void;
-}) {
+function SparklineSkeleton() {
+  return <div className="w-[90px] h-[28px] bg-slate-100 rounded animate-pulse" />;
+}
+
+// ── Category home ─────────────────────────────────────────────────────────────
+function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; onSearch: (q: string) => void }) {
   const [q, setQ] = useState("");
   return (
     <div>
-      <form
-        onSubmit={e => { e.preventDefault(); if (q.trim()) onSearch(q.trim()); }}
-        className="flex gap-2 mb-8"
-      >
+      <form onSubmit={e => { e.preventDefault(); if (q.trim()) onSearch(q.trim()); }} className="flex gap-2 mb-8">
         <div className="flex-1 relative">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Search any keyword or topic (e.g. &quot;gut health&quot;, &quot;AI tools&quot;)"
+            placeholder='Enter any keyword to expand (e.g. "mushroom coffee", "cold plunge")'
             className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
           />
         </div>
-        <button
-          type="submit"
-          className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
-        >
-          Search
+        <button type="submit" className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
+          Expand
         </button>
       </form>
-
       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Browse by category</p>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {CATEGORIES.map(cat => (
-          <button
-            key={cat.name}
-            onClick={() => onSelect(cat.name)}
-            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#6b21d6] hover:bg-[#faf8ff] transition group"
-          >
+          <button key={cat.name} onClick={() => onSelect(cat.name)}
+            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#6b21d6] hover:bg-[#faf8ff] transition group">
             <p className="font-bold text-slate-800 text-sm group-hover:text-[#6b21d6] transition leading-snug">{cat.name}</p>
             <p className="text-xs text-slate-400 mt-1 leading-snug">{cat.desc}</p>
           </button>
@@ -120,73 +120,89 @@ function CategoryHome({
   );
 }
 
-// ── Results table ─────────────────────────────────────────────────────────────
-type SortKey = "keyword" | "growth_pct" | "current_interest";
+// ── Results view ──────────────────────────────────────────────────────────────
+type SortKey = "growth" | "keyword" | "volume";
 
-function ResultsTable({
+function ResultsPage({
   context,
-  results,
-  loading,
-  loadingMsg,
+  rows,
+  loadingAI,
+  loadingReal,
+  realFetchedCount,
+  totalReal,
   onBack,
   onDrillDown,
 }: {
   context: string;
-  results: TrendResult[];
-  loading: boolean;
-  loadingMsg: string;
+  rows: Row[];
+  loadingAI: boolean;
+  loadingReal: boolean;
+  realFetchedCount: number;
+  totalReal: number;
   onBack: () => void;
   onDrillDown: (kw: string) => void;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("growth_pct");
+  const [sortKey, setSortKey] = useState<SortKey>("growth");
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
+  const [filter, setFilter] = useState<"all" | "rising" | "stable" | "declining">("all");
+  const [page, setPage] = useState(1);
 
   function toggleSort(k: SortKey) {
-    if (sortKey === k) setSortDir(d => (d === 1 ? -1 : 1));
+    if (sortKey === k) setSortDir(d => d === 1 ? -1 : 1);
     else { setSortKey(k); setSortDir(-1); }
   }
 
-  const sorted = [...results].sort((a, b) => {
-    const av = a[sortKey] as string | number;
-    const bv = b[sortKey] as string | number;
-    if (typeof av === "string") return sortDir * av.localeCompare(bv as string);
-    return sortDir * ((av as number) - (bv as number));
+  const filtered = rows.filter(r => filter === "all" || r.trend === filter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortKey === "keyword") return sortDir * a.keyword.localeCompare(b.keyword);
+    if (sortKey === "volume") {
+      const order = { high: 3, medium: 2, low: 1 };
+      return sortDir * ((order[a.volume] ?? 0) - (order[b.volume] ?? 0));
+    }
+    // growth — prefer real data
+    const ag = a.real ? a.real.growth_pct : a.growth;
+    const bg = b.real ? b.real.growth_pct : b.growth;
+    return sortDir * (ag - bg);
   });
 
-  const rising = results
-    .flatMap(r => r.rising_queries.map(q => ({ query: q, growth: r.growth_pct })))
-    .filter((v, i, arr) => arr.findIndex(x => x.query === v.query) === i)
-    .slice(0, 10);
+  const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const visible = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const Arrow = ({ k }: { k: SortKey }) =>
-    sortKey === k ? <span className="text-[#6b21d6] ml-0.5">{sortDir === -1 ? "↓" : "↑"}</span> : null;
+  const risingQueries = rows
+    .flatMap(r => (r.real?.rising_queries ?? []).map(q => ({ query: q })))
+    .filter((v, i, a) => a.findIndex(x => x.query === v.query) === i)
+    .slice(0, 12);
+
+  const Arrow = ({ k }: { k: SortKey }) => sortKey === k
+    ? <span className="text-[#6b21d6] ml-0.5 text-[10px]">{sortDir === -1 ? "↓" : "↑"}</span> : null;
 
   return (
     <div>
-      {/* Breadcrumb / back */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-5">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-[#6b21d6] hover:underline"
-        >
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#6b21d6] hover:underline">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
           Back to categories
         </button>
         <span className="text-slate-300">/</span>
-        <span className="text-sm font-bold text-slate-700">{context}</span>
+        <span className="text-sm font-bold text-slate-700 truncate max-w-xs">{context}</span>
+        {loadingAI && <span className="text-xs text-slate-400 animate-pulse">generating keywords…</span>}
+        {!loadingAI && loadingReal && (
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+            <span className="w-3 h-3 border-2 border-slate-300 border-t-[#6b21d6] rounded-full animate-spin inline-block" />
+            fetching trends ({realFetchedCount}/{totalReal})…
+          </span>
+        )}
       </div>
 
-      {/* Rising opportunities */}
-      {rising.length > 0 && (
-        <div className="mb-5 bg-[#faf8ff] border border-[#c4a8e8] rounded-2xl p-4">
+      {/* Rising from real data */}
+      {risingQueries.length > 0 && (
+        <div className="mb-4 bg-[#faf8ff] border border-[#c4a8e8] rounded-2xl p-4">
           <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Rising Opportunities</p>
           <div className="flex flex-wrap gap-2">
-            {rising.map((r, i) => (
-              <button
-                key={i}
-                onClick={() => onDrillDown(r.query)}
-                className="bg-white border border-[#c4a8e8] hover:bg-[#f3eef8] text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1"
-              >
+            {risingQueries.map((r, i) => (
+              <button key={i} onClick={() => onDrillDown(r.query)}
+                className="bg-white border border-[#c4a8e8] hover:bg-[#f3eef8] text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1">
                 <span className="text-green-500 font-bold">↑</span> {r.query}
               </button>
             ))}
@@ -194,169 +210,192 @@ function ResultsTable({
         </div>
       )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="flex items-center justify-center py-16 gap-3 flex-col">
+      {/* Filter chips */}
+      {!loadingAI && rows.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {(["all", "rising", "stable", "declining"] as const).map(f => (
+            <button key={f} onClick={() => { setFilter(f); setPage(1); }}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#6b21d6] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#6b21d6]"}`}>
+              {f === "all" ? `All (${rows.length})` : f === "rising" ? `↑ Rising (${rows.filter(r => r.trend === "rising").length})` : f === "stable" ? `→ Stable (${rows.filter(r => r.trend === "stable").length})` : `↓ Declining (${rows.filter(r => r.trend === "declining").length})`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Loading AI */}
+      {loadingAI && (
+        <div className="flex items-center justify-center py-20 gap-3 flex-col">
           <div className="w-7 h-7 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">{loadingMsg}</p>
+          <p className="text-sm text-slate-500">Discovering trending keywords…</p>
         </div>
       )}
 
       {/* Table */}
-      {!loading && results.length > 0 && (
+      {!loadingAI && visible.length > 0 && (
         <>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[2fr_96px_96px_110px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               <button className="text-left flex items-center" onClick={() => toggleSort("keyword")}>Keyword <Arrow k="keyword" /></button>
               <span>Trend — 1yr</span>
-              <button className="flex items-center" onClick={() => toggleSort("growth_pct")}>Growth <Arrow k="growth_pct" /></button>
-              <button className="flex items-center" onClick={() => toggleSort("current_interest")}>Interest <Arrow k="current_interest" /></button>
+              <button className="flex items-center" onClick={() => toggleSort("growth")}>Growth <Arrow k="growth" /></button>
+              <button className="flex items-center" onClick={() => toggleSort("volume")}>Volume <Arrow k="volume" /></button>
               <span>Rising queries</span>
             </div>
-            {sorted.map((r, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-[2fr_96px_96px_110px_1fr] items-center gap-4 px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition"
-              >
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
-                >
-                  {r.keyword}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-50 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                </a>
-                <Sparkline data={r.sparkline} growth={r.growth_pct} />
-                <div>{r.sparkline.length > 0 ? <GrowthBadge pct={r.growth_pct} /> : <span className="text-slate-300">—</span>}</div>
-                <div>{r.sparkline.length > 0 ? <InterestBar value={r.current_interest} /> : <span className="text-slate-300">—</span>}</div>
-                <div className="flex flex-wrap gap-1">
-                  {r.rising_queries.slice(0, 3).map((q, qi) => (
-                    <button
-                      key={qi}
-                      onClick={() => onDrillDown(q)}
-                      className="text-[11px] bg-[#f3eef8] text-[#6b21d6] font-semibold px-2 py-0.5 rounded-full hover:bg-[#e9e0f6] transition"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                  {r.rising_queries.length === 0 && <span className="text-slate-300 text-xs">—</span>}
+            {visible.map((r, i) => {
+              const growth = r.real ? r.real.growth_pct : r.growth;
+              const isReal = Boolean(r.real && r.real.sparkline.length > 1);
+              const isFetching = !r.real && loadingReal && i < totalReal;
+              return (
+                <div key={i} className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
+                  >
+                    {r.keyword}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                  <div>
+                    {isFetching ? <SparklineSkeleton /> : isReal ? <Sparkline data={r.real!.sparkline} growth={growth} /> : <TrendArrow trend={r.trend} />}
+                  </div>
+                  <div>
+                    <GrowthBadge pct={growth} estimated={!isReal} />
+                  </div>
+                  <div>
+                    <VolumeBadge tier={r.volume} />
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(r.real?.rising_queries ?? []).slice(0, 3).map((q, qi) => (
+                      <button key={qi} onClick={() => onDrillDown(q)}
+                        className="text-[11px] bg-[#f3eef8] text-[#6b21d6] font-semibold px-2 py-0.5 rounded-full hover:bg-[#e9e0f6] transition">
+                        {q}
+                      </button>
+                    ))}
+                    {(!r.real || r.real.rising_queries.length === 0) && <span className="text-slate-300 text-xs">—</span>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Pagination */}
+          {pages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#6b21d6] disabled:opacity-30 disabled:cursor-not-allowed transition">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span className="text-sm text-slate-600 font-medium">Page {page} of {pages}</span>
+              <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#6b21d6] disabled:opacity-30 disabled:cursor-not-allowed transition">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          )}
           <p className="text-xs text-slate-400 mt-3 text-center">
-            Google Trends data · Interest normalized 0–100 · Growth = last 6 months vs prior 6 months
+            {rows.filter(r => r.real).length} keywords with real Google Trends data · rest are AI estimates · Growth = last 6 months vs prior 6 months
           </p>
         </>
-      )}
-
-      {!loading && results.length === 0 && (
-        <div className="text-center py-16 text-slate-400 text-sm">No trend data available for these keywords.</div>
       )}
     </div>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 interface Props {
   auditKeywords?: (string | Keyword)[];
   bizName?: string;
   initialCategory?: string;
 }
 
+const REAL_FETCH_LIMIT = 10;
+
 export default function TrendsView({ auditKeywords = [], bizName, initialCategory }: Props) {
   const [page, setPage] = useState<"home" | "results">("home");
   const [context, setContext] = useState("");
-  const [results, setResults] = useState<TrendResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("Discovering trending keywords…");
-  const [geo] = useState("US");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [loadingReal, setLoadingReal] = useState(false);
+  const [realFetchedCount, setRealFetchedCount] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const fetchTrends = useCallback(async (keywords: string[]) => {
-    if (!keywords.length) return;
-    setLoadingMsg("Fetching Google Trends data…");
-    const res = await fetch("/api/trends", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keywords, geo }),
-    });
-    const data = await res.json();
-    setResults(data.results ?? []);
-  }, [geo]);
+  const fetchRealTrends = useCallback(async (aiRows: Row[]) => {
+    const topKws = aiRows.slice(0, REAL_FETCH_LIMIT).map(r => r.keyword);
+    if (!topKws.length) return;
+    setLoadingReal(true);
+    setRealFetchedCount(0);
+    try {
+      const res = await fetch("/api/trends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords: topKws, geo: "US" }),
+      });
+      const data = await res.json();
+      const realMap: Record<string, RealTrend> = {};
+      for (const r of (data.results ?? [])) realMap[r.keyword] = r;
+      setRealFetchedCount(Object.keys(realMap).length);
+      setRows(prev => prev.map(r => realMap[r.keyword] ? { ...r, real: realMap[r.keyword] } : r));
+    } finally {
+      setLoadingReal(false);
+    }
+  }, []);
 
-  const runCategory = useCallback(async (cat: string) => {
-    setContext(cat);
+  const run = useCallback(async (ctx: string, body: object) => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    setContext(ctx);
     setPage("results");
-    setResults([]);
-    setLoading(true);
-    setLoadingMsg("Discovering trending keywords…");
+    setRows([]);
+    setLoadingAI(true);
+    setLoadingReal(false);
+    setRealFetchedCount(0);
     try {
       const res = await fetch("/api/trends/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: cat }),
+        body: JSON.stringify(body),
+        signal: abortRef.current.signal,
       });
       const { keywords } = await res.json();
-      if (keywords?.length) await fetchTrends(keywords);
-    } finally {
-      setLoading(false);
+      const aiRows: Row[] = (keywords ?? []).map((k: AIKeyword) => ({
+        keyword: k.keyword, trend: k.trend ?? "stable",
+        growth: k.growth ?? 0, volume: k.volume ?? "medium",
+      }));
+      setRows(aiRows);
+      setLoadingAI(false);
+      if (aiRows.length) fetchRealTrends(aiRows);
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setLoadingAI(false);
     }
-  }, [fetchTrends]);
+  }, [fetchRealTrends]);
 
-  const runSearch = useCallback(async (q: string) => {
-    const keywords = q.split(",").map((s: string) => s.trim()).filter(Boolean).slice(0, 8);
-    setContext(`Search: "${q}"`);
-    setPage("results");
-    setResults([]);
-    setLoading(true);
-    setLoadingMsg("Fetching Google Trends data…");
-    try {
-      await fetchTrends(keywords);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchTrends]);
-
-  const runAuditKeywords = useCallback(async () => {
+  const runAuditKeywords = useCallback(() => {
     const kws = auditKeywords.slice(0, 8).map(k => typeof k === "string" ? k : k.keyword).filter(Boolean);
     if (!kws.length) return;
+    const aiRows: Row[] = kws.map(k => ({ keyword: k, trend: "stable", growth: 0, volume: "medium" }));
     setContext(bizName ? `${bizName} — audit keywords` : "Audit keywords");
     setPage("results");
-    setResults([]);
-    setLoading(true);
-    setLoadingMsg("Fetching Google Trends data…");
-    try {
-      await fetchTrends(kws);
-    } finally {
-      setLoading(false);
-    }
-  }, [auditKeywords, bizName, fetchTrends]);
+    setRows(aiRows);
+    setLoadingAI(false);
+    fetchRealTrends(aiRows);
+  }, [auditKeywords, bizName, fetchRealTrends]);
 
-  // Auto-load if arriving from audit with initialCategory or audit keywords
   useEffect(() => {
-    if (initialCategory) {
-      runCategory(initialCategory);
-    } else if (auditKeywords.length > 0) {
-      runAuditKeywords();
-    }
+    if (initialCategory) run(initialCategory, { category: initialCategory });
+    else if (auditKeywords.length > 0) runAuditKeywords();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="view-enter">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-extrabold text-slate-800">Discover Trends</h1>
           <p className="text-sm text-slate-500 mt-0.5">Spot growing keywords before your competitors do.</p>
         </div>
-        {/* Audit shortcut */}
         {auditKeywords.length > 0 && page === "home" && (
-          <button
-            onClick={runAuditKeywords}
-            className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] text-[#6b21d6] text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#ede5f6] transition"
-          >
+          <button onClick={runAuditKeywords}
+            className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] text-[#6b21d6] text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#ede5f6] transition">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             {bizName ? `${bizName} trends` : "My audit keywords"}
           </button>
@@ -364,17 +403,22 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       </div>
 
       {page === "home" && (
-        <CategoryHome onSelect={runCategory} onSearch={runSearch} />
+        <CategoryHome
+          onSelect={cat => run(cat, { category: cat })}
+          onSearch={q => run(`"${q}"`, { keyword: q })}
+        />
       )}
 
       {page === "results" && (
-        <ResultsTable
+        <ResultsPage
           context={context}
-          results={results}
-          loading={loading}
-          loadingMsg={loadingMsg}
-          onBack={() => { setPage("home"); setResults([]); }}
-          onDrillDown={(kw) => runSearch(kw)}
+          rows={rows}
+          loadingAI={loadingAI}
+          loadingReal={loadingReal}
+          realFetchedCount={realFetchedCount}
+          totalReal={REAL_FETCH_LIMIT}
+          onBack={() => { abortRef.current?.abort(); setPage("home"); setRows([]); }}
+          onDrillDown={kw => run(`"${kw}"`, { keyword: kw })}
         />
       )}
     </div>
