@@ -171,8 +171,8 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
 
   return (
     <div className="fixed inset-0 z-[200] overflow-y-auto">
-      {/* Backdrop — z-[199] so it covers the nav (z-50) but sits below modal content */}
-      <div className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-md" onClick={onClose} />
+      {/* Backdrop — no z-index so DOM order keeps modal card above it */}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
       {/* Scrollable centering wrapper */}
       <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10 pointer-events-none">
       <div
