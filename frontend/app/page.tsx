@@ -86,7 +86,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50">
       <Nav view={view} onNav={handleNav} hasAudit={Boolean(result)} />
 
-      <main className="md:ml-[220px] pb-[72px] md:pb-8 px-4 md:px-8 pt-6 max-w-[720px] mx-auto md:mx-0 xl:max-w-[760px]">
+      <main className="md:ml-[220px] pb-[72px] md:pb-8 px-4 md:px-8 pt-6 max-w-[720px] mx-auto md:mx-0 md:max-w-none">
         {auditError && view === "home" && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
             {auditError}

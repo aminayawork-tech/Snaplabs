@@ -398,7 +398,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         {keywords.length > 0 && (
           <div className="mb-4">
             <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Long-tail Keyword Opportunities</p>
-            <div className="flex flex-col gap-2">
+            <div className="grid md:grid-cols-2 gap-2">
               {keywords.slice(0, 15).map((kw, i) => {
                 const obj = typeof kw === "string" ? { keyword: kw } : (kw as Keyword);
                 const diff = (obj.difficulty ?? "").toLowerCase();
@@ -428,7 +428,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         {Object.keys(paa).length > 0 && (
           <div className="mt-4">
             <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">People Also Ask</p>
-            <div className="flex flex-col gap-2">
+            <div className="grid md:grid-cols-2 gap-2">
               {Object.entries(paa).map(([kw, questions]) =>
                 questions.map((q, qi) => (
                   <PAAItem key={`${kw}-${qi}`} question={q} keyword={kw} />
@@ -452,7 +452,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
 
       <Section title="Competitors">
         {competitors.length > 0 ? (
-          <div className="flex flex-col gap-3">
+          <div className="grid md:grid-cols-2 gap-3">
             {competitors.slice(0, 6).map((comp, i) => {
               if (typeof comp !== "object") return <p key={i} className="text-sm text-slate-600">- {String(comp)}</p>;
               const cName     = comp.name ?? comp.competitor_name ?? "Competitor";
@@ -506,7 +506,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
 
       <Section title="Quick Wins — Actionable Opportunities">
         {wins.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="grid md:grid-cols-2 gap-2">
             {wins.map((w, i) =>
               typeof w !== "object" ? (
                 <p key={i} className="text-sm text-slate-600">- {String(w)}</p>
