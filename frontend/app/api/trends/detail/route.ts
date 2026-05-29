@@ -80,7 +80,9 @@ export async function POST(req: NextRequest) {
 
     let regions: { region: string; value: number }[] = [];
     try {
-      const regRaw = await gt.interestByRegion({ keyword, geo, resolution: "COUNTRY" });
+      // Use REGION (states) when scoped to a country, COUNTRY for worldwide
+      const resolution = geo ? "REGION" : "COUNTRY";
+      const regRaw = await gt.interestByRegion({ keyword, geo, resolution });
       const geoData = JSON.parse(regRaw).default?.geoMapData ?? [];
       regions = (geoData as { geoName: string; value: number[] }[])
         .filter(r => (r.value[0] ?? 0) > 0)
