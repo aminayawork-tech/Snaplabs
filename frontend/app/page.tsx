@@ -5,8 +5,9 @@ import HomeView from "@/components/HomeView";
 import RunningView from "@/components/RunningView";
 import ResultsView from "@/components/ResultsView";
 import SavedView from "@/components/SavedView";
+import TrendsView from "@/components/TrendsView";
 import { storage } from "@/lib/storage";
-import type { View, AuditResult, AgentOutput } from "@/lib/types";
+import type { View, AuditResult, AgentOutput, Keyword } from "@/lib/types";
 
 interface PendingAudit { url: string; bizName: string; deepCrawl: boolean; }
 
@@ -117,6 +118,12 @@ export default function App() {
         )}
         {view === "saved" && (
           <SavedView onOpen={openSaved} />
+        )}
+        {view === "trends" && (
+          <TrendsView
+            auditKeywords={(result?.data.top_10_longtail_keywords ?? []) as (string | Keyword)[]}
+            bizName={bizName || undefined}
+          />
         )}
       </main>
     </div>

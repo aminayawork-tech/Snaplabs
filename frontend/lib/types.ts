@@ -1,4 +1,4 @@
-export type View = "home" | "running" | "results" | "saved";
+export type View = "home" | "running" | "results" | "saved" | "trends";
 
 export interface Client {
   id: number;
