@@ -4,6 +4,13 @@ import type { Keyword } from "@/lib/types";
 
 type VolumeTier = "high" | "medium" | "low";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtVol(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return `${n}`;
+}
+
 // ── Large trend chart ─────────────────────────────────────────────────────────
 interface TimePoint { date: string; value: number }
 
@@ -16,15 +23,19 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
   );
 
   const W = 800, H = 200;
-  const PAD = { top: 12, right: 16, bottom: 36, left: 38 };
+  const PAD = { top: 12, right: 16, bottom: 36, left: 50 };
   const iW = W - PAD.left - PAD.right;
   const iH = H - PAD.top - PAD.bottom;
 
+  const maxVal = Math.max(...timeline.map(d => d.value), 1);
   const xS = (i: number) => PAD.left + (i / Math.max(timeline.length - 1, 1)) * iW;
-  const yS = (v: number) => PAD.top + iH - (Math.min(v, 100) / 100) * iH;
+  const yS = (v: number) => PAD.top + iH - (Math.min(v, maxVal) / maxVal) * iH;
 
   const linePts = timeline.map((d, i) => `${xS(i)},${yS(d.value)}`).join(" ");
   const areaPts = `${xS(0)},${yS(0)} ${linePts} ${xS(timeline.length - 1)},${yS(0)}`;
+
+  // Y-axis: 5 ticks scaled to real volume
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0].map(f => Math.round(f * maxVal));
 
   // X-axis: 5 evenly spaced labels, no forced endpoints to avoid overlap
   const labelCount = Math.min(5, timeline.length);
@@ -53,11 +64,11 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
           </linearGradient>
         </defs>
 
-        {/* Grid lines + Y labels */}
-        {[0, 25, 50, 75, 100].map(v => (
+        {/* Grid lines + Y labels (real volume) */}
+        {yTicks.map(v => (
           <g key={v}>
             <line x1={PAD.left} x2={W - PAD.right} y1={yS(v)} y2={yS(v)} stroke="#e2e8f0" strokeWidth="1" />
-            <text x={PAD.left - 5} y={yS(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
+            <text x={PAD.left - 6} y={yS(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{fmtVol(v)}</text>
           </g>
         ))}
 
@@ -104,7 +115,8 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
               <div className="text-slate-300 mb-1">{hoveredPt.date}</div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
-                <span className="font-bold text-white text-sm">{hoveredPt.value}</span>
+                <span className="font-bold text-white text-sm">~{fmtVol(hoveredPt.value)}</span>
+                <span className="text-slate-400 text-xs">searches/mo</span>
               </div>
             </div>
           </div>
@@ -119,6 +131,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
   const [timeRange, setTimeRange] = useState<"6m" | "1y" | "5y">("1y");
   const [timeline, setTimeline] = useState<TimePoint[]>([]);
   const [rising, setRising] = useState<string[]>([]);
+  const [currentMonthly, setCurrentMonthly] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -130,7 +143,14 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
       body: JSON.stringify({ keyword, geo, timeRange }),
     })
       .then(r => r.json())
-      .then(d => { if (!cancelled) { setTimeline(d.timeline ?? []); setRising(d.rising_queries ?? []); setLoading(false); } })
+      .then(d => {
+        if (!cancelled) {
+          setTimeline(d.timeline ?? []);
+          setRising(d.rising_queries ?? []);
+          setCurrentMonthly(d.current_monthly ?? 0);
+          setLoading(false);
+        }
+      })
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [keyword, geo, timeRange]);
@@ -188,7 +208,12 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
         {/* Chart area */}
         <div className="px-6 pt-4">
           <div className="flex items-baseline justify-between mb-1">
-            <p className="font-display text-sm font-semibold text-slate-800 tracking-tight">Interest over time</p>
+            <div className="flex items-baseline gap-3">
+              <p className="font-display text-sm font-semibold text-slate-800 tracking-tight">Monthly search volume</p>
+              {!loading && currentMonthly > 0 && (
+                <span className="text-lg font-bold text-[#6b21d6]">~{fmtVol(currentMonthly)}<span className="text-xs font-normal text-slate-400 ml-1">searches/mo est.</span></span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
           </div>
 
