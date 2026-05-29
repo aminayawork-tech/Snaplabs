@@ -3,6 +3,174 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Keyword } from "@/lib/types";
 
 type VolumeTier = "high" | "medium" | "low";
+
+// ── Large trend chart ─────────────────────────────────────────────────────────
+interface TimePoint { date: string; value: number }
+
+function LargeChart({ timeline }: { timeline: TimePoint[] }) {
+  if (!timeline.length) return (
+    <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No data available</div>
+  );
+
+  const W = 800, H = 200;
+  const PAD = { top: 12, right: 16, bottom: 36, left: 38 };
+  const iW = W - PAD.left - PAD.right;
+  const iH = H - PAD.top - PAD.bottom;
+
+  const xS = (i: number) => PAD.left + (i / Math.max(timeline.length - 1, 1)) * iW;
+  const yS = (v: number) => PAD.top + iH - (Math.min(v, 100) / 100) * iH;
+
+  const linePts = timeline.map((d, i) => `${xS(i)},${yS(d.value)}`).join(" ");
+  const areaPts = `${xS(0)},${yS(0)} ${linePts} ${xS(timeline.length - 1)},${yS(0)}`;
+
+  // X-axis: show ~6 evenly spaced labels
+  const step = Math.max(1, Math.floor(timeline.length / 6));
+  const xLabels = timeline.map((d, i) => ({ i, date: d.date })).filter((_, i) => i % step === 0 || i === timeline.length - 1);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
+      <defs>
+        <linearGradient id="gt-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6b21d6" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#6b21d6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Grid lines + Y labels */}
+      {[0, 25, 50, 75, 100].map(v => (
+        <g key={v}>
+          <line x1={PAD.left} x2={W - PAD.right} y1={yS(v)} y2={yS(v)} stroke="#e2e8f0" strokeWidth="1" />
+          <text x={PAD.left - 5} y={yS(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
+        </g>
+      ))}
+
+      {/* Area fill */}
+      <polygon points={areaPts} fill="url(#gt-fill)" />
+
+      {/* Line */}
+      <polyline points={linePts} fill="none" stroke="#6b21d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* X-axis labels */}
+      {xLabels.map(({ i, date }) => (
+        <text key={i} x={xS(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="#94a3b8">{date}</text>
+      ))}
+
+      {/* Baseline */}
+      <line x1={PAD.left} x2={W - PAD.right} y1={yS(0)} y2={yS(0)} stroke="#cbd5e1" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// ── Detail modal ──────────────────────────────────────────────────────────────
+function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: string; onClose: () => void }) {
+  const [timeRange, setTimeRange] = useState<"1y" | "5y">("1y");
+  const [timeline, setTimeline] = useState<TimePoint[]>([]);
+  const [rising, setRising] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch("/api/trends/detail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword, geo, timeRange }),
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancelled) { setTimeline(d.timeline ?? []); setRising(d.rising_queries ?? []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [keyword, geo, timeRange]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            {/* Keyword chip like Google Trends */}
+            <div className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
+              <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
+              <a
+                href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(keyword)}&geo=${geo}`}
+                target="_blank" rel="noopener noreferrer"
+                className="opacity-50 hover:opacity-100 transition"
+                title="Open in Google Trends"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6]"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Time range toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              {(["1y", "5y"] as const).map(r => (
+                <button
+                  key={r}
+                  onClick={() => setTimeRange(r)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  {r === "1y" ? "1 Year" : "5 Years"}
+                </button>
+              ))}
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Chart area */}
+        <div className="px-6 pt-4">
+          <div className="flex items-baseline justify-between mb-1">
+            <p className="text-sm font-bold text-slate-700">Interest over time</p>
+            <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center h-48 gap-2">
+              <div className="w-5 h-5 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
+              <span className="text-sm text-slate-400">Loading trend data…</span>
+            </div>
+          ) : (
+            <LargeChart timeline={timeline} />
+          )}
+        </div>
+
+        {/* Rising queries */}
+        {rising.length > 0 && (
+          <div className="px-6 pb-5 mt-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Rising related searches</p>
+            <div className="flex flex-wrap gap-2">
+              {rising.map((q, i) => (
+                <a
+                  key={i}
+                  href={`https://www.google.com/search?q=${encodeURIComponent(q)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-semibold bg-[#f3eef8] text-[#6b21d6] px-3 py-1.5 rounded-full hover:bg-[#e9e0f6] transition flex items-center gap-1"
+                >
+                  <span className="text-green-500">↑</span> {q}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 type TrendDir   = "rising" | "stable" | "declining";
 
 interface AIKeyword {
@@ -130,8 +298,10 @@ function ResultsPage({
   loadingReal,
   realFetchedCount,
   totalReal,
+  geo,
   onBack,
   onDrillDown,
+  onDetail,
 }: {
   context: string;
   rows: Row[];
@@ -139,8 +309,10 @@ function ResultsPage({
   loadingReal: boolean;
   realFetchedCount: number;
   totalReal: number;
+  geo: string;
   onBack: () => void;
   onDrillDown: (kw: string) => void;
+  onDetail: (kw: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("growth");
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
@@ -255,9 +427,16 @@ function ResultsPage({
                     {r.keyword}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
-                  <div>
+                  <button
+                    onClick={() => onDetail(r.keyword)}
+                    className="group/spark flex items-center hover:opacity-80 transition cursor-pointer relative"
+                    title="Click to expand trend"
+                  >
                     {isFetching ? <SparklineSkeleton /> : isReal ? <Sparkline data={r.real!.sparkline} growth={growth} /> : <TrendArrow trend={r.trend} />}
-                  </div>
+                    {(isReal || !isFetching) && (
+                      <span className="absolute inset-0 rounded-lg border-2 border-transparent group-hover/spark:border-[#6b21d6] transition pointer-events-none" />
+                    )}
+                  </button>
                   <div>
                     <GrowthBadge pct={growth} estimated={!isReal} />
                   </div>
@@ -317,6 +496,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingReal, setLoadingReal] = useState(false);
   const [realFetchedCount, setRealFetchedCount] = useState(0);
+  const [geo] = useState("US");
+  const [detailKeyword, setDetailKeyword] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchRealTrends = useCallback(async (aiRows: Row[]) => {
@@ -417,8 +598,18 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
           loadingReal={loadingReal}
           realFetchedCount={realFetchedCount}
           totalReal={REAL_FETCH_LIMIT}
+          geo={geo}
           onBack={() => { abortRef.current?.abort(); setPage("home"); setRows([]); }}
           onDrillDown={kw => run(`"${kw}"`, { keyword: kw })}
+          onDetail={kw => setDetailKeyword(kw)}
+        />
+      )}
+
+      {detailKeyword && (
+        <TrendDetailModal
+          keyword={detailKeyword}
+          geo={geo}
+          onClose={() => setDetailKeyword(null)}
         />
       )}
     </div>
