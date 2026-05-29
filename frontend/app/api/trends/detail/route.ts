@@ -27,8 +27,11 @@ export async function POST(req: NextRequest) {
     let risingQueries: string[] = [];
     try {
       const relRaw = await gt.relatedQueries({ keyword, geo });
-      const ranked = JSON.parse(relRaw).default?.rankedList?.[1]?.rankedKeyword ?? [];
-      risingQueries = ranked.slice(0, 8).map((r: { query: string }) => r.query);
+      const rankedList = JSON.parse(relRaw).default?.rankedList ?? [];
+      const risingKws: { query: string }[] = rankedList[1]?.rankedKeyword ?? [];
+      const topKws: { query: string }[] = rankedList[0]?.rankedKeyword ?? [];
+      const merged = [...risingKws, ...topKws].filter((v, i, a) => a.findIndex(x => x.query === v.query) === i);
+      risingQueries = merged.slice(0, 8).map((r) => r.query);
     } catch { /* skip */ }
 
     return Response.json({ timeline, rising_queries: risingQueries });

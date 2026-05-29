@@ -37,8 +37,12 @@ export async function POST(req: NextRequest) {
       let rising: string[] = [];
       try {
         const relRaw = await gt.relatedQueries({ keyword, geo });
-        const ranked: RankedKw[] = JSON.parse(relRaw).default?.rankedList?.[1]?.rankedKeyword ?? [];
-        rising = ranked.slice(0, 6).map((r) => r.query);
+        const rankedList = JSON.parse(relRaw).default?.rankedList ?? [];
+        const risingKws: RankedKw[] = rankedList[1]?.rankedKeyword ?? [];
+        const topKws: RankedKw[] = rankedList[0]?.rankedKeyword ?? [];
+        // Prefer rising queries; fill from top queries when rising data is thin
+        const merged = [...risingKws, ...topKws].filter((v, i, a) => a.findIndex(x => x.query === v.query) === i);
+        rising = merged.slice(0, 6).map((r) => r.query);
       } catch { /* skip if related queries fail */ }
 
       results.push({ keyword, sparkline, growth_pct: growth, current_interest: current, rising_queries: rising });
