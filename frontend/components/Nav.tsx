@@ -65,10 +65,7 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
       {/* ── Desktop sidebar ── */}
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-[220px] flex-col bg-white border-r border-slate-200 shadow-[1px_0_0_#e2e8f0] z-50 px-3 py-5">
         {/* Brand */}
-        <div className="flex items-center gap-2.5 mb-1 px-1">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-sm">
-            S
-          </div>
+        <div className="flex items-center mb-1 px-1">
           <div className="font-display font-bold text-[1.05rem] text-slate-900 leading-none tracking-tight">
             Snappy<span className="text-brand">marketer</span>
           </div>
