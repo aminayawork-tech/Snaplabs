@@ -87,7 +87,7 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
                 onClick={() => handleNav(key)}
                 disabled={disabled}
                 className={clsx(
-                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[0.8125rem] font-medium transition-all w-full text-left",
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left",
                   isActive
                     ? "bg-brand-100 text-brand font-semibold"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
