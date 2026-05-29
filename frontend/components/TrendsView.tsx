@@ -8,6 +8,9 @@ type VolumeTier = "high" | "medium" | "low";
 interface TimePoint { date: string; value: number }
 
 function LargeChart({ timeline }: { timeline: TimePoint[] }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
   if (!timeline.length) return (
     <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No data available</div>
   );
@@ -30,37 +33,84 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
     return { i, date: timeline[i].date };
   });
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    const fraction = Math.max(0, Math.min(1, (svgX - PAD.left) / iW));
+    setHoverIdx(Math.round(fraction * (timeline.length - 1)));
+  };
+
+  const hoveredPt = hoverIdx !== null ? timeline[hoverIdx] : null;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
-      <defs>
-        <linearGradient id="gt-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6b21d6" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#6b21d6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
+    <div ref={wrapRef} className="relative select-none" onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
+        <defs>
+          <linearGradient id="gt-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6b21d6" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#6b21d6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
 
-      {/* Grid lines + Y labels */}
-      {[0, 25, 50, 75, 100].map(v => (
-        <g key={v}>
-          <line x1={PAD.left} x2={W - PAD.right} y1={yS(v)} y2={yS(v)} stroke="#e2e8f0" strokeWidth="1" />
-          <text x={PAD.left - 5} y={yS(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
-        </g>
-      ))}
+        {/* Grid lines + Y labels */}
+        {[0, 25, 50, 75, 100].map(v => (
+          <g key={v}>
+            <line x1={PAD.left} x2={W - PAD.right} y1={yS(v)} y2={yS(v)} stroke="#e2e8f0" strokeWidth="1" />
+            <text x={PAD.left - 5} y={yS(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
+          </g>
+        ))}
 
-      {/* Area fill */}
-      <polygon points={areaPts} fill="url(#gt-fill)" />
+        {/* Area fill */}
+        <polygon points={areaPts} fill="url(#gt-fill)" />
 
-      {/* Line */}
-      <polyline points={linePts} fill="none" stroke="#6b21d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Line */}
+        <polyline points={linePts} fill="none" stroke="#6b21d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
-      {/* X-axis labels */}
-      {xLabels.map(({ i, date }) => (
-        <text key={i} x={xS(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="#94a3b8">{date}</text>
-      ))}
+        {/* Hover crosshair + dot */}
+        {hoverIdx !== null && hoveredPt && (
+          <g>
+            <line
+              x1={xS(hoverIdx)} x2={xS(hoverIdx)}
+              y1={PAD.top} y2={yS(0)}
+              stroke="#6b21d6" strokeWidth="1" strokeDasharray="3,3" opacity="0.5"
+            />
+            <circle cx={xS(hoverIdx)} cy={yS(hoveredPt.value)} r="4.5" fill="white" stroke="#6b21d6" strokeWidth="2" />
+          </g>
+        )}
 
-      {/* Baseline */}
-      <line x1={PAD.left} x2={W - PAD.right} y1={yS(0)} y2={yS(0)} stroke="#cbd5e1" strokeWidth="1" />
-    </svg>
+        {/* X-axis labels */}
+        {xLabels.map(({ i, date }) => (
+          <text key={i} x={xS(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="#94a3b8">{date}</text>
+        ))}
+
+        {/* Baseline */}
+        <line x1={PAD.left} x2={W - PAD.right} y1={yS(0)} y2={yS(0)} stroke="#cbd5e1" strokeWidth="1" />
+      </svg>
+
+      {/* Hover tooltip */}
+      {hoverIdx !== null && hoveredPt && (() => {
+        const xPct = (xS(hoverIdx) / W) * 100;
+        const toLeft = xPct > 60;
+        return (
+          <div
+            className="absolute top-1 pointer-events-none z-10"
+            style={{
+              left: `${xPct}%`,
+              transform: toLeft ? "translateX(calc(-100% - 10px))" : "translateX(10px)",
+            }}
+          >
+            <div className="bg-slate-800 text-white rounded-xl px-3 py-2.5 text-xs shadow-xl whitespace-nowrap border border-slate-700">
+              <div className="text-slate-300 mb-1">{hoveredPt.date}</div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
+                <span className="font-bold text-white text-sm">{hoveredPt.value}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
   );
 }
 
