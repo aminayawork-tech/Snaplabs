@@ -53,6 +53,25 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
 
 Be specific and actionable. Use real data from the scraped content.`;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchPAA(fc: any, keyword: string): Promise<string[]> {
+  try {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&hl=en`;
+    const res = await fc.scrapeUrl(url, { formats: ["markdown"] });
+    if (!res.success || !res.markdown) return [];
+    const md: string = res.markdown;
+    const idx = md.search(/people\s+also\s+ask/i);
+    if (idx === -1) return [];
+    return md.slice(idx, idx + 4000)
+      .split("\n")
+      .map((l: string) => l.replace(/^[\s#*\->[\]|]+/, "").trim())
+      .filter((l: string) => l.endsWith("?") && l.length > 15 && l.length < 260)
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
+}
+
 export async function runResearch(
   url: string,
   deepCrawl: boolean,
@@ -121,6 +140,19 @@ export async function runResearch(
         return { success: false, error: "Audit response was truncated. Please try again." };
       }
     }
+
+    // Scrape Google PAA for top keywords in parallel
+    onProgress?.(3, "Fetching People Also Ask from Google");
+    const rawKws = (research.top_10_longtail_keywords ?? []) as (string | { keyword: string })[];
+    const topKws = rawKws.slice(0, 4).map(k => (typeof k === "string" ? k : k.keyword)).filter(Boolean);
+
+    const paaResults = await Promise.allSettled(topKws.map(kw => fetchPAA(fc, kw)));
+    const paa: Record<string, string[]> = {};
+    paaResults.forEach((r, i) => {
+      if (r.status === "fulfilled" && r.value.length > 0) paa[topKws[i]] = r.value;
+    });
+    if (Object.keys(paa).length > 0) research.people_also_ask = paa;
+
     return { success: true, research, pages_crawled: pagesCrawled };
   } catch (e) {
     return { success: false, error: String(e) };

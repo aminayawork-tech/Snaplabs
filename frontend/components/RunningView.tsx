@@ -8,6 +8,7 @@ const STEPS = [
   "Scraping website content",
   "Extracting pages & structure",
   "Running AI analysis",
+  "Fetching People Also Ask from Google",
   "Building your report",
 ];
 

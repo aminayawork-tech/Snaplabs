@@ -63,6 +63,7 @@ export interface ResearchData {
   top_10_longtail_keywords?: (string | Keyword)[];
   target_keywords?: string[];
   technical_seo_issues?: string[];
+  people_also_ask?: Record<string, string[]>;
   competitor_analysis?: Competitor[];
   competitors?: Competitor[];
   quick_win_opportunities?: QuickWin[];

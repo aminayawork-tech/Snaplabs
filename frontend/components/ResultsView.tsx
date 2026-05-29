@@ -20,6 +20,38 @@ function guessAgentId(tactic: string): string {
   return "seo";
 }
 
+function PAAItem({ question, keyword }: { question: string; keyword: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      onClick={() => setOpen(o => !o)}
+      className="w-full text-left border border-slate-200 rounded-xl px-4 py-2.5 hover:border-[#c4a8e8] transition group"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
+        <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+          <span className="text-[10px] font-bold bg-[#f3eef8] text-[#6b21d6] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px]">
+            {keyword}
+          </span>
+          <svg
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            className={`w-4 h-4 text-[#6b21d6] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </div>
+      {open && (
+        <p className="mt-2 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
+          This question surfaces on Google when users search for <em>&ldquo;{keyword}&rdquo;</em>.
+          Creating a page or blog post that directly answers this question can earn a featured snippet
+          and capture high-intent traffic.
+        </p>
+      )}
+    </button>
+  );
+}
+
 interface WinCardProps {
   win: QuickWin;
   index: number;
@@ -292,6 +324,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
   const competitors = (data.competitor_analysis ?? data.competitors ?? []) as Competitor[];
   const wins        = (data.quick_win_opportunities ?? []) as QuickWin[];
   const personas    = (data.target_audience ?? []) as AudiencePersona[];
+  const paa         = data.people_also_ask ?? {};
 
   return (
     <div className="view-enter">
@@ -392,8 +425,20 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
             </div>
           </div>
         )}
+        {Object.keys(paa).length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">People Also Ask</p>
+            <div className="flex flex-col gap-2">
+              {Object.entries(paa).map(([kw, questions]) =>
+                questions.map((q, qi) => (
+                  <PAAItem key={`${kw}-${qi}`} question={q} keyword={kw} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
         {techIssues.length > 0 && (
-          <div>
+          <div className="mt-4">
             <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">Technical Issues to Fix</p>
             <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
               {techIssues.slice(0, 8).map((t, i) => <li key={i}>{t}</li>)}

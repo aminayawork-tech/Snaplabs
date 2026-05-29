@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (result.success) {
-          send({ type: "progress", step: 3, label: "Building your report" });
+          send({ type: "progress", step: 4, label: "Building your report" });
           send({ type: "result", data: result.research, pages_crawled: result.pages_crawled ?? 1, biz_name });
         } else {
           send({ type: "error", message: result.error });

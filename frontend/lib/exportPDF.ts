@@ -36,6 +36,7 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
   const competitors = (data.competitor_analysis ?? data.competitors ?? []) as Competitor[];
   const wins = (data.quick_win_opportunities ?? []) as QuickWin[];
   const personas = (data.target_audience ?? []) as AudiencePersona[];
+  const paa = data.people_also_ask ?? {} as Record<string, string[]>;
 
   const overviewBody = `
     <div class="two-col">
@@ -64,7 +65,8 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
         </div>
       </div>`;
     }).join("")}
-    ${techIssues.length ? `<p class="label" style="margin-top:16px">Technical Issues</p><ul>${techIssues.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}` : "<p>No SEO data.</p>";
+    ${techIssues.length ? `<p class="label" style="margin-top:16px">Technical Issues</p><ul>${techIssues.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${Object.keys(paa).length ? `<p class="label" style="margin-top:16px">People Also Ask</p>${Object.entries(paa as Record<string, string[]>).flatMap(([kw, qs]) => qs.map(q => `<div class="kw-row"><span class="kw-text">${esc(q)}</span><span class="badge" style="background:#ede9fe;color:#6b21d6">${esc(kw)}</span></div>`)).join("")}` : ""}` : "<p>No SEO data.</p>";
 
   const compBody = competitors.length ? competitors.map(comp => {
     if (typeof comp !== "object") return `<p>${esc(String(comp))}</p>`;
