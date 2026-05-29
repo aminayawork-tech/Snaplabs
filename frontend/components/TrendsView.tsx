@@ -170,26 +170,27 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
   const maxRegionVal = Math.max(...regions.map(r => r.value), 1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      {/* Scrollable centering wrapper */}
+      <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10 pointer-events-none">
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mb-8"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl pointer-events-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5">
+          <a
+            href={`https://www.google.com/search?q=${encodeURIComponent(keyword)}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5 hover:bg-[#ede5f6] transition group"
+            title="Search on Google"
+          >
             <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
             <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
-            <a
-              href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(keyword)}&geo=${geo}`}
-              target="_blank" rel="noopener noreferrer"
-              className="opacity-50 hover:opacity-100 transition"
-              title="Open in Google Trends"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6]"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-          </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6] opacity-50 group-hover:opacity-100 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
           <div className="flex items-center gap-3">
             <div className="flex bg-slate-100 rounded-lg p-0.5">
               {(["6m", "1y", "5y"] as const).map(r => (
@@ -315,6 +316,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
