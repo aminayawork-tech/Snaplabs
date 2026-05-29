@@ -23,9 +23,12 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
   const linePts = timeline.map((d, i) => `${xS(i)},${yS(d.value)}`).join(" ");
   const areaPts = `${xS(0)},${yS(0)} ${linePts} ${xS(timeline.length - 1)},${yS(0)}`;
 
-  // X-axis: show ~6 evenly spaced labels
-  const step = Math.max(1, Math.floor(timeline.length / 6));
-  const xLabels = timeline.map((d, i) => ({ i, date: d.date })).filter((_, i) => i % step === 0 || i === timeline.length - 1);
+  // X-axis: 5 evenly spaced labels, no forced endpoints to avoid overlap
+  const labelCount = Math.min(5, timeline.length);
+  const xLabels = Array.from({ length: labelCount }, (_, j) => {
+    const i = Math.round(j * (timeline.length - 1) / Math.max(labelCount - 1, 1));
+    return { i, date: timeline[i].date };
+  });
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
@@ -63,7 +66,7 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
 
 // ── Detail modal ──────────────────────────────────────────────────────────────
 function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: string; onClose: () => void }) {
-  const [timeRange, setTimeRange] = useState<"1y" | "5y">("1y");
+  const [timeRange, setTimeRange] = useState<"6m" | "1y" | "5y">("1y");
   const [timeline, setTimeline] = useState<TimePoint[]>([]);
   const [rising, setRising] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,13 +119,13 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
           <div className="flex items-center gap-3">
             {/* Time range toggle */}
             <div className="flex bg-slate-100 rounded-lg p-0.5">
-              {(["1y", "5y"] as const).map(r => (
+              {(["6m", "1y", "5y"] as const).map(r => (
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  {r === "1y" ? "1 Year" : "5 Years"}
+                  {r === "6m" ? "6 Months" : r === "1y" ? "1 Year" : "5 Years"}
                 </button>
               ))}
             </div>
@@ -136,7 +139,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
         <div className="px-6 pt-4">
           <div className="flex items-baseline justify-between mb-1">
             <p className="text-sm font-bold text-slate-700">Interest over time</p>
-            <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
+            <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
           </div>
 
           {loading ? (

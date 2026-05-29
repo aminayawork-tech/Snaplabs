@@ -9,7 +9,9 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const gt = require("google-trends-api");
   const startTime = new Date();
-  startTime.setFullYear(startTime.getFullYear() - (timeRange === "5y" ? 5 : 1));
+  if (timeRange === "6m") startTime.setMonth(startTime.getMonth() - 6);
+  else if (timeRange === "5y") startTime.setFullYear(startTime.getFullYear() - 5);
+  else startTime.setFullYear(startTime.getFullYear() - 1);
 
   try {
     const raw = await gt.interestOverTime({ keyword, startTime, geo });
