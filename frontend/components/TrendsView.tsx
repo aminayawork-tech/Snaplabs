@@ -127,7 +127,7 @@ function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?
 }
 
 // ── Detail modal ──────────────────────────────────────────────────────────────
-function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: string; onClose: () => void }) {
+function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: string; geo: string; onClose: () => void; onDrillDown: (kw: string) => void }) {
   const [timeRange, setTimeRange] = useState<"6m" | "1y" | "5y">("1y");
   const [timeline, setTimeline]           = useState<TimePoint[]>([]);
   const [relatedQueries, setRelatedQueries] = useState<{ query: string; value: number }[]>([]);
@@ -170,9 +170,9 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
   const maxRegionVal = Math.max(...regions.map(r => r.value), 1);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[200] overflow-y-auto">
+      {/* Backdrop — z-[199] so it covers the nav (z-50) but sits below modal content */}
+      <div className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-md" onClick={onClose} />
       {/* Scrollable centering wrapper */}
       <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10 pointer-events-none">
       <div
@@ -181,16 +181,16 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-          <a
-            href={`https://www.google.com/search?q=${encodeURIComponent(keyword)}`}
-            target="_blank" rel="noopener noreferrer"
+          <button
+            onClick={() => onDrillDown(keyword)}
             className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5 hover:bg-[#ede5f6] transition group"
-            title="Search on Google"
+            title="Search this keyword in Trends"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
             <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6] opacity-50 group-hover:opacity-100 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
+            {/* search icon */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6] opacity-50 group-hover:opacity-100 transition"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
           <div className="flex items-center gap-3">
             <div className="flex bg-slate-100 rounded-lg p-0.5">
               {(["6m", "1y", "5y"] as const).map(r => (
@@ -760,6 +760,7 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
           keyword={detailKeyword}
           geo={geo}
           onClose={() => setDetailKeyword(null)}
+          onDrillDown={kw => { setDetailKeyword(null); run(`"${kw}"`, { keyword: kw }); }}
         />
       )}
     </div>
