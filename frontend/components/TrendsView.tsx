@@ -188,7 +188,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
         {/* Chart area */}
         <div className="px-6 pt-4">
           <div className="flex items-baseline justify-between mb-1">
-            <p className="text-sm font-bold text-slate-700">Interest over time</p>
+            <p className="font-display text-sm font-semibold text-slate-800 tracking-tight">Interest over time</p>
             <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
           </div>
 
@@ -205,7 +205,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
         {/* Rising queries */}
         {rising.length > 0 && (
           <div className="px-6 pb-5 mt-2">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Rising related searches</p>
+            <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Rising related searches</p>
             <div className="flex flex-wrap gap-2">
               {rising.map((q, i) => (
                 <a
@@ -327,7 +327,7 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
           Expand
         </button>
       </form>
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Browse by category</p>
+      <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.12em] mb-4">Browse by category</p>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {CATEGORIES.map(cat => (
           <button key={cat.name} onClick={() => onSelect(cat.name)}
@@ -423,7 +423,7 @@ function ResultsPage({
       {/* Rising from real data */}
       {risingQueries.length > 0 && (
         <div className="mb-4 bg-[#faf8ff] border border-[#c4a8e8] rounded-2xl p-4">
-          <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Rising Opportunities</p>
+          <p className="text-[0.6875rem] font-semibold text-[#6b21d6] uppercase tracking-[0.1em] mb-3">Rising Opportunities</p>
           <div className="flex flex-wrap gap-2">
             {risingQueries.map((r, i) => (
               <button key={i} onClick={() => onDrillDown(r.query)}
@@ -459,7 +459,7 @@ function ResultsPage({
       {!loadingAI && visible.length > 0 && (
         <>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
               <button className="text-left flex items-center" onClick={() => toggleSort("keyword")}>Keyword <Arrow k="keyword" /></button>
               <span>Trend — 1yr</span>
               <button className="flex items-center" onClick={() => toggleSort("growth")}>Growth <Arrow k="growth" /></button>
@@ -624,8 +624,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     <div className="view-enter">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-800">Discover Trends</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Spot growing keywords before your competitors do.</p>
+          <h1 className="font-display text-[1.375rem] font-bold text-slate-900 tracking-tight">Discover Trends</h1>
+          <p className="text-[0.875rem] text-slate-500 mt-1 font-normal">Spot growing keywords before your competitors do.</p>
         </div>
         {auditKeywords.length > 0 && page === "home" && (
           <button onClick={runAuditKeywords}

@@ -35,10 +35,10 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
     <div className="view-enter">
       {/* Hero */}
       <div className="text-center py-8 px-4">
-        <h1 className="text-[2rem] font-extrabold text-slate-800 tracking-tight leading-tight mb-2">
+        <h1 className="font-display text-[2.1rem] font-bold text-slate-900 tracking-tight leading-[1.15] mb-3">
           Your AI <span className="text-brand">Marketing Analyst</span>
         </h1>
-        <p className="text-slate-500 text-[0.95rem] leading-relaxed max-w-sm mx-auto">
+        <p className="text-slate-500 text-[0.9375rem] leading-relaxed max-w-sm mx-auto font-normal">
           Enter your website URL and get a full marketing audit — SEO, competitors, content gaps, and quick wins — in under 60 seconds.
         </p>
       </div>
@@ -46,20 +46,20 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
       {/* Audit form */}
       <form onSubmit={submit} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-6">
         <div className="mb-4">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-            Business Name <span className="text-slate-300 normal-case font-normal">(optional)</span>
+          <label className="block text-[0.7rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-1.5">
+            Business Name <span className="text-slate-300 normal-case font-normal tracking-normal">(optional)</span>
           </label>
           <input
             type="text"
             value={bizName}
             onChange={(e) => setBizName(e.target.value)}
             placeholder="e.g. My Coffee Shop"
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
+            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+          <label className="block text-[0.7rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-1.5">
             Website URL <span className="text-red-400">*</span>
           </label>
           <input
@@ -68,7 +68,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://yourbusiness.com/"
             required
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
+            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
           />
         </div>
 
@@ -79,8 +79,8 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
             onChange={(e) => setDeepCrawl(e.target.checked)}
             className="w-4 h-4 rounded accent-brand"
           />
-          <span className="text-sm text-slate-600">
-            Deep crawl <span className="text-slate-400">(up to 10 pages, richer data)</span>
+          <span className="text-[0.875rem] text-slate-600">
+            Deep crawl <span className="text-slate-400 font-normal">(up to 10 pages, richer data)</span>
           </span>
         </label>
 
@@ -90,7 +90,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-3 text-sm shadow-md hover:shadow-lg hover:-translate-y-px transition-all"
+          className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-semibold rounded-xl py-3 text-[0.9375rem] tracking-wide shadow-md hover:shadow-lg hover:-translate-y-px transition-all"
         >
           Audit My Website
         </button>
@@ -99,7 +99,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
       {/* Recent audits */}
       {audits.length > 0 && (
         <div>
-          <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-widest mb-3">
+          <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.12em] mb-3">
             Recent Audits
           </p>
           <div className="flex flex-col gap-2">

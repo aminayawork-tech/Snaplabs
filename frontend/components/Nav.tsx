@@ -65,17 +65,15 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
       {/* ── Desktop sidebar ── */}
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-[220px] flex-col bg-white border-r border-slate-200 shadow-[1px_0_0_#e2e8f0] z-50 px-3 py-5">
         {/* Brand */}
-        <div className="flex items-center gap-2 mb-1 px-1">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] text-white font-bold text-sm flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-2.5 mb-1 px-1">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-sm">
             S
           </div>
-          <div>
-            <div className="font-extrabold text-[1.0rem] text-slate-800 leading-tight">
-              Snappy<span className="text-brand">marketer</span>
-            </div>
+          <div className="font-display font-bold text-[1.05rem] text-slate-900 leading-none tracking-tight">
+            Snappy<span className="text-brand">marketer</span>
           </div>
         </div>
-        <p className="text-[0.62rem] uppercase tracking-widest text-slate-400 mb-5 pl-1">AI Marketing Platform</p>
+        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-5 pl-1">AI Marketing Platform</p>
 
         <div className="w-full h-px bg-slate-100 mb-3" />
 
@@ -89,10 +87,10 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
                 onClick={() => handleNav(key)}
                 disabled={disabled}
                 className={clsx(
-                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left",
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[0.8125rem] font-medium transition-all w-full text-left",
                   isActive
-                    ? "bg-brand-100 text-brand font-bold"
-                    : "text-slate-500 hover:bg-slate-100 hover:text-brand",
+                    ? "bg-brand-100 text-brand font-semibold"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
                   disabled && "opacity-30 cursor-not-allowed"
                 )}
               >
@@ -103,10 +101,8 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
           })}
         </div>
 
-        <div className="mt-auto text-[0.65rem] text-slate-300 leading-relaxed pl-1">
-          snappymarketer
-          <br />
-          Powered by Claude + Firecrawl
+        <div className="mt-auto text-[0.625rem] text-slate-300 leading-relaxed pl-1 tracking-wide">
+          snappymarketer · Claude + Firecrawl
         </div>
       </nav>
 
