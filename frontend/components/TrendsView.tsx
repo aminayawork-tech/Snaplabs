@@ -155,7 +155,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
             {/* Keyword chip like Google Trends */}
             <div className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
-              <span className="text-base font-bold text-[#6b21d6]">{keyword}</span>
+              <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
               <a
                 href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(keyword)}&geo=${geo}`}
                 target="_blank" rel="noopener noreferrer"
@@ -173,7 +173,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
                 <button
                   key={r}
                   onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   {r === "6m" ? "6 Months" : r === "1y" ? "1 Year" : "5 Years"}
                 </button>
@@ -188,14 +188,14 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
         {/* Chart area */}
         <div className="px-6 pt-4">
           <div className="flex items-baseline justify-between mb-1">
-            <p className="font-display text-base font-semibold text-slate-800 tracking-tight">Interest over time</p>
-            <p className="text-sm text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
+            <p className="font-display text-sm font-semibold text-slate-800 tracking-tight">Interest over time</p>
+            <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center h-48 gap-2">
               <div className="w-5 h-5 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-              <span className="text-base text-slate-400">Loading trend data…</span>
+              <span className="text-sm text-slate-400">Loading trend data…</span>
             </div>
           ) : (
             <LargeChart timeline={timeline} />
@@ -212,7 +212,7 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
                   key={i}
                   href={`https://www.google.com/search?q=${encodeURIComponent(q)}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="text-sm font-semibold bg-[#f3eef8] text-[#6b21d6] px-3 py-1.5 rounded-full hover:bg-[#e9e0f6] transition flex items-center gap-1"
+                  className="text-xs font-semibold bg-[#f3eef8] text-[#6b21d6] px-3 py-1.5 rounded-full hover:bg-[#e9e0f6] transition flex items-center gap-1"
                 >
                   <span className="text-green-500">↑</span> {q}
                 </a>
@@ -293,7 +293,7 @@ function TrendArrow({ trend }: { trend: TrendDir }) {
 function GrowthBadge({ pct, estimated }: { pct: number; estimated?: boolean }) {
   const up = pct >= 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-sm font-bold px-2.5 py-1 rounded-full ${up ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
       {up ? "▲" : "▼"} {Math.abs(pct)}%{estimated ? <span className="font-normal opacity-70 ml-0.5">est</span> : null}
     </span>
   );
@@ -320,10 +320,10 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder='Enter any keyword to expand (e.g. "mushroom coffee", "cold plunge")'
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-base focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
           />
         </div>
-        <button type="submit" className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-3 rounded-xl text-base transition">
+        <button type="submit" className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
           Expand
         </button>
       </form>
@@ -332,8 +332,8 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
         {CATEGORIES.map(cat => (
           <button key={cat.name} onClick={() => onSelect(cat.name)}
             className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#6b21d6] hover:bg-[#faf8ff] transition group">
-            <p className="font-bold text-slate-800 text-base group-hover:text-[#6b21d6] transition leading-snug">{cat.name}</p>
-            <p className="text-sm text-slate-400 mt-1 leading-snug">{cat.desc}</p>
+            <p className="font-bold text-slate-800 text-sm group-hover:text-[#6b21d6] transition leading-snug">{cat.name}</p>
+            <p className="text-xs text-slate-400 mt-1 leading-snug">{cat.desc}</p>
           </button>
         ))}
       </div>
@@ -405,15 +405,15 @@ function ResultsPage({
     <div>
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-base font-semibold text-[#6b21d6] hover:underline">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#6b21d6] hover:underline">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
           Back to categories
         </button>
         <span className="text-slate-300">/</span>
-        <span className="text-base font-bold text-slate-700 truncate max-w-xs">{context}</span>
-        {loadingAI && <span className="text-sm text-slate-400 animate-pulse">generating keywords…</span>}
+        <span className="text-sm font-bold text-slate-700 truncate max-w-xs">{context}</span>
+        {loadingAI && <span className="text-xs text-slate-400 animate-pulse">generating keywords…</span>}
         {!loadingAI && loadingReal && (
-          <span className="text-sm text-slate-400 flex items-center gap-1.5">
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
             <span className="w-3 h-3 border-2 border-slate-300 border-t-[#6b21d6] rounded-full animate-spin inline-block" />
             fetching trends ({realFetchedCount}/{totalReal})…
           </span>
@@ -427,7 +427,7 @@ function ResultsPage({
           <div className="flex flex-wrap gap-2">
             {risingQueries.map((r, i) => (
               <button key={i} onClick={() => onDrillDown(r.query)}
-                className="bg-white border border-[#c4a8e8] hover:bg-[#f3eef8] text-slate-700 text-sm font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1">
+                className="bg-white border border-[#c4a8e8] hover:bg-[#f3eef8] text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1">
                 <span className="text-green-500 font-bold">↑</span> {r.query}
               </button>
             ))}
@@ -440,7 +440,7 @@ function ResultsPage({
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           {(["all", "rising", "stable", "declining"] as const).map(f => (
             <button key={f} onClick={() => { setFilter(f); setPage(1); }}
-              className={`text-sm font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#6b21d6] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#6b21d6]"}`}>
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#6b21d6] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#6b21d6]"}`}>
               {f === "all" ? `All (${rows.length})` : f === "rising" ? `↑ Rising (${rows.filter(r => r.trend === "rising").length})` : f === "stable" ? `→ Stable (${rows.filter(r => r.trend === "stable").length})` : `↓ Declining (${rows.filter(r => r.trend === "declining").length})`}
             </button>
           ))}
@@ -451,7 +451,7 @@ function ResultsPage({
       {loadingAI && (
         <div className="flex items-center justify-center py-20 gap-3 flex-col">
           <div className="w-7 h-7 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-          <p className="text-base text-slate-500">Discovering trending keywords…</p>
+          <p className="text-sm text-slate-500">Discovering trending keywords…</p>
         </div>
       )}
 
@@ -475,7 +475,7 @@ function ResultsPage({
                   <a
                     href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="text-base font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
+                    className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
                   >
                     {r.keyword}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -517,14 +517,14 @@ function ResultsPage({
                 className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#6b21d6] disabled:opacity-30 disabled:cursor-not-allowed transition">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <span className="text-base text-slate-600 font-medium">Page {page} of {pages}</span>
+              <span className="text-sm text-slate-600 font-medium">Page {page} of {pages}</span>
               <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
                 className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#6b21d6] disabled:opacity-30 disabled:cursor-not-allowed transition">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
           )}
-          <p className="text-sm text-slate-400 mt-3 text-center">
+          <p className="text-xs text-slate-400 mt-3 text-center">
             {rows.filter(r => r.real).length} keywords with real Google Trends data · rest are AI estimates · Growth = last 6 months vs prior 6 months
           </p>
         </>

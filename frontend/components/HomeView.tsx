@@ -54,7 +54,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
             value={bizName}
             onChange={(e) => setBizName(e.target.value)}
             placeholder="e.g. My Coffee Shop"
-            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-base text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
+            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
           />
         </div>
 
@@ -68,7 +68,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://yourbusiness.com/"
             required
-            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-base text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
+            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition"
           />
         </div>
 
