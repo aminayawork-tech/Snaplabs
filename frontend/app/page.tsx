@@ -20,6 +20,7 @@ export default function App() {
   const [bizName, setBizName]     = useState("");
   const [agentOutputs, setAgentOutputs] = useState<Record<string, AgentOutput>>({});
   const [auditError, setAuditError] = useState("");
+  const [trendsTopic, setTrendsTopic] = useState<string | undefined>();
 
   const startAudit = useCallback((url: string, bName: string, deepCrawl: boolean) => {
     setBizName(bName);
@@ -80,7 +81,13 @@ export default function App() {
 
   const handleNav = useCallback((v: View) => {
     if (v === "running") return;
+    if (v !== "trends") setTrendsTopic(undefined);
     setView(v);
+  }, []);
+
+  const handleExploreTrends = useCallback((industry: string) => {
+    setTrendsTopic(industry);
+    setView("trends");
   }, []);
 
   return (
@@ -114,6 +121,7 @@ export default function App() {
             bizName={bizName}
             initialAgentOutputs={agentOutputs}
             onAgentOutput={handleAgentOutput}
+            onExploreTrends={handleExploreTrends}
           />
         )}
         {view === "saved" && (
@@ -123,6 +131,7 @@ export default function App() {
           <TrendsView
             auditKeywords={(result?.data.top_10_longtail_keywords ?? []) as (string | Keyword)[]}
             bizName={bizName || undefined}
+            initialCategory={trendsTopic}
           />
         )}
       </main>

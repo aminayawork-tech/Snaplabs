@@ -295,13 +295,14 @@ interface Props {
   bizName: string;
   initialAgentOutputs?: Record<string, AgentOutput>;
   onAgentOutput?: (agentId: string, output: AgentOutput) => void;
+  onExploreTrends?: (industry: string) => void;
 }
 
 function scoreColor(s: number) {
   return s >= 70 ? "#22c55e" : s >= 50 ? "#f59e0b" : "#ef4444";
 }
 
-export default function ResultsView({ result, bizName, initialAgentOutputs, onAgentOutput }: Props) {
+export default function ResultsView({ result, bizName, initialAgentOutputs, onAgentOutput, onExploreTrends }: Props) {
   const { data, pages_crawled } = result;
 
   const rawScore = data.overall_marketing_score;
@@ -395,6 +396,17 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
       </Section>
 
       <Section title="SEO & Keywords">
+        {onExploreTrends && industry && (
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => onExploreTrends(industry)}
+              className="flex items-center gap-1.5 text-xs font-bold text-[#6b21d6] bg-[#f3eef8] border border-[#c4a8e8] px-3 py-1.5 rounded-full hover:bg-[#ede5f6] transition"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              Explore trends for {industry}
+            </button>
+          </div>
+        )}
         {keywords.length > 0 && (
           <div className="mb-4">
             <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Long-tail Keyword Opportunities</p>
