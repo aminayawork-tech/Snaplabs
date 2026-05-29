@@ -170,13 +170,17 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
   const maxRegionVal = Math.max(...regions.map(r => r.value), 1);
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-y-auto">
-      {/* Backdrop — no z-index so DOM order keeps modal card above it */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-md" onClick={onClose} />
-      {/* Scrollable centering wrapper */}
-      <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10 pointer-events-none">
+    <>
+      {/* Backdrop — separate sibling so backdrop-blur covers everything below z-150 (including nav at z-50) */}
+      <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" />
+      {/* Scroll container + click-to-close */}
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl pointer-events-auto"
+        className="fixed inset-0 z-[200] overflow-y-auto"
+        onClick={onClose}
+      >
+      <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10">
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -318,7 +322,8 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
         )}
       </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 type TrendDir   = "rising" | "stable" | "declining";
