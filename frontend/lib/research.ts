@@ -63,6 +63,24 @@ Return a strict JSON object with EXACTLY these keys (no markdown fences):
 
 Be specific and actionable. Use real data from the scraped content. For people_also_ask, write questions exactly as a real person would type them into Google — specific to this business and industry.`;
 
+async function verifyUrl(raw: string): Promise<boolean> {
+  try {
+    const url = raw.startsWith("http") ? raw : `https://${raw}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    // Try HEAD first — much faster
+    let res = await fetch(url, { method: "HEAD", signal: controller.signal, redirect: "follow" }).catch(() => null);
+    // Some servers reject HEAD — fall back to GET with a range limit
+    if (!res || res.status === 405) {
+      res = await fetch(url, { method: "GET", signal: controller.signal, redirect: "follow" }).catch(() => null);
+    }
+    clearTimeout(timer);
+    return !!res && res.status < 400;
+  } catch {
+    return false;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchPAA(fc: any, keyword: string): Promise<string[]> {
   try {
@@ -164,14 +182,34 @@ export async function runResearch(
       }
     }
 
-    // Try Google scraping in parallel — overwrites/supplements with real SERP data
-    onProgress?.(3, "Fetching People Also Ask from Google");
-    const paaResults = await Promise.allSettled(topKws.map(kw => fetchPAA(fc, kw)));
+    // Run PAA scraping + competitor URL verification in parallel
+    onProgress?.(3, "Verifying competitors & fetching People Also Ask");
+
+    type CompObj = Record<string, unknown>;
+    const rawComps = (research.competitor_analysis ?? []) as CompObj[];
+
+    const [paaResults, compVerifications] = await Promise.all([
+      Promise.allSettled(topKws.map(kw => fetchPAA(fc, kw))),
+      Promise.allSettled(
+        rawComps.map(comp => {
+          const url = (comp.url ?? comp.website ?? "") as string;
+          return url ? verifyUrl(url) : Promise.resolve(true); // keep if no URL
+        })
+      ),
+    ]);
+
+    // Apply PAA results
     paaResults.forEach((r, i) => {
       if (r.status === "fulfilled" && r.value.length > 0) paa[topKws[i]] = r.value;
     });
-
     if (Object.keys(paa).length > 0) research.people_also_ask = paa;
+
+    // Filter out competitors with dead URLs — keep all if every URL failed (safety net)
+    const verified = rawComps.filter((_, i) => {
+      const r = compVerifications[i];
+      return r.status === "fulfilled" ? r.value : true;
+    });
+    if (verified.length > 0) research.competitor_analysis = verified;
 
     return { success: true, research, pages_crawled: pagesCrawled };
   } catch (e) {
