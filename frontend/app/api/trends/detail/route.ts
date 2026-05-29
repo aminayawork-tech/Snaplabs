@@ -44,15 +44,13 @@ export async function POST(req: NextRequest) {
   else startTime.setFullYear(startTime.getFullYear() - 1);
 
   try {
-    // Fetch Google Trends + Claude volume estimate in parallel
+    // Phase 1: timeline + volume estimate in parallel
     const [raw, peakMonthly] = await Promise.all([
       gt.interestOverTime({ keyword, startTime, geo }),
       estimatePeakMonthly(keyword, geo),
     ]);
 
     const timelineData = JSON.parse(raw).default?.timelineData ?? [];
-
-    // Scale 0-100 index to estimated monthly searches
     const timeline: { date: string; value: number }[] = timelineData.map(
       (d: { formattedAxisTime?: string; formattedTime?: string; value: number[] }) => ({
         date: d.formattedAxisTime || d.formattedTime || "",
@@ -60,19 +58,56 @@ export async function POST(req: NextRequest) {
       })
     );
 
+    // Phase 2: related queries + regions in parallel
+    const [relResult, regResult] = await Promise.allSettled([
+      gt.relatedQueries({ keyword, geo }),
+      gt.interestByRegion({ keyword, geo, resolution: "COUNTRY" }),
+    ]);
+
+    // Related queries — top (with volume bars) + rising (for tags)
+    let relatedQueries: { query: string; value: number }[] = [];
     let risingQueries: string[] = [];
-    try {
-      const relRaw = await gt.relatedQueries({ keyword, geo });
-      const rankedList = JSON.parse(relRaw).default?.rankedList ?? [];
-      const risingKws: { query: string }[] = rankedList[1]?.rankedKeyword ?? [];
-      const topKws: { query: string }[] = rankedList[0]?.rankedKeyword ?? [];
-      const merged = [...risingKws, ...topKws].filter((v, i, a) => a.findIndex(x => x.query === v.query) === i);
-      risingQueries = merged.slice(0, 8).map((r) => r.query);
-    } catch { /* skip */ }
+    if (relResult.status === "fulfilled") {
+      const rankedList = JSON.parse(relResult.value).default?.rankedList ?? [];
+      const topKws: { query: string; value: number }[] = rankedList[0]?.rankedKeyword ?? [];
+      const risingKws: { query: string; value: number }[] = rankedList[1]?.rankedKeyword ?? [];
+      relatedQueries = topKws.slice(0, 14).map(r => ({ query: r.query, value: r.value }));
+      const topSet = new Set(topKws.map(r => r.query));
+      const merged = [...risingKws.filter(r => !topSet.has(r.query)), ...topKws]
+        .filter((v, i, a) => a.findIndex(x => x.query === v.query) === i);
+      risingQueries = merged.slice(0, 8).map(r => r.query);
+    }
+
+    // Interest by region
+    let regions: { region: string; value: number }[] = [];
+    if (regResult.status === "fulfilled") {
+      const geoData = JSON.parse(regResult.value).default?.geoMapData ?? [];
+      regions = (geoData as { geoName: string; value: number[] }[])
+        .filter(r => (r.value[0] ?? 0) > 0)
+        .sort((a, b) => (b.value[0] ?? 0) - (a.value[0] ?? 0))
+        .slice(0, 8)
+        .map(r => ({ region: r.geoName, value: r.value[0] ?? 0 }));
+    }
+
+    // YoY growth from timeline
+    let yoyGrowth = 0;
+    if (timeline.length >= 24) {
+      const recent = timeline.slice(-12).reduce((s, d) => s + d.value, 0) / 12;
+      const prior  = timeline.slice(-24, -12).reduce((s, d) => s + d.value, 0) / 12;
+      yoyGrowth = prior > 0 ? Math.round(((recent - prior) / prior) * 100) : 0;
+    }
 
     const currentMonthly = timeline[timeline.length - 1]?.value ?? 0;
-    return Response.json({ timeline, rising_queries: risingQueries, peak_monthly: peakMonthly, current_monthly: currentMonthly });
+    return Response.json({
+      timeline,
+      related_queries: relatedQueries,
+      rising_queries: risingQueries,
+      regions,
+      peak_monthly: peakMonthly,
+      current_monthly: currentMonthly,
+      yoy_growth: yoyGrowth,
+    });
   } catch {
-    return Response.json({ timeline: [], rising_queries: [], peak_monthly: 0, current_monthly: 0 });
+    return Response.json({ timeline: [], related_queries: [], rising_queries: [], regions: [], peak_monthly: 0, current_monthly: 0, yoy_growth: 0 });
   }
 }

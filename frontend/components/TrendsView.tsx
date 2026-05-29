@@ -14,7 +14,7 @@ function fmtVol(n: number): string {
 // ── Large trend chart ─────────────────────────────────────────────────────────
 interface TimePoint { date: string; value: number }
 
-function LargeChart({ timeline }: { timeline: TimePoint[] }) {
+function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?: number }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +22,7 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
     <div className="flex items-center justify-center h-48 text-slate-400 text-sm">No data available</div>
   );
 
-  const W = 800, H = 200;
+  const W = 800, H = height;
   const PAD = { top: 12, right: 16, bottom: 36, left: 50 };
   const iW = W - PAD.left - PAD.right;
   const iH = H - PAD.top - PAD.bottom;
@@ -56,7 +56,7 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
 
   return (
     <div ref={wrapRef} className="relative select-none" onMouseMove={handleMouseMove} onMouseLeave={() => setHoverIdx(null)}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }}>
         <defs>
           <linearGradient id="gt-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#6b21d6" stopOpacity="0.18" />
@@ -129,10 +129,13 @@ function LargeChart({ timeline }: { timeline: TimePoint[] }) {
 // ── Detail modal ──────────────────────────────────────────────────────────────
 function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: string; onClose: () => void }) {
   const [timeRange, setTimeRange] = useState<"6m" | "1y" | "5y">("1y");
-  const [timeline, setTimeline] = useState<TimePoint[]>([]);
-  const [rising, setRising] = useState<string[]>([]);
-  const [currentMonthly, setCurrentMonthly] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const [timeline, setTimeline]           = useState<TimePoint[]>([]);
+  const [relatedQueries, setRelatedQueries] = useState<{ query: string; value: number }[]>([]);
+  const [risingQueries, setRisingQueries]  = useState<string[]>([]);
+  const [regions, setRegions]             = useState<{ region: string; value: number }[]>([]);
+  const [currentMonthly, setCurrentMonthly] = useState(0);
+  const [yoyGrowth, setYoyGrowth]         = useState(0);
+  const [loading, setLoading]             = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,8 +149,11 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
       .then(d => {
         if (!cancelled) {
           setTimeline(d.timeline ?? []);
-          setRising(d.rising_queries ?? []);
+          setRelatedQueries(d.related_queries ?? []);
+          setRisingQueries(d.rising_queries ?? []);
+          setRegions(d.regions ?? []);
           setCurrentMonthly(d.current_monthly ?? 0);
+          setYoyGrowth(d.yoy_growth ?? 0);
           setLoading(false);
         }
       })
@@ -155,46 +161,40 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
     return () => { cancelled = true; };
   }, [keyword, geo, timeRange]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  const maxRegionVal = Math.max(...regions.map(r => r.value), 1);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            {/* Keyword chip like Google Trends */}
-            <div className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
-              <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
-              <a
-                href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(keyword)}&geo=${geo}`}
-                target="_blank" rel="noopener noreferrer"
-                className="opacity-50 hover:opacity-100 transition"
-                title="Open in Google Trends"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6]"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </a>
-            </div>
+          <div className="flex items-center gap-2 bg-[#f3eef8] border border-[#c4a8e8] rounded-full px-4 py-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#6b21d6] flex-shrink-0" />
+            <span className="text-sm font-bold text-[#6b21d6]">{keyword}</span>
+            <a
+              href={`https://trends.google.com/trends/explore?q=${encodeURIComponent(keyword)}&geo=${geo}`}
+              target="_blank" rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition"
+              title="Open in Google Trends"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#6b21d6]"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
           </div>
           <div className="flex items-center gap-3">
-            {/* Time range toggle */}
             <div className="flex bg-slate-100 rounded-lg p-0.5">
               {(["6m", "1y", "5y"] as const).map(r => (
-                <button
-                  key={r}
-                  onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                >
+                <button key={r} onClick={() => setTimeRange(r)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                   {r === "6m" ? "6 Months" : r === "1y" ? "1 Year" : "5 Years"}
                 </button>
               ))}
@@ -205,36 +205,106 @@ function TrendDetailModal({ keyword, geo, onClose }: { keyword: string; geo: str
           </div>
         </div>
 
-        {/* Chart area */}
-        <div className="px-6 pt-4">
-          <div className="flex items-baseline justify-between mb-1">
-            <div className="flex items-baseline gap-3">
-              <p className="font-display text-sm font-semibold text-slate-800 tracking-tight">Monthly search volume</p>
-              {!loading && currentMonthly > 0 && (
-                <span className="text-lg font-bold text-[#6b21d6]">~{fmtVol(currentMonthly)}<span className="text-xs font-normal text-slate-400 ml-1">searches/mo est.</span></span>
-              )}
+        {/* Stats row */}
+        {!loading && (
+          <div className="flex items-center gap-6 px-6 pt-4 pb-2">
+            {currentMonthly > 0 && (
+              <div>
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Monthly searches</p>
+                <p className="text-2xl font-bold text-[#6b21d6] mt-0.5">~{fmtVol(currentMonthly)}</p>
+                <p className="text-xs text-slate-400">est. · {geo === "US" ? "United States" : geo || "Worldwide"}</p>
+              </div>
+            )}
+            {yoyGrowth !== 0 && (
+              <div>
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">YoY growth</p>
+                <p className={`text-2xl font-bold mt-0.5 ${yoyGrowth >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {yoyGrowth >= 0 ? "+" : ""}{yoyGrowth}%
+                </p>
+                <p className="text-xs text-slate-400">vs. prior year</p>
+              </div>
+            )}
+            <div className="ml-auto text-right">
+              <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Period</p>
+              <p className="text-sm font-semibold text-slate-700 mt-0.5">{timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
             </div>
-            <p className="text-xs text-slate-400">{geo === "US" ? "United States" : geo || "Worldwide"} · {timeRange === "6m" ? "Past 6 months" : timeRange === "1y" ? "Past year" : "Past 5 years"}</p>
           </div>
+        )}
 
+        {/* Chart */}
+        <div className="px-6 pt-2 pb-4">
+          <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Monthly search volume over time</p>
           {loading ? (
-            <div className="flex items-center justify-center h-48 gap-2">
+            <div className="flex items-center justify-center h-56 gap-2">
               <div className="w-5 h-5 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
               <span className="text-sm text-slate-400">Loading trend data…</span>
             </div>
           ) : (
-            <LargeChart timeline={timeline} />
+            <LargeChart timeline={timeline} height={260} />
           )}
         </div>
 
-        {/* Rising queries */}
-        {rising.length > 0 && (
-          <div className="px-6 pb-5 mt-2">
-            <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Rising related searches</p>
+        {/* People Also Search + Interest by Region */}
+        {!loading && (relatedQueries.length > 0 || regions.length > 0) && (
+          <div className="grid grid-cols-2 gap-0 border-t border-slate-100">
+            {/* People Also Search */}
+            {relatedQueries.length > 0 && (
+              <div className="px-6 py-5 border-r border-slate-100">
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">People Also Search</p>
+                <div className="space-y-2.5">
+                  {relatedQueries.slice(0, 10).map((q, i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1">
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(q.query)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-slate-700 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate max-w-[200px]"
+                        >
+                          {q.query}
+                        </a>
+                        <span className="text-xs text-slate-400 ml-2 flex-shrink-0">{q.value}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#6b21d6] rounded-full" style={{ width: `${q.value}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Interest by Region */}
+            {regions.length > 0 && (
+              <div className="px-6 py-5">
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Interest by Region</p>
+                <div className="space-y-2.5">
+                  {regions.map((r, i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-300 w-4 text-right">{i + 1}</span>
+                          <span className="text-sm text-slate-700">{r.region}</span>
+                        </span>
+                        <span className="text-xs text-slate-400 ml-2 flex-shrink-0">{r.value}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden ml-6">
+                        <div className="h-full bg-[#6b21d6] rounded-full" style={{ width: `${(r.value / maxRegionVal) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Rising searches */}
+        {!loading && risingQueries.length > 0 && (
+          <div className="px-6 pb-6 pt-4 border-t border-slate-100">
+            <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Rising searches</p>
             <div className="flex flex-wrap gap-2">
-              {rising.map((q, i) => (
-                <a
-                  key={i}
+              {risingQueries.map((q, i) => (
+                <a key={i}
                   href={`https://www.google.com/search?q=${encodeURIComponent(q)}`}
                   target="_blank" rel="noopener noreferrer"
                   className="text-xs font-semibold bg-[#f3eef8] text-[#6b21d6] px-3 py-1.5 rounded-full hover:bg-[#e9e0f6] transition flex items-center gap-1"
