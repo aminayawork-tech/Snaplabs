@@ -218,7 +218,15 @@ function ResultsTable({
                 key={i}
                 className="grid grid-cols-[2fr_96px_96px_110px_1fr] items-center gap-4 px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition"
               >
-                <span className="text-sm font-semibold text-slate-800 truncate">{r.keyword}</span>
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
+                >
+                  {r.keyword}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-50 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
                 <Sparkline data={r.sparkline} growth={r.growth_pct} />
                 <div>{r.sparkline.length > 0 ? <GrowthBadge pct={r.growth_pct} /> : <span className="text-slate-300">—</span>}</div>
                 <div>{r.sparkline.length > 0 ? <InterestBar value={r.current_interest} /> : <span className="text-slate-300">—</span>}</div>
