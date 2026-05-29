@@ -22,8 +22,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans:    ["var(--font-roboto)", "Roboto", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["var(--font-roboto)", "Roboto", "sans-serif"],
+        sans:    ["var(--font-open-sans)", "Open Sans", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        display: ["var(--font-open-sans)", "Open Sans", "sans-serif"],
       },
     },
   },

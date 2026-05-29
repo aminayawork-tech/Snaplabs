@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
+import { Open_Sans } from "next/font/google";
 import "./globals.css";
 
-const roboto = Roboto({
+const openSans = Open_Sans({
   subsets: ["latin"],
-  variable: "--font-roboto",
-  weight: ["300", "400", "500", "700", "900"],
+  variable: "--font-open-sans",
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -23,8 +23,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={roboto.variable}>
-      <body className={roboto.className}>{children}</body>
+    <html lang="en" className={openSans.variable}>
+      <body className={openSans.className}>{children}</body>
     </html>
   );
 }
