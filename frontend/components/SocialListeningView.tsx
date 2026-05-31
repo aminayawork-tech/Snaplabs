@@ -47,13 +47,15 @@ interface ListenData {
   platform: Platform;
 }
 
+const ALL_PLATFORMS: Platform[] = ["reddit", "hackernews", "x", "linkedin", "tiktok", "facebook"];
+
 const PLATFORMS: { key: Platform; label: string; pill: string; activePill: string }[] = [
-  { key: "reddit",     label: "Reddit",      pill: "bg-orange-50 text-orange-700 border-orange-200",   activePill: "bg-orange-600 text-white border-orange-600" },
-  { key: "hackernews", label: "HackerNews",  pill: "bg-amber-50 text-amber-700 border-amber-200",      activePill: "bg-amber-500 text-white border-amber-500" },
-  { key: "x",          label: "X",           pill: "bg-slate-100 text-slate-700 border-slate-300",     activePill: "bg-slate-900 text-white border-slate-900" },
-  { key: "linkedin",   label: "LinkedIn",    pill: "bg-blue-50 text-blue-700 border-blue-200",         activePill: "bg-blue-700 text-white border-blue-700" },
-  { key: "tiktok",     label: "TikTok",      pill: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",activePill: "bg-fuchsia-600 text-white border-fuchsia-600" },
-  { key: "facebook",   label: "Facebook",    pill: "bg-indigo-50 text-indigo-700 border-indigo-200",   activePill: "bg-indigo-600 text-white border-indigo-600" },
+  { key: "reddit",     label: "Reddit",      pill: "bg-orange-50 text-orange-700 border-orange-200",    activePill: "bg-orange-600 text-white border-orange-600" },
+  { key: "hackernews", label: "HackerNews",  pill: "bg-amber-50 text-amber-700 border-amber-200",       activePill: "bg-amber-500 text-white border-amber-500" },
+  { key: "x",          label: "X",           pill: "bg-slate-100 text-slate-700 border-slate-300",      activePill: "bg-slate-900 text-white border-slate-900" },
+  { key: "linkedin",   label: "LinkedIn",    pill: "bg-blue-50 text-blue-700 border-blue-200",          activePill: "bg-blue-700 text-white border-blue-700" },
+  { key: "tiktok",     label: "TikTok",      pill: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", activePill: "bg-fuchsia-600 text-white border-fuchsia-600" },
+  { key: "facebook",   label: "Facebook",    pill: "bg-indigo-50 text-indigo-700 border-indigo-200",    activePill: "bg-indigo-600 text-white border-indigo-600" },
 ];
 
 const COMMUNITY_PREFIX: Record<Platform, string> = {
@@ -140,39 +142,58 @@ function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negativ
   );
 }
 
+type ResultsMap = Partial<Record<Platform, ListenData>>;
+type LoadingMap = Partial<Record<Platform, boolean>>;
+
 export default function SocialListeningView() {
   const [keyword, setKeyword] = useState("");
-  const [platform, setPlatform] = useState<Platform>("reddit");
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ListenData | null>(null);
+  const [activePlatform, setActivePlatform] = useState<Platform>("reddit");
+  const [results, setResults] = useState<ResultsMap>({});
+  const [loadingMap, setLoadingMap] = useState<LoadingMap>({});
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
 
-  const listen = async (e: React.FormEvent) => {
+  const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
+  const doneCount = ALL_PLATFORMS.filter(p => results[p] && !loadingMap[p]).length;
+  const hasAnyResult = doneCount > 0;
+
+  const analyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) return;
-    setLoading(true);
+
+    setResults({});
     setError("");
-    setData(null);
     setShowAll(false);
-    try {
-      const res = await fetch("/api/social/listen", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim(), platform }),
-      });
-      const json = await res.json();
-      if (json.error) setError(json.error);
-      else setData(json);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setActiveSection("social");
+
+    const initialLoading: LoadingMap = {};
+    ALL_PLATFORMS.forEach(p => { initialLoading[p] = true; });
+    setLoadingMap(initialLoading);
+
+    await Promise.all(
+      ALL_PLATFORMS.map(async (platform) => {
+        try {
+          const res = await fetch("/api/social/listen", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keyword: keyword.trim(), platform }),
+          });
+          const json = await res.json();
+          if (!json.error) {
+            setResults(prev => ({ ...prev, [platform]: json }));
+          }
+        } catch {
+          // silently ignore individual platform failures
+        } finally {
+          setLoadingMap(prev => ({ ...prev, [platform]: false }));
+        }
+      })
+    );
   };
 
-  const activePlatform = data?.platform ?? platform;
+  const data = results[activePlatform] ?? null;
+  const isActiveLoading = !!loadingMap[activePlatform];
   const totalPosts = data ? (data.sentiment_summary.positive + data.sentiment_summary.neutral + data.sentiment_summary.negative) : 0;
   const visiblePosts = data ? (showAll ? data.posts : data.posts.slice(0, 8)) : [];
 
@@ -180,61 +201,87 @@ export default function SocialListeningView() {
     <div className="view-enter">
       <div className="mb-5">
         <h2 className="font-display text-[1.375rem] font-bold text-slate-900 tracking-tight">Social Listening & Content Discovery</h2>
-        <p className="text-[0.875rem] text-slate-500 mt-1">Sentiment, themes, and content intelligence for any keyword or brand.</p>
+        <p className="text-[0.875rem] text-slate-500 mt-1">Analyze all platforms at once — switch between results instantly.</p>
       </div>
 
-      {/* Platform selector */}
-      <div className="mb-4">
-        <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Platform</p>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-0 scrollbar-hide flex-wrap">
-          {PLATFORMS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => { setPlatform(p.key); setData(null); setError(""); }}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border transition
-                ${platform === p.key ? p.activePill : p.pill}`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <form onSubmit={listen} className="flex gap-2 mb-6">
+      <form onSubmit={analyze} className="flex gap-2 mb-5">
         <div className="flex-1 relative">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <input
             type="text"
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
-            placeholder={`Search ${PLATFORMS.find(p => p.key === platform)?.label ?? "social"} conversations…`}
+            placeholder='Enter brand name or keyword (e.g. "cold plunge", "nurses", "weight loss")'
             className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
           />
         </div>
-        <button type="submit" disabled={loading || !keyword.trim()}
-          className="bg-[#6b21d6] hover:bg-[#5b17be] disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
-          {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-          {loading ? "Analyzing…" : "Analyze"}
+        <button type="submit" disabled={anyLoading || !keyword.trim()}
+          className="bg-[#6b21d6] hover:bg-[#5b17be] disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2 min-w-[120px] justify-center">
+          {anyLoading
+            ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{doneCount}/{ALL_PLATFORMS.length}</>
+            : "Analyze All"}
         </button>
       </form>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Analyzing {PLATFORMS.find(p => p.key === platform)?.label} conversations…</p>
+      {/* Platform tabs — always visible once analysis started */}
+      {(anyLoading || hasAnyResult) && (
+        <div className="mb-5">
+          <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Platform</p>
+          <div className="flex gap-2 flex-wrap">
+            {PLATFORMS.map(p => {
+              const isLoading = !!loadingMap[p.key];
+              const isDone = !!results[p.key];
+              const isActive = activePlatform === p.key;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => { setActivePlatform(p.key); setShowAll(false); setActiveSection("social"); }}
+                  disabled={!isDone && !isLoading}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition
+                    ${isActive ? p.activePill : p.pill}
+                    ${!isDone && !isLoading ? "opacity-40 cursor-not-allowed" : ""}
+                  `}
+                >
+                  {isLoading
+                    ? <span className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                    : isDone
+                    ? <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                    : null
+                  }
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {data && !loading && (
+      {/* Active platform loading state */}
+      {isActiveLoading && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Analyzing {PLATFORMS.find(p => p.key === activePlatform)?.label} conversations…</p>
+        </div>
+      )}
+
+      {/* Initial loading state (nothing done yet) */}
+      {anyLoading && !hasAnyResult && !isActiveLoading && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Analyzing all platforms in parallel…</p>
+          <p className="text-xs text-slate-400">{doneCount} of {ALL_PLATFORMS.length} complete</p>
+        </div>
+      )}
+
+      {data && !isActiveLoading && (
         <div className="flex flex-col gap-4 view-enter">
 
-          {/* AI mode badge */}
           {data.data_source === "ai" && (
             <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-700">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span><strong>AI-powered insights</strong> — Real-time {PLATFORMS.find(p => p.key === activePlatform)?.label} data is not available. Showing Claude-generated analysis based on typical discussions about this topic.</span>
+              <span><strong>AI-powered insights</strong> — Real-time {PLATFORMS.find(p => p.key === activePlatform)?.label} data is not available. Showing Claude-generated analysis based on typical discussions.</span>
             </div>
           )}
 
@@ -260,7 +307,6 @@ export default function SocialListeningView() {
           {activeSection === "social" && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Sentiment */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Sentiment Overview</p>
                   <div className="flex items-center gap-3 mb-4">
@@ -278,7 +324,6 @@ export default function SocialListeningView() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  {/* Key Themes */}
                   <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex-1">
                     <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Key Themes</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -287,8 +332,6 @@ export default function SocialListeningView() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Top Communities */}
                   {data.top_communities.length > 0 && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                       <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">
@@ -311,13 +354,11 @@ export default function SocialListeningView() {
                 </div>
               </div>
 
-              {/* AI Summary */}
               <div className="bg-[#faf8ff] border border-[#c4a8e8] rounded-2xl p-4">
                 <p className="text-[0.6875rem] font-semibold text-[#6b21d6] uppercase tracking-[0.1em] mb-2">AI Summary</p>
                 <p className="text-sm text-slate-700 leading-relaxed">{data.sentiment_summary.summary}</p>
               </div>
 
-              {/* Opportunities */}
               {data.opportunities.length > 0 && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Marketing Opportunities</p>
@@ -331,7 +372,6 @@ export default function SocialListeningView() {
                 </div>
               )}
 
-              {/* Posts — real data only */}
               {visiblePosts.length > 0 && (
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
