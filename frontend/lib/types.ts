@@ -1,4 +1,5 @@
-export type View = "home" | "running" | "results" | "saved" | "trends";
+export type View = "home" | "running" | "results" | "saved" | "research";
+export type ResearchTab = "trends" | "competitor" | "social" | "audience";
 
 export interface Client {
   id: number;

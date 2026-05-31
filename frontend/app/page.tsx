@@ -5,7 +5,7 @@ import HomeView from "@/components/HomeView";
 import RunningView from "@/components/RunningView";
 import ResultsView from "@/components/ResultsView";
 import SavedView from "@/components/SavedView";
-import TrendsView from "@/components/TrendsView";
+import ResearchView from "@/components/ResearchView";
 import { storage } from "@/lib/storage";
 import type { View, AuditResult, AgentOutput, Keyword } from "@/lib/types";
 
@@ -81,13 +81,13 @@ export default function App() {
 
   const handleNav = useCallback((v: View) => {
     if (v === "running") return;
-    if (v !== "trends") setTrendsTopic(undefined);
+    if (v !== "research") setTrendsTopic(undefined);
     setView(v);
   }, []);
 
   const handleExploreTrends = useCallback((industry: string) => {
     setTrendsTopic(industry);
-    setView("trends");
+    setView("research");
   }, []);
 
   return (
@@ -127,8 +127,8 @@ export default function App() {
         {view === "saved" && (
           <SavedView onOpen={openSaved} />
         )}
-        {view === "trends" && (
-          <TrendsView
+        {view === "research" && (
+          <ResearchView
             auditKeywords={(result?.data.top_10_longtail_keywords ?? []) as (string | Keyword)[]}
             bizName={bizName || undefined}
             initialCategory={trendsTopic}
