@@ -178,7 +178,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
         className="fixed inset-0 z-[200] overflow-y-auto"
         onClick={onClose}
       >
-      <div className="flex min-h-full items-start justify-center p-4 pt-10 pb-10">
+      <div className="flex min-h-full items-center justify-center p-4 py-10">
       <div
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl"
         onClick={e => e.stopPropagation()}
@@ -445,6 +445,7 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
 
 // ── Results view ──────────────────────────────────────────────────────────────
 type SortKey = "growth" | "keyword" | "volume";
+type TrendsTimeRange = "24h" | "6m" | "1y";
 
 function ResultsPage({
   context,
@@ -454,6 +455,8 @@ function ResultsPage({
   realFetchedCount,
   totalReal,
   geo,
+  trendsTimeRange,
+  onTimeRangeChange,
   onBack,
   onDrillDown,
   onDetail,
@@ -465,6 +468,8 @@ function ResultsPage({
   realFetchedCount: number;
   totalReal: number;
   geo: string;
+  trendsTimeRange: TrendsTimeRange;
+  onTimeRangeChange: (t: TrendsTimeRange) => void;
   onBack: () => void;
   onDrillDown: (kw: string) => void;
   onDetail: (kw: string) => void;
@@ -537,15 +542,25 @@ function ResultsPage({
         </div>
       )}
 
-      {/* Filter chips */}
+      {/* Filter chips + time range toggle */}
       {!loadingAI && rows.length > 0 && (
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          {(["all", "rising", "stable", "declining"] as const).map(f => (
-            <button key={f} onClick={() => { setFilter(f); setPage(1); }}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#6b21d6] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#6b21d6]"}`}>
-              {f === "all" ? `All (${rows.length})` : f === "rising" ? `↑ Rising (${rows.filter(r => r.trend === "rising").length})` : f === "stable" ? `→ Stable (${rows.filter(r => r.trend === "stable").length})` : `↓ Declining (${rows.filter(r => r.trend === "declining").length})`}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 mb-3 flex-wrap justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(["all", "rising", "stable", "declining"] as const).map(f => (
+              <button key={f} onClick={() => { setFilter(f); setPage(1); }}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#6b21d6] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#6b21d6]"}`}>
+                {f === "all" ? `All (${rows.length})` : f === "rising" ? `↑ Rising (${rows.filter(r => r.trend === "rising").length})` : f === "stable" ? `→ Stable (${rows.filter(r => r.trend === "stable").length})` : `↓ Declining (${rows.filter(r => r.trend === "declining").length})`}
+              </button>
+            ))}
+          </div>
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            {(["24h", "6m", "1y"] as const).map(t => (
+              <button key={t} onClick={() => onTimeRangeChange(t)}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${trendsTimeRange === t ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                {t === "24h" ? "24 Hours" : t === "6m" ? "6 Months" : "1 Year"}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -563,7 +578,7 @@ function ResultsPage({
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <div className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
               <button className="text-left flex items-center" onClick={() => toggleSort("keyword")}>Keyword <Arrow k="keyword" /></button>
-              <span>Trend — 1yr</span>
+              <span className="text-center">{trendsTimeRange === "24h" ? "Trend — 24h" : trendsTimeRange === "6m" ? "Trend — 6m" : "Trend — 1yr"}</span>
               <button className="flex items-center" onClick={() => toggleSort("growth")}>Growth <Arrow k="growth" /></button>
               <button className="flex items-center" onClick={() => toggleSort("volume")}>Volume <Arrow k="volume" /></button>
               <span>Rising queries</span>
@@ -584,7 +599,7 @@ function ResultsPage({
                   </a>
                   <button
                     onClick={() => onDetail(r.keyword)}
-                    className="group/spark flex items-center hover:opacity-80 transition cursor-pointer relative"
+                    className="group/spark flex items-center justify-center w-full hover:opacity-80 transition cursor-pointer relative"
                     title="Click to expand trend"
                   >
                     {isFetching ? <SparklineSkeleton /> : isReal ? <Sparkline data={r.real!.sparkline} growth={growth} /> : <TrendArrow trend={r.trend} />}
@@ -652,10 +667,11 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   const [loadingReal, setLoadingReal] = useState(false);
   const [realFetchedCount, setRealFetchedCount] = useState(0);
   const [geo] = useState("US");
+  const [trendsTimeRange, setTrendsTimeRange] = useState<TrendsTimeRange>("1y");
   const [detailKeyword, setDetailKeyword] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchRealTrends = useCallback(async (aiRows: Row[]) => {
+  const fetchRealTrends = useCallback(async (aiRows: Row[], timeRange: TrendsTimeRange = "1y") => {
     const topKws = aiRows.slice(0, REAL_FETCH_LIMIT).map(r => r.keyword);
     if (!topKws.length) return;
     setLoadingReal(true);
@@ -664,7 +680,7 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       const res = await fetch("/api/trends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords: topKws, geo: "US" }),
+        body: JSON.stringify({ keywords: topKws, geo: "US", timeRange }),
       });
       const data = await res.json();
       const realMap: Record<string, RealTrend> = {};
@@ -675,6 +691,13 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       setLoadingReal(false);
     }
   }, []);
+
+  const handleTimeRangeChange = useCallback((t: TrendsTimeRange) => {
+    setTrendsTimeRange(t);
+    const stripped = rows.map(({ keyword, trend, growth, volume }) => ({ keyword, trend, growth, volume }));
+    setRows(stripped);
+    fetchRealTrends(stripped, t);
+  }, [fetchRealTrends, rows]);
 
   const run = useCallback(async (ctx: string, body: object) => {
     abortRef.current?.abort();
@@ -699,11 +722,11 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       }));
       setRows(aiRows);
       setLoadingAI(false);
-      if (aiRows.length) fetchRealTrends(aiRows);
+      if (aiRows.length) fetchRealTrends(aiRows, trendsTimeRange);
     } catch (e) {
       if ((e as Error).name !== "AbortError") setLoadingAI(false);
     }
-  }, [fetchRealTrends]);
+  }, [fetchRealTrends, trendsTimeRange]);
 
   const runAuditKeywords = useCallback(() => {
     const kws = auditKeywords.slice(0, 8).map(k => typeof k === "string" ? k : k.keyword).filter(Boolean);
@@ -713,8 +736,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     setPage("results");
     setRows(aiRows);
     setLoadingAI(false);
-    fetchRealTrends(aiRows);
-  }, [auditKeywords, bizName, fetchRealTrends]);
+    fetchRealTrends(aiRows, trendsTimeRange);
+  }, [auditKeywords, bizName, fetchRealTrends, trendsTimeRange]);
 
   useEffect(() => {
     if (initialCategory) run(initialCategory, { category: initialCategory });
@@ -754,6 +777,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
           realFetchedCount={realFetchedCount}
           totalReal={REAL_FETCH_LIMIT}
           geo={geo}
+          trendsTimeRange={trendsTimeRange}
+          onTimeRangeChange={handleTimeRangeChange}
           onBack={() => { abortRef.current?.abort(); setPage("home"); setRows([]); }}
           onDrillDown={kw => run(`"${kw}"`, { keyword: kw })}
           onDetail={kw => setDetailKeyword(kw)}
@@ -762,6 +787,7 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
 
       {detailKeyword && (
         <TrendDetailModal
+          key={detailKeyword}
           keyword={detailKeyword}
           geo={geo}
           onClose={() => setDetailKeyword(null)}

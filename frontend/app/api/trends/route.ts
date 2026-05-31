@@ -17,13 +17,15 @@ function calcGrowth(data: TrendPoint[]): number {
 }
 
 export async function POST(req: NextRequest) {
-  const { keywords, geo = "US" } = await req.json();
+  const { keywords, geo = "US", timeRange = "1y" } = await req.json();
   if (!Array.isArray(keywords) || keywords.length === 0) return Response.json({ results: [] });
 
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const gt = require("google-trends-api");
   const startTime = new Date();
-  startTime.setFullYear(startTime.getFullYear() - 1);
+  if (timeRange === "24h") startTime.setDate(startTime.getDate() - 1);
+  else if (timeRange === "6m") startTime.setMonth(startTime.getMonth() - 6);
+  else startTime.setFullYear(startTime.getFullYear() - 1);
 
   const results = [];
   for (const keyword of (keywords as string[]).slice(0, 10)) {
