@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 
+type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+
 interface Post {
   title: string;
   subreddit: string;
@@ -37,12 +39,55 @@ interface ContentDiscovery {
 interface ListenData {
   posts: Post[];
   sentiment_summary: SentimentSummary;
-  top_subreddits: string[];
+  top_communities: string[];
   key_themes: string[];
   opportunities: string[];
   content_discovery: ContentDiscovery | null;
-  data_source: "reddit" | "ai";
+  data_source: string;
+  platform: Platform;
 }
+
+const PLATFORMS: { key: Platform; label: string; pill: string; activePill: string }[] = [
+  { key: "reddit",     label: "Reddit",      pill: "bg-orange-50 text-orange-700 border-orange-200",   activePill: "bg-orange-600 text-white border-orange-600" },
+  { key: "hackernews", label: "HackerNews",  pill: "bg-amber-50 text-amber-700 border-amber-200",      activePill: "bg-amber-500 text-white border-amber-500" },
+  { key: "x",          label: "X",           pill: "bg-slate-100 text-slate-700 border-slate-300",     activePill: "bg-slate-900 text-white border-slate-900" },
+  { key: "linkedin",   label: "LinkedIn",    pill: "bg-blue-50 text-blue-700 border-blue-200",         activePill: "bg-blue-700 text-white border-blue-700" },
+  { key: "tiktok",     label: "TikTok",      pill: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",activePill: "bg-fuchsia-600 text-white border-fuchsia-600" },
+  { key: "facebook",   label: "Facebook",    pill: "bg-indigo-50 text-indigo-700 border-indigo-200",   activePill: "bg-indigo-600 text-white border-indigo-600" },
+];
+
+const COMMUNITY_PREFIX: Record<Platform, string> = {
+  reddit: "r/", hackernews: "", x: "#", linkedin: "", tiktok: "#", facebook: "",
+};
+
+const COMMUNITY_STYLE: Record<Platform, string> = {
+  reddit:     "bg-orange-50 text-orange-700 hover:bg-orange-100",
+  hackernews: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+  x:          "bg-slate-100 text-slate-700 hover:bg-slate-200",
+  linkedin:   "bg-blue-50 text-blue-700 hover:bg-blue-100",
+  tiktok:     "bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100",
+  facebook:   "bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
+};
+
+const COMMUNITY_LABEL: Record<Platform, string> = {
+  reddit: "Active Subreddits", hackernews: "Topic Areas",
+  x: "Top Hashtags", linkedin: "Active Communities",
+  tiktok: "Top Hashtags", facebook: "Active Groups & Pages",
+};
+
+const COMMUNITY_LINK: Record<Platform, (c: string) => string | null> = {
+  reddit:     c => `https://reddit.com/r/${c}`,
+  hackernews: () => null,
+  x:          c => `https://x.com/hashtag/${encodeURIComponent(c)}`,
+  linkedin:   () => null,
+  tiktok:     c => `https://tiktok.com/tag/${encodeURIComponent(c)}`,
+  facebook:   () => null,
+};
+
+const POST_HEADER: Record<Platform, string> = {
+  reddit: "Reddit Discussions", hackernews: "HackerNews Stories",
+  x: "Conversations", linkedin: "Posts", tiktok: "Videos", facebook: "Posts",
+};
 
 const SENTIMENT_STYLES = {
   positive: "bg-green-50 text-green-700 border-green-200",
@@ -52,8 +97,8 @@ const SENTIMENT_STYLES = {
 
 const LEVEL_STYLES = {
   high:   { bar: "bg-[#6b21d6]", label: "bg-[#f3eef8] text-[#6b21d6]" },
-  medium: { bar: "bg-blue-500",   label: "bg-blue-50 text-blue-700" },
-  low:    { bar: "bg-slate-300",  label: "bg-slate-100 text-slate-500" },
+  medium: { bar: "bg-blue-500",  label: "bg-blue-50 text-blue-700" },
+  low:    { bar: "bg-slate-300", label: "bg-slate-100 text-slate-500" },
 };
 
 const LEVEL_WIDTH = { high: "w-full", medium: "w-2/3", low: "w-1/3" };
@@ -79,11 +124,11 @@ function timeAgo(utc: number) {
 }
 
 function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negative" }) {
-  const colorClass = overall === "positive" ? "stroke-green-500" : overall === "negative" ? "stroke-red-500" : "stroke-slate-400";
-  const bgClass = overall === "positive" ? "bg-green-50" : overall === "negative" ? "bg-red-50" : "bg-slate-100";
+  const stroke = overall === "positive" ? "stroke-green-500" : overall === "negative" ? "stroke-red-500" : "stroke-slate-400";
+  const bg = overall === "positive" ? "bg-green-50" : overall === "negative" ? "bg-red-50" : "bg-slate-100";
   return (
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bgClass}`}>
-      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-6 h-6 ${colorClass}`}>
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg}`}>
+      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-6 h-6 ${stroke}`}>
         {overall === "positive"
           ? <><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
           : overall === "negative"
@@ -97,6 +142,7 @@ function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negativ
 
 export default function SocialListeningView() {
   const [keyword, setKeyword] = useState("");
+  const [platform, setPlatform] = useState<Platform>("reddit");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ListenData | null>(null);
   const [error, setError] = useState("");
@@ -114,7 +160,7 @@ export default function SocialListeningView() {
       const res = await fetch("/api/social/listen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim() }),
+        body: JSON.stringify({ keyword: keyword.trim(), platform }),
       });
       const json = await res.json();
       if (json.error) setError(json.error);
@@ -126,14 +172,32 @@ export default function SocialListeningView() {
     }
   };
 
+  const activePlatform = data?.platform ?? platform;
   const totalPosts = data ? (data.sentiment_summary.positive + data.sentiment_summary.neutral + data.sentiment_summary.negative) : 0;
   const visiblePosts = data ? (showAll ? data.posts : data.posts.slice(0, 8)) : [];
 
   return (
     <div className="view-enter">
-      <div className="mb-6">
+      <div className="mb-5">
         <h2 className="font-display text-[1.375rem] font-bold text-slate-900 tracking-tight">Social Listening & Content Discovery</h2>
         <p className="text-[0.875rem] text-slate-500 mt-1">Sentiment, themes, and content intelligence for any keyword or brand.</p>
+      </div>
+
+      {/* Platform selector */}
+      <div className="mb-4">
+        <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Platform</p>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-0 scrollbar-hide flex-wrap">
+          {PLATFORMS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => { setPlatform(p.key); setData(null); setError(""); }}
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border transition
+                ${platform === p.key ? p.activePill : p.pill}`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <form onSubmit={listen} className="flex gap-2 mb-6">
@@ -143,7 +207,7 @@ export default function SocialListeningView() {
             type="text"
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
-            placeholder='Enter brand name or keyword (e.g. "cold plunge", "Hims", "weight loss")'
+            placeholder={`Search ${PLATFORMS.find(p => p.key === platform)?.label ?? "social"} conversations…`}
             className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
           />
         </div>
@@ -159,17 +223,18 @@ export default function SocialListeningView() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Analyzing social conversations and content landscape…</p>
+          <p className="text-sm text-slate-500">Analyzing {PLATFORMS.find(p => p.key === platform)?.label} conversations…</p>
         </div>
       )}
 
       {data && !loading && (
         <div className="flex flex-col gap-4 view-enter">
-          {/* Data source badge */}
+
+          {/* AI mode badge */}
           {data.data_source === "ai" && (
             <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-700">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span><strong>AI-powered insights</strong> — Connect Reddit API credentials (REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET) for real-time data. Showing AI-generated analysis based on known discussions about this topic.</span>
+              <span><strong>AI-powered insights</strong> — Real-time {PLATFORMS.find(p => p.key === activePlatform)?.label} data is not available. Showing Claude-generated analysis based on typical discussions about this topic.</span>
             </div>
           )}
 
@@ -191,7 +256,7 @@ export default function SocialListeningView() {
             </div>
           )}
 
-          {/* ── SOCIAL LISTENING SECTION ── */}
+          {/* ── SOCIAL LISTENING ── */}
           {activeSection === "social" && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,17 +287,24 @@ export default function SocialListeningView() {
                       ))}
                     </div>
                   </div>
-                  {/* Top Subreddits — only show when real data */}
-                  {data.top_subreddits.length > 0 && (
+
+                  {/* Top Communities */}
+                  {data.top_communities.length > 0 && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                      <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Top Subreddits</p>
+                      <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">
+                        {COMMUNITY_LABEL[activePlatform]}
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {data.top_subreddits.map((s, i) => (
-                          <a key={i} href={`https://reddit.com/r/${s}`} target="_blank" rel="noopener noreferrer"
-                            className="text-xs font-semibold bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full hover:bg-orange-100 transition">
-                            r/{s}
-                          </a>
-                        ))}
+                        {data.top_communities.map((c, i) => {
+                          const href = COMMUNITY_LINK[activePlatform](c);
+                          const prefix = COMMUNITY_PREFIX[activePlatform];
+                          const cls = `text-xs font-semibold px-2.5 py-1 rounded-full transition ${COMMUNITY_STYLE[activePlatform]}`;
+                          return href ? (
+                            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className={cls}>{prefix}{c}</a>
+                          ) : (
+                            <span key={i} className={cls}>{prefix}{c}</span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -259,11 +331,13 @@ export default function SocialListeningView() {
                 </div>
               )}
 
-              {/* Posts (real data only) */}
+              {/* Posts — real data only */}
               {visiblePosts.length > 0 && (
                 <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
-                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Reddit Discussions ({data.posts.length})</p>
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
+                      {POST_HEADER[activePlatform]} ({data.posts.length})
+                    </p>
                   </div>
                   <div className="divide-y divide-slate-50">
                     {visiblePosts.map((post, i) => (
@@ -281,7 +355,9 @@ export default function SocialListeningView() {
                               <p className="text-xs text-slate-500 mt-1 italic">{post.key_insight}</p>
                             )}
                             <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-                              <span className="text-orange-600 font-semibold">r/{post.subreddit}</span>
+                              <span className={`font-semibold ${COMMUNITY_STYLE[activePlatform].split(" ")[1]}`}>
+                                {activePlatform === "reddit" ? `r/${post.subreddit}` : activePlatform === "hackernews" ? `by ${post.subreddit}` : post.subreddit}
+                              </span>
                               <span>↑ {post.score}</span>
                               <span>{post.num_comments} comments</span>
                               <span>{timeAgo(post.created_utc)}</span>
@@ -303,10 +379,9 @@ export default function SocialListeningView() {
             </>
           )}
 
-          {/* ── CONTENT DISCOVERY SECTION ── */}
+          {/* ── CONTENT DISCOVERY ── */}
           {activeSection === "content" && data.content_discovery && (
             <div className="flex flex-col gap-4">
-              {/* Platform activity */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                 <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
                 <div className="space-y-3">
@@ -327,7 +402,6 @@ export default function SocialListeningView() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Top formats */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Top Content Formats</p>
                   <div className="flex flex-wrap gap-2">
@@ -338,7 +412,6 @@ export default function SocialListeningView() {
                     ))}
                   </div>
                 </div>
-                {/* Best angles */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Best Content Angles</p>
                   <ul className="space-y-1.5">
@@ -352,7 +425,6 @@ export default function SocialListeningView() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Trending topics */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Trending Topics to Cover</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -361,7 +433,6 @@ export default function SocialListeningView() {
                     ))}
                   </div>
                 </div>
-                {/* Content gaps */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Content Gaps (Opportunities)</p>
                   <ul className="space-y-1.5">
