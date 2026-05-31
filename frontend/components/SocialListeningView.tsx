@@ -382,30 +382,33 @@ export default function SocialListeningView() {
           {/* ── CONTENT DISCOVERY ── */}
           {activeSection === "content" && data.content_discovery && (
             <div className="flex flex-col gap-4">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
-                <div className="space-y-3">
-                  {data.content_discovery.platform_activity.map((p, i) => {
-                    const s = LEVEL_STYLES[p.level];
-                    return (
-                      <div key={i} className="flex items-center gap-3">
-                        <span className="text-sm font-semibold text-slate-700 w-20 flex-shrink-0">{p.platform}</span>
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${s.bar} ${LEVEL_WIDTH[p.level]}`} />
+              {(data.content_discovery.platform_activity ?? []).length > 0 && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
+                  <div className="space-y-3">
+                    {(data.content_discovery.platform_activity ?? []).map((p, i) => {
+                      const lvl: "high" | "medium" | "low" = (["high", "medium", "low"].includes(p.level) ? p.level : "low") as "high" | "medium" | "low";
+                      const s = LEVEL_STYLES[lvl];
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-slate-700 w-20 flex-shrink-0">{p.platform}</span>
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${s.bar} ${LEVEL_WIDTH[lvl]}`} />
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.label} w-16 text-center flex-shrink-0 capitalize`}>{lvl}</span>
+                          <span className="text-xs text-slate-500 flex-1 hidden md:block">{p.what_works}</span>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.label} w-16 text-center flex-shrink-0 capitalize`}>{p.level}</span>
-                        <span className="text-xs text-slate-500 flex-1 hidden md:block">{p.what_works}</span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Top Content Formats</p>
                   <div className="flex flex-wrap gap-2">
-                    {data.content_discovery.top_formats.map((f, i) => (
+                    {(data.content_discovery.top_formats ?? []).map((f, i) => (
                       <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#6b21d6]" />{f}
                       </span>
@@ -415,7 +418,7 @@ export default function SocialListeningView() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Best Content Angles</p>
                   <ul className="space-y-1.5">
-                    {data.content_discovery.best_angles.map((a, i) => (
+                    {(data.content_discovery.best_angles ?? []).map((a, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
                         <span className="text-[#6b21d6] font-bold flex-shrink-0">→</span>{a}
                       </li>
@@ -428,7 +431,7 @@ export default function SocialListeningView() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Trending Topics to Cover</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {data.content_discovery.trending_topics.map((t, i) => (
+                    {(data.content_discovery.trending_topics ?? []).map((t, i) => (
                       <span key={i} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{t}</span>
                     ))}
                   </div>
@@ -436,7 +439,7 @@ export default function SocialListeningView() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Content Gaps (Opportunities)</p>
                   <ul className="space-y-1.5">
-                    {data.content_discovery.content_gaps.map((g, i) => (
+                    {(data.content_discovery.content_gaps ?? []).map((g, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
                         <span className="text-green-500 font-bold flex-shrink-0">+</span>{g}
                       </li>
