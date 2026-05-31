@@ -138,7 +138,9 @@ async function generateAIInsights(
 
 ${postContext}
 
-Return ONLY valid JSON (no markdown fences):
+For the "top_communities" field, provide 5-6 real ${communityType}.
+
+Return ONLY valid JSON (no markdown fences, no comments inside the JSON):
 {
   "posts": [{"index": 0, "sentiment": "positive|neutral|negative", "key_insight": "one-sentence marketer takeaway"}],
   "sentiment_summary": {
@@ -148,7 +150,7 @@ Return ONLY valid JSON (no markdown fences):
   },
   "key_themes": ["theme 1", "theme 2", "theme 3", "theme 4", "theme 5"],
   "opportunities": ["marketing opportunity 1", "opportunity 2", "opportunity 3"],
-  "top_communities": ["${communityType}"],
+  "top_communities": ["name1", "name2", "name3", "name4", "name5"],
   "content_discovery": {
     "top_formats": ["Blog posts", "YouTube tutorials", "Short-form video", "Newsletters"],
     "best_angles": ["How-to / educational", "Comparison / vs", "Personal story", "Data-driven"],
