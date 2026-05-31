@@ -152,13 +152,13 @@ export default function SocialListeningView() {
   const [results, setResults] = useState<ResultsMap>({});
   const [loadingMap, setLoadingMap] = useState<LoadingMap>({});
   const [errorMap, setErrorMap] = useState<ErrorMap>({});
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
   const doneCount = ALL_PLATFORMS.filter(p => results[p] && !loadingMap[p]).length;
-  const hasAnyResult = doneCount > 0 || ALL_PLATFORMS.some(p => errorMap[p]);
 
   const fetchPlatform = async (platform: Platform, kw: string) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
@@ -191,14 +191,17 @@ export default function SocialListeningView() {
     setError("");
     setShowAll(false);
     setActiveSection("social");
+    setHasAnalyzed(true);
 
     const kw = keyword.trim();
-    // Run in two batches of 3 to avoid rate-limit spikes
-    const batch1 = ALL_PLATFORMS.slice(0, 3);
-    const batch2 = ALL_PLATFORMS.slice(3);
-    ALL_PLATFORMS.forEach(p => setLoadingMap(prev => ({ ...prev, [p]: true })));
-    await Promise.all(batch1.map(p => fetchPlatform(p, kw)));
-    await Promise.all(batch2.map(p => fetchPlatform(p, kw)));
+    // Stagger starts by 400ms each — all run in parallel but avoids simultaneous rate-limit spike
+    await Promise.all(
+      ALL_PLATFORMS.map((platform, i) =>
+        new Promise<void>(resolve =>
+          setTimeout(() => fetchPlatform(platform, kw).then(resolve), i * 400)
+        )
+      )
+    );
   };
 
   const data = results[activePlatform] ?? null;
@@ -234,8 +237,8 @@ export default function SocialListeningView() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
-      {/* Platform tabs — always visible once analysis started */}
-      {(anyLoading || hasAnyResult) && (
+      {/* Platform tabs — visible once Analyze All has been clicked */}
+      {hasAnalyzed && (
         <div className="mb-5">
           <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Platform</p>
           <div className="flex gap-2 flex-wrap">
@@ -286,7 +289,7 @@ export default function SocialListeningView() {
       )}
 
       {/* Initial loading state (nothing done yet) */}
-      {anyLoading && !hasAnyResult && !isActiveLoading && (
+      {anyLoading && doneCount === 0 && !isActiveLoading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
           <p className="text-sm text-slate-500">Analyzing all platforms in parallel…</p>
