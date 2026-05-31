@@ -131,7 +131,7 @@ async function generateAIInsights(
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: 1200,
     messages: [{
       role: "user",
       content: `You are a social media analyst. Analyze ${hasRealData ? "these posts" : "typical conversations"} about "${keyword}" on ${platformLabel} for a marketer.

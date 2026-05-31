@@ -144,52 +144,61 @@ function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negativ
 
 type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
+type ErrorMap = Partial<Record<Platform, boolean>>;
 
 export default function SocialListeningView() {
   const [keyword, setKeyword] = useState("");
   const [activePlatform, setActivePlatform] = useState<Platform>("reddit");
   const [results, setResults] = useState<ResultsMap>({});
   const [loadingMap, setLoadingMap] = useState<LoadingMap>({});
+  const [errorMap, setErrorMap] = useState<ErrorMap>({});
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
   const doneCount = ALL_PLATFORMS.filter(p => results[p] && !loadingMap[p]).length;
-  const hasAnyResult = doneCount > 0;
+  const hasAnyResult = doneCount > 0 || ALL_PLATFORMS.some(p => errorMap[p]);
+
+  const fetchPlatform = async (platform: Platform, kw: string) => {
+    setLoadingMap(prev => ({ ...prev, [platform]: true }));
+    setErrorMap(prev => ({ ...prev, [platform]: false }));
+    try {
+      const res = await fetch("/api/social/listen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: kw, platform }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        setErrorMap(prev => ({ ...prev, [platform]: true }));
+      } else {
+        setResults(prev => ({ ...prev, [platform]: json }));
+      }
+    } catch {
+      setErrorMap(prev => ({ ...prev, [platform]: true }));
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [platform]: false }));
+    }
+  };
 
   const analyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) return;
 
     setResults({});
+    setErrorMap({});
     setError("");
     setShowAll(false);
     setActiveSection("social");
 
-    const initialLoading: LoadingMap = {};
-    ALL_PLATFORMS.forEach(p => { initialLoading[p] = true; });
-    setLoadingMap(initialLoading);
-
-    await Promise.all(
-      ALL_PLATFORMS.map(async (platform) => {
-        try {
-          const res = await fetch("/api/social/listen", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keyword: keyword.trim(), platform }),
-          });
-          const json = await res.json();
-          if (!json.error) {
-            setResults(prev => ({ ...prev, [platform]: json }));
-          }
-        } catch {
-          // silently ignore individual platform failures
-        } finally {
-          setLoadingMap(prev => ({ ...prev, [platform]: false }));
-        }
-      })
-    );
+    const kw = keyword.trim();
+    // Run in two batches of 3 to avoid rate-limit spikes
+    const batch1 = ALL_PLATFORMS.slice(0, 3);
+    const batch2 = ALL_PLATFORMS.slice(3);
+    ALL_PLATFORMS.forEach(p => setLoadingMap(prev => ({ ...prev, [p]: true })));
+    await Promise.all(batch1.map(p => fetchPlatform(p, kw)));
+    await Promise.all(batch2.map(p => fetchPlatform(p, kw)));
   };
 
   const data = results[activePlatform] ?? null;
@@ -233,19 +242,29 @@ export default function SocialListeningView() {
             {PLATFORMS.map(p => {
               const isLoading = !!loadingMap[p.key];
               const isDone = !!results[p.key];
+              const isFailed = !!errorMap[p.key] && !isLoading;
               const isActive = activePlatform === p.key;
+              const isClickable = isDone || isFailed;
               return (
                 <button
                   key={p.key}
-                  onClick={() => { setActivePlatform(p.key); setShowAll(false); setActiveSection("social"); }}
-                  disabled={!isDone && !isLoading}
+                  onClick={() => {
+                    setActivePlatform(p.key);
+                    setShowAll(false);
+                    setActiveSection("social");
+                    if (isFailed) fetchPlatform(p.key, keyword.trim());
+                  }}
+                  disabled={!isClickable && !isLoading}
+                  title={isFailed ? "Failed — click to retry" : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition
-                    ${isActive ? p.activePill : p.pill}
-                    ${!isDone && !isLoading ? "opacity-40 cursor-not-allowed" : ""}
+                    ${isActive ? p.activePill : isFailed ? "bg-red-50 text-red-600 border-red-300" : p.pill}
+                    ${!isClickable && !isLoading ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                   `}
                 >
                   {isLoading
                     ? <span className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                    : isFailed
+                    ? <span className="text-red-500 text-[10px] font-bold">↺</span>
                     : isDone
                     ? <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                     : null
