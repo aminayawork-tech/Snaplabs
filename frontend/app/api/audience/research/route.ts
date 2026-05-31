@@ -23,7 +23,6 @@ Return ONLY valid JSON (no markdown fences):
   "personas": [
     {
       "name": "Persona name (e.g. 'The Busy Professional')",
-      "emoji": "single emoji representing this persona",
       "age_range": "e.g. 28-40",
       "job_title": "typical job/role",
       "income": "e.g. '$60K-90K/yr'",

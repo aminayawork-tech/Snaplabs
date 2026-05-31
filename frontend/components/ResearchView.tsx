@@ -84,13 +84,19 @@ export default function ResearchView({ auditKeywords = [], bizName, initialCateg
         </div>
       </div>
 
-      {/* Active tool */}
-      {tab === "trends" && (
+      {/* Active tool — all mounted, only active one shown */}
+      <div className={tab === "trends" ? "" : "hidden"}>
         <TrendsView auditKeywords={auditKeywords} bizName={bizName} initialCategory={initialCategory} />
-      )}
-      {tab === "competitor" && <CompetitorView />}
-      {tab === "social" && <SocialListeningView />}
-      {tab === "audience" && <AudienceView />}
+      </div>
+      <div className={tab === "competitor" ? "" : "hidden"}>
+        <CompetitorView />
+      </div>
+      <div className={tab === "social" ? "" : "hidden"}>
+        <SocialListeningView />
+      </div>
+      <div className={tab === "audience" ? "" : "hidden"}>
+        <AudienceView />
+      </div>
     </div>
   );
 }

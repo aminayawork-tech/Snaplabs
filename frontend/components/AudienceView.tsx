@@ -154,14 +154,18 @@ export default function AudienceView() {
                 <div className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-6`}>
                   {/* Header */}
                   <div className="flex items-start gap-4 mb-5">
-                    <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-3xl shadow-sm flex-shrink-0">{p.emoji}</div>
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm flex-shrink-0">
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#6b21d6" className="w-6 h-6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
                     <div>
                       <h3 className={`font-display text-xl font-bold ${c.accent}`}>{p.name}</h3>
                       <p className="text-sm text-slate-600">{p.job_title}</p>
                       <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                        <span>📅 {p.age_range}</span>
-                        <span>💰 {p.income}</span>
-                        <span>📍 {p.location}</span>
+                        <span>Age {p.age_range}</span>
+                        <span>·</span>
+                        <span>{p.income}</span>
+                        <span>·</span>
+                        <span>{p.location}</span>
                       </div>
                     </div>
                   </div>
@@ -173,7 +177,7 @@ export default function AudienceView() {
                       <ul className="space-y-1.5">
                         {p.pain_points.map((pt, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                            <span className="text-red-400 flex-shrink-0 mt-0.5">✗</span>{pt}
+                            <span className="text-red-400 flex-shrink-0 mt-0.5 font-bold">–</span>{pt}
                           </li>
                         ))}
                       </ul>
@@ -184,7 +188,7 @@ export default function AudienceView() {
                       <ul className="space-y-1.5">
                         {p.goals.map((g, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                            <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span>{g}
+                            <span className="text-green-500 flex-shrink-0 mt-0.5 font-bold">+</span>{g}
                           </li>
                         ))}
                       </ul>

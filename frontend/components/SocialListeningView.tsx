@@ -135,7 +135,15 @@ export default function SocialListeningView() {
               <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Sentiment Overview</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${data.sentiment_summary.overall === "positive" ? "bg-green-50" : data.sentiment_summary.overall === "negative" ? "bg-red-50" : "bg-slate-100"}`}>
-                  <span className="text-2xl">{data.sentiment_summary.overall === "positive" ? "😊" : data.sentiment_summary.overall === "negative" ? "😟" : "😐"}</span>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className={`w-7 h-7 ${data.sentiment_summary.overall === "positive" ? "stroke-green-500" : data.sentiment_summary.overall === "negative" ? "stroke-red-500" : "stroke-slate-400"}`}>
+                    {data.sentiment_summary.overall === "positive"
+                      ? <><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
+                      : data.sentiment_summary.overall === "negative"
+                      ? <><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
+                      : <><circle cx="12" cy="12" r="10"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
+                    }
+                  </svg>
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 capitalize">{data.sentiment_summary.overall} overall</p>
