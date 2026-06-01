@@ -146,6 +146,9 @@ type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
 type ErrorMap = Partial<Record<Platform, boolean>>;
 
+// Session-level cache — keyword → all platform results
+const socialCache = new Map<string, ResultsMap>();
+
 export default function SocialListeningView() {
   const [keyword, setKeyword] = useState("");
   const [activePlatform, setActivePlatform] = useState<Platform>("reddit");
@@ -153,6 +156,7 @@ export default function SocialListeningView() {
   const [loadingMap, setLoadingMap] = useState<LoadingMap>({});
   const [errorMap, setErrorMap] = useState<ErrorMap>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
@@ -173,7 +177,12 @@ export default function SocialListeningView() {
       if (json.error) {
         setErrorMap(prev => ({ ...prev, [platform]: true }));
       } else {
-        setResults(prev => ({ ...prev, [platform]: json }));
+        setResults(prev => {
+          const next = { ...prev, [platform]: json };
+          // Keep cache up to date as each platform finishes
+          socialCache.set(kw.toLowerCase(), next);
+          return next;
+        });
       }
     } catch {
       setErrorMap(prev => ({ ...prev, [platform]: true }));
@@ -186,15 +195,30 @@ export default function SocialListeningView() {
     e.preventDefault();
     if (!keyword.trim()) return;
 
+    const kw = keyword.trim();
+    const cacheKey = kw.toLowerCase();
+
+    // Serve from cache instantly
+    const cached = socialCache.get(cacheKey);
+    if (cached) {
+      setResults(cached);
+      setErrorMap({});
+      setHasAnalyzed(true);
+      setFromCache(true);
+      setShowAll(false);
+      setActiveSection("social");
+      return;
+    }
+
     setResults({});
     setErrorMap({});
     setError("");
     setShowAll(false);
     setActiveSection("social");
     setHasAnalyzed(true);
+    setFromCache(false);
 
-    const kw = keyword.trim();
-    // Stagger starts by 400ms each — all run in parallel but avoids simultaneous rate-limit spike
+    // Stagger starts by 400ms each — all run in parallel, avoids rate-limit spike
     await Promise.all(
       ALL_PLATFORMS.map((platform, i) =>
         new Promise<void>(resolve =>
@@ -236,6 +260,14 @@ export default function SocialListeningView() {
       </form>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
+
+      {fromCache && hasAnalyzed && (
+        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
+          <span>Loaded from cache — results for <strong>{keyword.trim()}</strong></span>
+          <button onClick={() => { socialCache.delete(keyword.trim().toLowerCase()); setResults({}); setHasAnalyzed(false); setFromCache(false); }}
+            className="text-[#6b21d6] font-semibold hover:underline ml-3">Reload fresh</button>
+        </div>
+      )}
 
       {/* Platform tabs — visible once Analyze All has been clicked */}
       {hasAnalyzed && (

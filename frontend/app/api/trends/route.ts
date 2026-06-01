@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
       let rising: string[] = [];
       try {
-        const relRaw = await gt.relatedQueries({ keyword, geo });
+        const relRaw = await gt.relatedQueries({ keyword, geo, startTime });
         const rankedList = JSON.parse(relRaw).default?.rankedList ?? [];
         const risingKws: RankedKw[] = rankedList[1]?.rankedKeyword ?? [];
         const topKws: RankedKw[] = rankedList[0]?.rankedKeyword ?? [];

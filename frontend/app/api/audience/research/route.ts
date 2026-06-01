@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 4096,
       messages: [{
         role: "user",
         content: `You are a market research expert. Build a detailed audience research report for: "${market}"

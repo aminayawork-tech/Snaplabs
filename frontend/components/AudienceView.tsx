@@ -41,6 +41,9 @@ interface AudienceData {
   market_insights: MarketInsights;
 }
 
+// Session-level cache — persists until page refresh
+const audienceCache = new Map<string, AudienceData>();
+
 const STAGE_COLORS = {
   awareness:     { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-500" },
   consideration: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", dot: "bg-purple-500" },
@@ -64,13 +67,26 @@ export default function AudienceView() {
   const [data, setData] = useState<AudienceData | null>(null);
   const [error, setError] = useState("");
   const [activePersona, setActivePersona] = useState(0);
+  const [fromCache, setFromCache] = useState(false);
 
   const research = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!market.trim()) return;
+
+    const cacheKey = market.trim().toLowerCase();
+    const cached = audienceCache.get(cacheKey);
+    if (cached) {
+      setData(cached);
+      setActivePersona(0);
+      setFromCache(true);
+      setError("");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setData(null);
+    setFromCache(false);
     try {
       const res = await fetch("/api/audience/research", {
         method: "POST",
@@ -79,7 +95,11 @@ export default function AudienceView() {
       });
       const json = await res.json();
       if (json.error) setError(json.error);
-      else { setData(json); setActivePersona(0); }
+      else {
+        audienceCache.set(cacheKey, json);
+        setData(json);
+        setActivePersona(0);
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -121,6 +141,14 @@ export default function AudienceView() {
       </form>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
+
+      {fromCache && data && (
+        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
+          <span>Loaded from cache — results for <strong>{market.trim()}</strong></span>
+          <button onClick={() => { audienceCache.delete(market.trim().toLowerCase()); setData(null); setFromCache(false); }}
+            className="text-[#6b21d6] font-semibold hover:underline ml-3">Reload fresh</button>
+        </div>
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
