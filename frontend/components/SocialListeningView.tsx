@@ -164,7 +164,6 @@ export default function SocialListeningView() {
   const [contentDiscoveryLoading, setContentDiscoveryLoading] = useState(false);
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
-  const doneCount = ALL_PLATFORMS.filter(p => results[p] && !loadingMap[p]).length;
 
   const fetchPlatform = async (platform: Platform, kw: string) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
@@ -197,7 +196,6 @@ export default function SocialListeningView() {
 
     const ok = await attempt();
     if (!ok) {
-      // Silent auto-retry once after 3s
       await new Promise(r => setTimeout(r, 3000));
       const retryOk = await attempt();
       if (!retryOk) setErrorMap(prev => ({ ...prev, [platform]: true }));
@@ -225,14 +223,13 @@ export default function SocialListeningView() {
     finally { setContentDiscoveryLoading(false); }
   };
 
-  const analyze = async (e: React.FormEvent) => {
+  const analyze = (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) return;
 
     const kw = keyword.trim();
     const cacheKey = kw.toLowerCase();
 
-    // Serve from cache instantly
     const cached = socialCache.get(cacheKey);
     if (cached) {
       setResults(cached);
@@ -245,6 +242,7 @@ export default function SocialListeningView() {
       return;
     }
 
+    // Just show the platform pills — user clicks each one to load it
     setResults({});
     setErrorMap({});
     setError("");
@@ -253,17 +251,8 @@ export default function SocialListeningView() {
     setHasAnalyzed(true);
     setFromCache(false);
     setContentDiscovery(null);
-
-    // Run platforms in sequential batches of 2 — prevents rate limit spikes
-    // Each batch awaits completion before the next starts
-    const batches: Platform[][] = [
-      ["reddit", "hackernews"],
-      ["x", "linkedin"],
-      ["tiktok", "facebook"],
-    ];
-    for (const batch of batches) {
-      await Promise.all(batch.map(p => fetchPlatform(p, kw)));
-    }
+    // Auto-load the active platform immediately
+    fetchPlatform(activePlatform, kw);
   };
 
   const data = results[activePlatform] ?? null;
@@ -275,7 +264,7 @@ export default function SocialListeningView() {
     <div className="view-enter">
       <div className="mb-5">
         <h2 className="font-display text-[1.375rem] font-bold text-slate-900 tracking-tight">Social Listening & Content Discovery</h2>
-        <p className="text-[0.875rem] text-slate-500 mt-1">Analyze all platforms at once — switch between results instantly.</p>
+        <p className="text-[0.875rem] text-slate-500 mt-1">Enter a keyword, then click a platform to analyze it.</p>
       </div>
 
       <form onSubmit={analyze} className="flex gap-2 mb-5">
@@ -290,10 +279,8 @@ export default function SocialListeningView() {
           />
         </div>
         <button type="submit" disabled={anyLoading || !keyword.trim()}
-          className="bg-[#6b21d6] hover:bg-[#5b17be] disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2 min-w-[120px] justify-center">
-          {anyLoading
-            ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{doneCount}/{ALL_PLATFORMS.length}</>
-            : "Analyze All"}
+          className="bg-[#6b21d6] hover:bg-[#5b17be] disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2 min-w-[100px] justify-center">
+          Search
         </button>
       </form>
 
@@ -317,21 +304,20 @@ export default function SocialListeningView() {
               const isDone = !!results[p.key];
               const isFailed = !!errorMap[p.key] && !isLoading;
               const isActive = activePlatform === p.key;
-              const isClickable = isDone || isFailed;
               return (
                 <button
                   key={p.key}
+                  disabled={isLoading}
+                  title={isFailed ? "Failed — click to retry" : !isDone && !isLoading ? "Click to analyze" : undefined}
                   onClick={() => {
                     setActivePlatform(p.key);
                     setShowAll(false);
                     setActiveSection("social");
-                    if (isFailed) fetchPlatform(p.key, keyword.trim());
+                    if (!isDone || isFailed) fetchPlatform(p.key, keyword.trim());
                   }}
-                  disabled={!isClickable && !isLoading}
-                  title={isFailed ? "Failed — click to retry" : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition
                     ${isActive ? p.activePill : isFailed ? "bg-red-50 text-red-600 border-red-300" : p.pill}
-                    ${!isClickable && !isLoading ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+                    ${isLoading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
                   `}
                 >
                   {isLoading
@@ -340,7 +326,7 @@ export default function SocialListeningView() {
                     ? <span className="text-red-500 text-[10px] font-bold">↺</span>
                     : isDone
                     ? <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                    : null
+                    : <span className="w-1.5 h-1.5 rounded-full bg-current opacity-30" />
                   }
                   {p.label}
                 </button>
@@ -358,12 +344,10 @@ export default function SocialListeningView() {
         </div>
       )}
 
-      {/* Initial loading state (nothing done yet) */}
-      {anyLoading && doneCount === 0 && !isActiveLoading && (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Analyzing all platforms in parallel…</p>
-          <p className="text-xs text-slate-400">{doneCount} of {ALL_PLATFORMS.length} complete</p>
+      {/* Prompt to pick a platform */}
+      {hasAnalyzed && !anyLoading && !data && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-sm text-slate-500">Click a platform above to analyze <strong>{keyword.trim()}</strong></p>
         </div>
       )}
 
