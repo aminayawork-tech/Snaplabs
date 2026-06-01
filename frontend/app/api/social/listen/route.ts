@@ -116,16 +116,13 @@ export async function POST(req: NextRequest) {
     // Lean prompt — no content_discovery here, keeping response fast
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 550,
+      max_tokens: 400,
       messages: [{
         role: "user",
-        content: `Social media analyst. Analyze ${hasRealData ? "these posts" : "typical conversations"} about "${keyword}" on ${platformLabel}.
+        content: `Analyze ${hasRealData ? "these posts" : "conversations"} about "${keyword}" on ${platformLabel}. ${postContext}
 
-${postContext}
-
-Provide 5-6 real ${communityType} for "top_communities".
-Return ONLY valid JSON:
-{"posts":[{"index":0,"sentiment":"positive|neutral|negative","key_insight":"one sentence"}],"sentiment_summary":{"positive":8,"neutral":10,"negative":7,"overall":"positive|neutral|negative","summary":"2 sentences"},"key_themes":["theme1","theme2","theme3","theme4","theme5"],"opportunities":["opp1","opp2","opp3"],"top_communities":["c1","c2","c3","c4","c5"]}`,
+Return ONLY this JSON (no extras). Use 3-4 items per array. For top_communities use real ${communityType}:
+{"posts":[{"index":0,"sentiment":"positive","key_insight":"brief"}],"sentiment_summary":{"positive":8,"neutral":10,"negative":7,"overall":"positive","summary":"2 sentences max"},"key_themes":["t1","t2","t3"],"opportunities":["o1","o2","o3"],"top_communities":["c1","c2","c3","c4"]}`,
       }],
     });
 

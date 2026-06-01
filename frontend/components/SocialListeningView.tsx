@@ -169,28 +169,40 @@ export default function SocialListeningView() {
   const fetchPlatform = async (platform: Platform, kw: string) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
     setErrorMap(prev => ({ ...prev, [platform]: false }));
-    try {
-      const res = await fetch("/api/social/listen", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw, platform }),
-      });
-      const json = await res.json();
-      if (json.error) {
-        setErrorMap(prev => ({ ...prev, [platform]: true }));
-      } else {
+
+    const attempt = async (): Promise<boolean> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 14000);
+      try {
+        const res = await fetch("/api/social/listen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword: kw, platform }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        const json = await res.json();
+        if (json.error) return false;
         setResults(prev => {
           const next = { ...prev, [platform]: json };
-          // Keep cache up to date as each platform finishes
           socialCache.set(kw.toLowerCase(), next);
           return next;
         });
+        return true;
+      } catch {
+        clearTimeout(timeout);
+        return false;
       }
-    } catch {
-      setErrorMap(prev => ({ ...prev, [platform]: true }));
-    } finally {
-      setLoadingMap(prev => ({ ...prev, [platform]: false }));
+    };
+
+    const ok = await attempt();
+    if (!ok) {
+      // Silent auto-retry once after 3s
+      await new Promise(r => setTimeout(r, 3000));
+      const retryOk = await attempt();
+      if (!retryOk) setErrorMap(prev => ({ ...prev, [platform]: true }));
     }
+    setLoadingMap(prev => ({ ...prev, [platform]: false }));
   };
 
   const fetchContentDiscovery = async (kw: string) => {
@@ -242,14 +254,16 @@ export default function SocialListeningView() {
     setFromCache(false);
     setContentDiscovery(null);
 
-    // Stagger starts by 400ms each — all run in parallel, avoids rate-limit spike
-    await Promise.all(
-      ALL_PLATFORMS.map((platform, i) =>
-        new Promise<void>(resolve =>
-          setTimeout(() => fetchPlatform(platform, kw).then(resolve), i * 400)
-        )
-      )
-    );
+    // Run platforms in sequential batches of 2 — prevents rate limit spikes
+    // Each batch awaits completion before the next starts
+    const batches: Platform[][] = [
+      ["reddit", "hackernews"],
+      ["x", "linkedin"],
+      ["tiktok", "facebook"],
+    ];
+    for (const batch of batches) {
+      await Promise.all(batch.map(p => fetchPlatform(p, kw)));
+    }
   };
 
   const data = results[activePlatform] ?? null;
