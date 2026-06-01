@@ -344,8 +344,25 @@ export default function SocialListeningView() {
         </div>
       )}
 
+      {/* Error state for active platform */}
+      {hasAnalyzed && !anyLoading && !data && errorMap[activePlatform] && (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-6 h-6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 text-sm">Analysis failed</p>
+            <p className="text-xs text-slate-500 mt-1">The request timed out. Try again — it usually works on the second attempt.</p>
+          </div>
+          <button onClick={() => fetchPlatform(activePlatform, keyword.trim())}
+            className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+            Retry {PLATFORMS.find(p => p.key === activePlatform)?.label}
+          </button>
+        </div>
+      )}
+
       {/* Prompt to pick a platform */}
-      {hasAnalyzed && !anyLoading && !data && (
+      {hasAnalyzed && !anyLoading && !data && !errorMap[activePlatform] && (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
           <p className="text-sm text-slate-500">Click a platform above to analyze <strong>{keyword.trim()}</strong></p>
         </div>
