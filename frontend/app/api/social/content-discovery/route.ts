@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-export const maxDuration = 45;
-export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   const { keyword } = await req.json();

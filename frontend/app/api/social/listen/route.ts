@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-export const maxDuration = 45;
-export const dynamic = "force-dynamic";
+export const runtime = "edge";  // 30s timeout on ALL Vercel plans (vs 10s for serverless hobby)
 
 type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
 
@@ -24,7 +23,7 @@ async function getRedditToken(): Promise<string | null> {
     const res = await fetch("https://www.reddit.com/api/v1/access_token", {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         "Content-Type": "application/x-www-form-urlencoded",
         "User-Agent": "web:snappymarketer:v1.0.0",
       },
