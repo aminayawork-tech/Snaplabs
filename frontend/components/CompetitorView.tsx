@@ -6,6 +6,15 @@ interface CompetitorData {
   content_strategy?: { main_topics: string[]; content_types: string[]; tone: string; publishing_signals: string };
   keyword_themes?: string[];
   positioning?: { unique_value_props: string[]; messaging_pillars: string[]; competitive_angle: string };
+  paid_acquisition?: {
+    strategy: "organic" | "paid" | "mixed";
+    spend_level: "high" | "medium" | "low" | "unknown";
+    primary_channels: string[];
+    campaign_themes: string[];
+    ad_copy_signals: string[];
+    landing_page_signals: string;
+    organic_strengths: string[];
+  };
   content_gaps?: { missing_topics: string[]; format_opportunities: string[]; strategic_opportunities: string[] };
   social_signals?: { mentioned_channels: string[]; community_focus: string; engagement_signals: string };
   error?: string;
@@ -205,6 +214,76 @@ export default function CompetitorView() {
               </div>
               <p className="text-sm text-slate-600 leading-relaxed">{data.social_signals.community_focus}</p>
             </Card>
+          )}
+
+          {/* Paid Acquisition */}
+          {data.paid_acquisition && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-8 h-8 rounded-xl bg-[#f3eef8] flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#6b21d6" strokeWidth="2" className="w-4 h-4"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </span>
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Acquisition Strategy</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <span className={`text-sm font-bold px-4 py-1.5 rounded-full capitalize ${
+                  data.paid_acquisition.strategy === "paid" ? "bg-red-50 text-red-700 border border-red-200" :
+                  data.paid_acquisition.strategy === "mixed" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                  "bg-green-50 text-green-700 border border-green-200"
+                }`}>{data.paid_acquisition.strategy}</span>
+                <span className="text-xs text-slate-400">Ad Spend:</span>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full capitalize ${
+                  data.paid_acquisition.spend_level === "high" ? "bg-red-50 text-red-600" :
+                  data.paid_acquisition.spend_level === "medium" ? "bg-amber-50 text-amber-600" :
+                  data.paid_acquisition.spend_level === "low" ? "bg-green-50 text-green-600" :
+                  "bg-slate-100 text-slate-500"
+                }`}>{data.paid_acquisition.spend_level}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Primary Channels</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.paid_acquisition.primary_channels.map((c, i) => <Tag key={i} label={c} color="blue" />)}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Organic Strengths</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.paid_acquisition.organic_strengths.map((s, i) => <Tag key={i} label={s} color="green" />)}
+                  </div>
+                </div>
+              </div>
+              {data.paid_acquisition.campaign_themes.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-400 mb-2">Inferred Campaign Themes</p>
+                  <ul className="space-y-1.5">
+                    {data.paid_acquisition.campaign_themes.map((t, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <span className="text-[#6b21d6] font-bold flex-shrink-0 mt-0.5">▸</span>{t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {data.paid_acquisition.ad_copy_signals.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-400 mb-2">Ad Copy Signals Detected</p>
+                  <ul className="space-y-1.5">
+                    {data.paid_acquisition.ad_copy_signals.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600 italic">
+                        <span className="text-amber-500 font-bold flex-shrink-0 mt-0.5 not-italic">→</span>{s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {data.paid_acquisition.landing_page_signals && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-400 mb-1">Landing Page Patterns</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">{data.paid_acquisition.landing_page_signals}</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

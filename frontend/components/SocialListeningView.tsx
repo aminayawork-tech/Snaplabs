@@ -42,7 +42,6 @@ interface ListenData {
   top_communities: string[];
   key_themes: string[];
   opportunities: string[];
-  content_discovery: ContentDiscovery | null;
   data_source: string;
   platform: Platform;
 }
@@ -146,8 +145,9 @@ type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
 type ErrorMap = Partial<Record<Platform, boolean>>;
 
-// Session-level cache — keyword → all platform results
+// Session-level caches
 const socialCache = new Map<string, ResultsMap>();
+const contentDiscoveryCache = new Map<string, ContentDiscovery>();
 
 export default function SocialListeningView() {
   const [keyword, setKeyword] = useState("");
@@ -160,6 +160,8 @@ export default function SocialListeningView() {
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
+  const [contentDiscovery, setContentDiscovery] = useState<ContentDiscovery | null>(null);
+  const [contentDiscoveryLoading, setContentDiscoveryLoading] = useState(false);
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
   const doneCount = ALL_PLATFORMS.filter(p => results[p] && !loadingMap[p]).length;
@@ -191,6 +193,26 @@ export default function SocialListeningView() {
     }
   };
 
+  const fetchContentDiscovery = async (kw: string) => {
+    const cacheKey = kw.toLowerCase();
+    const cached = contentDiscoveryCache.get(cacheKey);
+    if (cached) { setContentDiscovery(cached); return; }
+    setContentDiscoveryLoading(true);
+    try {
+      const res = await fetch("/api/social/content-discovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: kw }),
+      });
+      const json = await res.json();
+      if (!json.error) {
+        contentDiscoveryCache.set(cacheKey, json);
+        setContentDiscovery(json);
+      }
+    } catch { /* silently fail */ }
+    finally { setContentDiscoveryLoading(false); }
+  };
+
   const analyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) return;
@@ -207,6 +229,7 @@ export default function SocialListeningView() {
       setFromCache(true);
       setShowAll(false);
       setActiveSection("social");
+      setContentDiscovery(contentDiscoveryCache.get(cacheKey) ?? null);
       return;
     }
 
@@ -217,6 +240,7 @@ export default function SocialListeningView() {
     setActiveSection("social");
     setHasAnalyzed(true);
     setFromCache(false);
+    setContentDiscovery(null);
 
     // Stagger starts by 400ms each — all run in parallel, avoids rate-limit spike
     await Promise.all(
@@ -264,7 +288,7 @@ export default function SocialListeningView() {
       {fromCache && hasAnalyzed && (
         <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
           <span>Loaded from cache — results for <strong>{keyword.trim()}</strong></span>
-          <button onClick={() => { socialCache.delete(keyword.trim().toLowerCase()); setResults({}); setHasAnalyzed(false); setFromCache(false); }}
+          <button onClick={() => { const k = keyword.trim().toLowerCase(); socialCache.delete(k); contentDiscoveryCache.delete(k); setResults({}); setContentDiscovery(null); setHasAnalyzed(false); setFromCache(false); }}
             className="text-[#6b21d6] font-semibold hover:underline ml-3">Reload fresh</button>
         </div>
       )}
@@ -340,22 +364,20 @@ export default function SocialListeningView() {
           )}
 
           {/* Section toggle */}
-          {data.content_discovery && (
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
-              <button onClick={() => setActiveSection("social")}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
-                  ${activeSection === "social" ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Social Listening
-              </button>
-              <button onClick={() => setActiveSection("content")}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
-                  ${activeSection === "content" ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                Content Discovery
-              </button>
-            </div>
-          )}
+          <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+            <button onClick={() => setActiveSection("social")}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
+                ${activeSection === "social" ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Social Listening
+            </button>
+            <button onClick={() => setActiveSection("content")}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
+                ${activeSection === "content" ? "bg-white text-[#6b21d6] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Content Discovery
+            </button>
+          </div>
 
           {/* ── SOCIAL LISTENING ── */}
           {activeSection === "social" && (
@@ -474,74 +496,96 @@ export default function SocialListeningView() {
           )}
 
           {/* ── CONTENT DISCOVERY ── */}
-          {activeSection === "content" && data.content_discovery && (
-            <div className="flex flex-col gap-4">
-              {(data.content_discovery.platform_activity ?? []).length > 0 && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
-                  <div className="space-y-3">
-                    {(data.content_discovery.platform_activity ?? []).map((p, i) => {
-                      const lvl: "high" | "medium" | "low" = (["high", "medium", "low"].includes(p.level) ? p.level : "low") as "high" | "medium" | "low";
-                      const s = LEVEL_STYLES[lvl];
-                      return (
-                        <div key={i} className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-slate-700 w-20 flex-shrink-0">{p.platform}</span>
-                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${s.bar} ${LEVEL_WIDTH[lvl]}`} />
+          {activeSection === "content" && (
+            contentDiscoveryLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
+                <p className="text-sm text-slate-500">Generating content strategy…</p>
+              </div>
+            ) : contentDiscovery ? (
+              <div className="flex flex-col gap-4">
+                {(contentDiscovery.platform_activity ?? []).length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
+                    <div className="space-y-3">
+                      {(contentDiscovery.platform_activity ?? []).map((p, i) => {
+                        const lvl: "high" | "medium" | "low" = (["high", "medium", "low"].includes(p.level) ? p.level : "low") as "high" | "medium" | "low";
+                        const s = LEVEL_STYLES[lvl];
+                        return (
+                          <div key={i} className="flex items-center gap-3">
+                            <span className="text-sm font-semibold text-slate-700 w-20 flex-shrink-0">{p.platform}</span>
+                            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${s.bar} ${LEVEL_WIDTH[lvl]}`} />
+                            </div>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.label} w-16 text-center flex-shrink-0 capitalize`}>{lvl}</span>
+                            <span className="text-xs text-slate-500 flex-1 hidden md:block">{p.what_works}</span>
                           </div>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.label} w-16 text-center flex-shrink-0 capitalize`}>{lvl}</span>
-                          <span className="text-xs text-slate-500 flex-1 hidden md:block">{p.what_works}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Top Content Formats</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(data.content_discovery.top_formats ?? []).map((f, i) => (
-                      <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#6b21d6]" />{f}
-                      </span>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Top Content Formats</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(contentDiscovery.top_formats ?? []).map((f, i) => (
+                        <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#6b21d6]" />{f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Best Content Angles</p>
+                    <ul className="space-y-1.5">
+                      {(contentDiscovery.best_angles ?? []).map((a, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                          <span className="text-[#6b21d6] font-bold flex-shrink-0">→</span>{a}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Best Content Angles</p>
-                  <ul className="space-y-1.5">
-                    {(data.content_discovery.best_angles ?? []).map((a, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <span className="text-[#6b21d6] font-bold flex-shrink-0">→</span>{a}
-                      </li>
-                    ))}
-                  </ul>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Trending Topics to Cover</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(contentDiscovery.trending_topics ?? []).map((t, i) => (
+                        <span key={i} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Content Gaps (Opportunities)</p>
+                    <ul className="space-y-1.5">
+                      {(contentDiscovery.content_gaps ?? []).map((g, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                          <span className="text-green-500 font-bold flex-shrink-0">+</span>{g}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Trending Topics to Cover</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(data.content_discovery.trending_topics ?? []).map((t, i) => (
-                      <span key={i} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{t}</span>
-                    ))}
-                  </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#f3eef8] flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#6b21d6" strokeWidth="2" className="w-7 h-7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Content Gaps (Opportunities)</p>
-                  <ul className="space-y-1.5">
-                    {(data.content_discovery.content_gaps ?? []).map((g, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <span className="text-green-500 font-bold flex-shrink-0">+</span>{g}
-                      </li>
-                    ))}
-                  </ul>
+                <div>
+                  <p className="font-semibold text-slate-800 text-sm">Generate Content Strategy</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs">Discover what content formats and angles work best for <strong>{keyword.trim()}</strong> across all platforms.</p>
                 </div>
+                <button
+                  onClick={() => fetchContentDiscovery(keyword.trim())}
+                  className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                  Generate Content Strategy
+                </button>
               </div>
-            </div>
+            )
           )}
         </div>
       )}

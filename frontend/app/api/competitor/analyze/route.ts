@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2000,
+      max_tokens: 2500,
       messages: [{
         role: "user",
-        content: `You are a competitive intelligence analyst. Analyze this competitor's website content and return ONLY valid JSON (no markdown fences).
+        content: `You are a competitive intelligence analyst. Analyze this competitor's website and return ONLY valid JSON (no markdown fences).
 
 URL: ${url}
 CONTENT:
@@ -45,11 +45,20 @@ Return this exact JSON structure:
     "tone": "professional/casual/technical/conversational",
     "publishing_signals": "what the content cadence/depth signals"
   },
-  "keyword_themes": ["keyword cluster 1", "keyword cluster 2", "keyword cluster 3", "keyword cluster 4", "keyword cluster 5", "keyword cluster 6"],
+  "keyword_themes": ["keyword cluster 1", "keyword cluster 2", "keyword cluster 3", "keyword cluster 4", "keyword cluster 5"],
   "positioning": {
     "unique_value_props": ["UVP 1", "UVP 2", "UVP 3"],
     "messaging_pillars": ["pillar 1", "pillar 2", "pillar 3"],
     "competitive_angle": "how they differentiate from competitors"
+  },
+  "paid_acquisition": {
+    "strategy": "organic|paid|mixed",
+    "spend_level": "high|medium|low|unknown",
+    "primary_channels": ["Google Ads", "Meta Ads", "SEO", "Content Marketing"],
+    "campaign_themes": ["inferred campaign theme 1", "theme 2", "theme 3"],
+    "ad_copy_signals": ["evidence from site copy suggesting paid traffic 1", "signal 2"],
+    "landing_page_signals": "description of paid-traffic landing page patterns detected",
+    "organic_strengths": ["organic strength 1", "organic strength 2"]
   },
   "content_gaps": {
     "missing_topics": ["topic gap 1", "topic gap 2", "topic gap 3"],
