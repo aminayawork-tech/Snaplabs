@@ -79,7 +79,7 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
   const agentMeta = AGENTS.find((a) => a.id === agentId);
 
   const effortColor = effort.includes("low")
-    ? "bg-green-500" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
+    ? "bg-[#eff6ff]0" : effort.includes("medium") ? "bg-amber-500" : "bg-red-500";
 
   const buildTaskOverride = () => {
     const base = [title, impact].filter(Boolean).join(" — Expected outcome: ");
@@ -299,7 +299,7 @@ interface Props {
 }
 
 function scoreColor(s: number) {
-  return s >= 70 ? "#22c55e" : s >= 50 ? "#f59e0b" : "#ef4444";
+  return s >= 70 ? "#275fe8" : s >= 50 ? "#f59e0b" : "#ef4444";
 }
 
 export default function ResultsView({ result, bizName, initialAgentOutputs, onAgentOutput, onExploreTrends }: Props) {
@@ -416,7 +416,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
                 const diff = (obj.difficulty ?? "").toLowerCase();
                 const intent = (obj.intent ?? "").toLowerCase();
                 const vol = obj.monthly_searches ?? "";
-                const diffColor = diff === "low" ? "bg-green-100 text-green-700" : diff === "medium" ? "bg-amber-100 text-amber-700" : diff === "high" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500";
+                const diffColor = diff === "low" ? "bg-[#dbeafe] text-[#275fe8]" : diff === "medium" ? "bg-amber-100 text-amber-700" : diff === "high" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500";
                 const intentColor = intent === "transactional" ? "bg-blue-100 text-blue-700" : intent === "commercial" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500";
                 return (
                   <div key={i} className="border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 flex-wrap">

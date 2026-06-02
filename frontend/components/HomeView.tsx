@@ -106,7 +106,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
             {audits.slice(0, 5).map((a) => {
               const score = a.score ?? 0;
               const scoreColor =
-                score >= 70 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+                score >= 70 ? "#275fe8" : score >= 50 ? "#f59e0b" : "#ef4444";
               return (
                 <div
                   key={a.id}

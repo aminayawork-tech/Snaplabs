@@ -88,7 +88,7 @@ export default function AgentGrid({ researchData, bizName, initialOutputs = {}, 
               className={clsx(
                 "border rounded-xl px-3 py-2.5 text-xs font-semibold flex items-center gap-1.5 transition-all justify-center",
                 done
-                  ? "bg-green-50 border-green-200 text-green-700"
+                  ? "bg-[#eff6ff] border-[#bfdbfe] text-[#275fe8]"
                   : "bg-white border-slate-200 text-slate-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand",
                 (running || runningAll) && "opacity-50 cursor-not-allowed"
               )}

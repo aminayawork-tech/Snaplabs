@@ -23,7 +23,7 @@ interface CompetitorData {
 function Tag({ label, color = "purple" }: { label: string; color?: "purple" | "green" | "blue" | "orange" }) {
   const styles = {
     purple: "bg-[#eff6ff] text-[#275fe8]",
-    green:  "bg-green-50 text-green-700",
+    green:  "bg-[#eff6ff] text-[#275fe8]",
     blue:   "bg-blue-50 text-blue-700",
     orange: "bg-orange-50 text-orange-700",
   };
@@ -196,7 +196,7 @@ export default function CompetitorView() {
                     <ul className="space-y-1">
                       {data.content_gaps.strategic_opportunities.map((o, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                          <span className="text-green-500 mt-0.5 flex-shrink-0">→</span>{o}
+                          <span className="text-[#275fe8] mt-0.5 flex-shrink-0">→</span>{o}
                         </li>
                       ))}
                     </ul>
@@ -229,13 +229,13 @@ export default function CompetitorView() {
                 <span className={`text-sm font-bold px-4 py-1.5 rounded-full capitalize ${
                   data.paid_acquisition.strategy === "paid" ? "bg-red-50 text-red-700 border border-red-200" :
                   data.paid_acquisition.strategy === "mixed" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                  "bg-green-50 text-green-700 border border-green-200"
+                  "bg-[#eff6ff] text-[#275fe8] border border-[#bfdbfe]"
                 }`}>{data.paid_acquisition.strategy}</span>
                 <span className="text-xs text-slate-400">Ad Spend:</span>
                 <span className={`text-xs font-bold px-3 py-1 rounded-full capitalize ${
                   data.paid_acquisition.spend_level === "high" ? "bg-red-50 text-red-600" :
                   data.paid_acquisition.spend_level === "medium" ? "bg-amber-50 text-amber-600" :
-                  data.paid_acquisition.spend_level === "low" ? "bg-green-50 text-green-600" :
+                  data.paid_acquisition.spend_level === "low" ? "bg-[#eff6ff] text-[#275fe8]" :
                   "bg-slate-100 text-slate-500"
                 }`}>{data.paid_acquisition.spend_level}</span>
               </div>

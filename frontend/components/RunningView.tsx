@@ -73,7 +73,7 @@ export default function RunningView({ url, bizName, deepCrawl, step, onSetStep, 
               key={i}
               className={clsx(
                 "flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all",
-                done   && "bg-green-50 border-green-200 text-green-700",
+                done   && "bg-[#eff6ff] border-[#bfdbfe] text-[#275fe8]",
                 active && "bg-brand-50 border-brand-300 text-brand pulse",
                 !done && !active && "bg-white border-slate-100 text-slate-400"
               )}
@@ -81,7 +81,7 @@ export default function RunningView({ url, bizName, deepCrawl, step, onSetStep, 
               <div
                 className={clsx(
                   "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-                  done   && "bg-green-500 text-white",
+                  done   && "bg-[#eff6ff]0 text-white",
                   active && "bg-brand text-white",
                   !done && !active && "bg-slate-100 text-slate-400"
                 )}

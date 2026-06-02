@@ -254,7 +254,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             {yoyGrowth !== 0 && (
               <div>
                 <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">YoY growth</p>
-                <p className={`text-2xl font-bold mt-0.5 ${yoyGrowth >= 0 ? "text-green-600" : "text-red-500"}`}>
+                <p className={`text-2xl font-bold mt-0.5 ${yoyGrowth >= 0 ? "text-[#275fe8]" : "text-red-500"}`}>
                   {yoyGrowth >= 0 ? "+" : ""}{yoyGrowth}%
                 </p>
                 <p className="text-xs text-slate-400">vs. prior year</p>
@@ -345,7 +345,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                   target="_blank" rel="noopener noreferrer"
                   className="text-xs font-semibold bg-[#eff6ff] text-[#275fe8] px-3 py-1.5 rounded-full hover:bg-[#dbeafe] transition flex items-center gap-1"
                 >
-                  <span className="text-green-500">↑</span> {q}
+                  <span className="text-[#275fe8]">↑</span> {q}
                 </a>
               ))}
             </div>
@@ -367,12 +367,12 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             <div className="space-y-4">
               <div>
                 <div className="flex h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-green-400 transition-all" style={{ width: `${socialMentions.pos}%` }} />
+                  <div className="bg-[#275fe8] transition-all" style={{ width: `${socialMentions.pos}%` }} />
                   <div className="bg-slate-200 transition-all" style={{ width: `${socialMentions.neu}%` }} />
                   <div className="bg-red-400 transition-all" style={{ width: `${socialMentions.neg}%` }} />
                 </div>
                 <div className="flex flex-wrap gap-4 mt-1.5 text-[0.6875rem] text-slate-400">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />{socialMentions.pos}% positive</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#275fe8] flex-shrink-0" />{socialMentions.pos}% positive</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-200 flex-shrink-0" />{socialMentions.neu}% neutral</span>
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />{socialMentions.neg}% negative</span>
                 </div>
@@ -476,7 +476,7 @@ function Sparkline({ data, growth }: { data: number[]; growth: number }) {
 }
 
 function TrendArrow({ trend }: { trend: TrendDir }) {
-  if (trend === "rising")   return <span className="text-green-500 font-bold text-base">↑</span>;
+  if (trend === "rising")   return <span className="text-[#275fe8] font-bold text-base">↑</span>;
   if (trend === "declining")return <span className="text-red-500 font-bold text-base">↓</span>;
   return <span className="text-slate-400 font-bold text-base">→</span>;
 }
@@ -484,7 +484,7 @@ function TrendArrow({ trend }: { trend: TrendDir }) {
 function GrowthBadge({ pct, estimated }: { pct: number; estimated?: boolean }) {
   const up = pct >= 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-[#eff6ff] text-[#275fe8]" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
       {up ? "▲" : "▼"} {Math.abs(pct)}%{estimated ? <span className="font-normal opacity-70 ml-0.5">est</span> : null}
     </span>
   );
@@ -654,7 +654,7 @@ function ResultsPage({
             {risingQueries.map((r, i) => (
               <button key={i} onClick={() => onDrillDown(r.query)}
                 className="bg-white border border-[#bfdbfe] hover:bg-[#eff6ff] text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1">
-                <span className="text-green-500 font-bold">↑</span> {r.query}
+                <span className="text-[#275fe8] font-bold">↑</span> {r.query}
               </button>
             ))}
           </div>

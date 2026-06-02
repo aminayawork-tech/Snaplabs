@@ -8,7 +8,7 @@ interface Props {
 }
 
 function scoreColor(s: number) {
-  return s >= 70 ? "#22c55e" : s >= 50 ? "#f59e0b" : "#ef4444";
+  return s >= 70 ? "#275fe8" : s >= 50 ? "#f59e0b" : "#ef4444";
 }
 
 export default function SavedView({ onOpen }: Props) {

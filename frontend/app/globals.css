@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --brand: #5aae69;
-  --brand-light: #dcfce7;
-  --brand-mid: #3d9e52;
+  --brand: #275fe8;
+  --brand-light: #dbeafe;
+  --brand-mid: #1a4fd0;
 }
 
 * { box-sizing: border-box; }
@@ -66,7 +66,7 @@ h1, h2, h3, h4, h5, h6 {
 .prose h3 { font-size: 0.9rem; }
 .prose strong { color: #0f172a; font-weight: 600; }
 .prose code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 0.8rem; font-family: ui-monospace, monospace; }
-.prose a { color: #5aae69; text-decoration: underline; text-underline-offset: 2px; }
+.prose a { color: #275fe8; text-decoration: underline; text-underline-offset: 2px; }
 
 @media print {
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -47,14 +47,14 @@ const audienceCache = new Map<string, AudienceData>();
 const STAGE_COLORS = {
   awareness:     { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-500" },
   consideration: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", dot: "bg-blue-500" },
-  decision:      { bg: "bg-green-50",  border: "border-green-200",  text: "text-green-700",  dot: "bg-green-500" },
+  decision:      { bg: "bg-[#eff6ff]",  border: "border-[#bfdbfe]",  text: "text-[#275fe8]",  dot: "bg-[#eff6ff]0" },
   retention:     { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-500" },
 };
 
 const PERSONA_COLORS = [
   { bg: "from-[#eff6ff] to-[#dbeafe]", border: "border-[#bfdbfe]", accent: "text-[#275fe8]" },
   { bg: "from-blue-50 to-indigo-50",   border: "border-blue-200",  accent: "text-blue-700" },
-  { bg: "from-green-50 to-emerald-50", border: "border-green-200", accent: "text-green-700" },
+  { bg: "from-[#eff6ff] to-[#eff6ff]", border: "border-[#bfdbfe]", accent: "text-[#275fe8]" },
 ];
 
 function Tag({ label }: { label: string }) {
@@ -216,7 +216,7 @@ export default function AudienceView() {
                       <ul className="space-y-1.5">
                         {p.goals.map((g, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                            <span className="text-green-500 flex-shrink-0 mt-0.5 font-bold">+</span>{g}
+                            <span className="text-[#275fe8] flex-shrink-0 mt-0.5 font-bold">+</span>{g}
                           </li>
                         ))}
                       </ul>
@@ -294,7 +294,7 @@ export default function AudienceView() {
                 </div>
                 <div>
                   <p className="text-[0.6875rem] text-slate-400 mb-0.5">Growth</p>
-                  <p className="font-bold text-green-600 text-sm">{data.market_insights.growth_trend}</p>
+                  <p className="font-bold text-[#275fe8] text-sm">{data.market_insights.growth_trend}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-[0.6875rem] text-slate-400 mb-1.5">Key Communities</p>
@@ -318,7 +318,7 @@ export default function AudienceView() {
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Underserved Segments</p>
                   <ul className="space-y-1">
                     {data.market_insights.underserved_segments.map((s, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700"><span className="text-green-500 flex-shrink-0">→</span>{s}</li>
+                      <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700"><span className="text-[#275fe8] flex-shrink-0">→</span>{s}</li>
                     ))}
                   </ul>
                 </div>

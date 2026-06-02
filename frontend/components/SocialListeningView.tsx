@@ -91,7 +91,7 @@ const POST_HEADER: Record<Platform, string> = {
 };
 
 const SENTIMENT_STYLES = {
-  positive: "bg-green-50 text-green-700 border-green-200",
+  positive: "bg-[#eff6ff] text-[#275fe8] border-[#bfdbfe]",
   neutral:  "bg-slate-100 text-slate-600 border-slate-200",
   negative: "bg-red-50 text-red-600 border-red-200",
 };
@@ -126,7 +126,7 @@ function timeAgo(utc: number) {
 
 function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negative" }) {
   const stroke = overall === "positive" ? "stroke-green-500" : overall === "negative" ? "stroke-red-500" : "stroke-slate-400";
-  const bg = overall === "positive" ? "bg-green-50" : overall === "negative" ? "bg-red-50" : "bg-slate-100";
+  const bg = overall === "positive" ? "bg-[#eff6ff]" : overall === "negative" ? "bg-red-50" : "bg-slate-100";
   return (
     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg}`}>
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-6 h-6 ${stroke}`}>
@@ -396,7 +396,7 @@ export default function SocialListeningView() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <SentimentBar label="Positive" count={data.sentiment_summary.positive} total={totalPosts || 100} color="bg-green-500" />
+                    <SentimentBar label="Positive" count={data.sentiment_summary.positive} total={totalPosts || 100} color="bg-[#eff6ff]0" />
                     <SentimentBar label="Neutral"  count={data.sentiment_summary.neutral}  total={totalPosts || 100} color="bg-slate-400" />
                     <SentimentBar label="Negative" count={data.sentiment_summary.negative} total={totalPosts || 100} color="bg-red-500" />
                   </div>
@@ -444,7 +444,7 @@ export default function SocialListeningView() {
                   <ul className="space-y-2">
                     {data.opportunities.map((o, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <span className="text-green-500 font-bold mt-0.5 flex-shrink-0">→</span>{o}
+                        <span className="text-[#275fe8] font-bold mt-0.5 flex-shrink-0">→</span>{o}
                       </li>
                     ))}
                   </ul>
@@ -566,7 +566,7 @@ export default function SocialListeningView() {
                     <ul className="space-y-1.5">
                       {(contentDiscovery.content_gaps ?? []).map((g, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                          <span className="text-green-500 font-bold flex-shrink-0">+</span>{g}
+                          <span className="text-[#275fe8] font-bold flex-shrink-0">+</span>{g}
                         </li>
                       ))}
                     </ul>
