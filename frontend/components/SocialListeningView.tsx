@@ -143,7 +143,7 @@ function SentimentIcon({ overall }: { overall: "positive" | "neutral" | "negativ
 
 type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
-type ErrorMap = Partial<Record<Platform, boolean>>;
+type ErrorMap = Partial<Record<Platform, string>>;
 
 // Session-level caches
 const socialCache = new Map<string, ResultsMap>();
@@ -167,40 +167,28 @@ export default function SocialListeningView() {
 
   const fetchPlatform = async (platform: Platform, kw: string) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
-    setErrorMap(prev => ({ ...prev, [platform]: false }));
-
-    const attempt = async (): Promise<boolean> => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 14000);
-      try {
-        const res = await fetch("/api/social/listen", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keyword: kw, platform }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        const json = await res.json();
-        if (json.error) return false;
+    setErrorMap(prev => ({ ...prev, [platform]: undefined }));
+    try {
+      const res = await fetch("/api/social/listen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: kw, platform }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        setErrorMap(prev => ({ ...prev, [platform]: json.error }));
+      } else {
         setResults(prev => {
           const next = { ...prev, [platform]: json };
           socialCache.set(kw.toLowerCase(), next);
           return next;
         });
-        return true;
-      } catch {
-        clearTimeout(timeout);
-        return false;
       }
-    };
-
-    const ok = await attempt();
-    if (!ok) {
-      await new Promise(r => setTimeout(r, 3000));
-      const retryOk = await attempt();
-      if (!retryOk) setErrorMap(prev => ({ ...prev, [platform]: true }));
+    } catch (e) {
+      setErrorMap(prev => ({ ...prev, [platform]: String(e) }));
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [platform]: false }));
     }
-    setLoadingMap(prev => ({ ...prev, [platform]: false }));
   };
 
   const fetchContentDiscovery = async (kw: string) => {
@@ -350,9 +338,9 @@ export default function SocialListeningView() {
           <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
             <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-6 h-6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <div>
+          <div className="max-w-sm">
             <p className="font-semibold text-slate-800 text-sm">Analysis failed</p>
-            <p className="text-xs text-slate-500 mt-1">The request timed out. Try again — it usually works on the second attempt.</p>
+            <p className="text-xs text-red-500 mt-1 font-mono break-all">{errorMap[activePlatform]}</p>
           </div>
           <button onClick={() => fetchPlatform(activePlatform, keyword.trim())}
             className="bg-[#6b21d6] hover:bg-[#5b17be] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
