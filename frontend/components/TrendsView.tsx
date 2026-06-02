@@ -136,6 +136,12 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
   const [currentMonthly, setCurrentMonthly] = useState(0);
   const [yoyGrowth, setYoyGrowth]         = useState(0);
   const [loading, setLoading]             = useState(true);
+  const [socialMentions, setSocialMentions] = useState<{
+    summary: string; themes: string[];
+    posts: Array<{ title: string; url: string; score: number; num_comments: number }>;
+    pos: number; neu: number; neg: number;
+  } | null>(null);
+  const [socialLoading, setSocialLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +172,35 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSocialLoading(true);
+    setSocialMentions(null);
+    fetch("/api/social/listen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword, platform: "hackernews" }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) {
+          setSocialMentions({
+            summary: d.sentiment_summary?.summary ?? "",
+            themes: d.key_themes ?? [],
+            posts: (d.posts ?? []).slice(0, 4).map((p: { title: string; url: string; score: number; num_comments: number }) => ({
+              title: p.title, url: p.url, score: p.score, num_comments: p.num_comments,
+            })),
+            pos: d.sentiment_summary?.positive ?? 33,
+            neu: d.sentiment_summary?.neutral ?? 44,
+            neg: d.sentiment_summary?.negative ?? 23,
+          });
+          setSocialLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setSocialLoading(false); });
+    return () => { cancelled = true; };
+  }, [keyword]);
 
   const maxRegionVal = Math.max(...regions.map(r => r.value), 1);
 
@@ -316,6 +351,65 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             </div>
           </div>
         )}
+
+        {/* Social mentions */}
+        <div className="border-t border-slate-100 px-6 py-5">
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Social Mentions</p>
+            <span className="text-[0.6875rem] text-slate-300">· HackerNews</span>
+          </div>
+          {socialLoading ? (
+            <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
+              <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-[#6b21d6] rounded-full animate-spin flex-shrink-0" />
+              Loading social data…
+            </div>
+          ) : socialMentions ? (
+            <div className="space-y-4">
+              <div>
+                <div className="flex h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-green-400 transition-all" style={{ width: `${socialMentions.pos}%` }} />
+                  <div className="bg-slate-200 transition-all" style={{ width: `${socialMentions.neu}%` }} />
+                  <div className="bg-red-400 transition-all" style={{ width: `${socialMentions.neg}%` }} />
+                </div>
+                <div className="flex flex-wrap gap-4 mt-1.5 text-[0.6875rem] text-slate-400">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />{socialMentions.pos}% positive</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-200 flex-shrink-0" />{socialMentions.neu}% neutral</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />{socialMentions.neg}% negative</span>
+                </div>
+              </div>
+              {socialMentions.summary && (
+                <p className="text-sm text-slate-600 leading-relaxed">{socialMentions.summary}</p>
+              )}
+              {socialMentions.themes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {socialMentions.themes.map((t, i) => (
+                    <span key={i} className="text-xs bg-[#f3eef8] text-[#6b21d6] font-semibold px-2.5 py-0.5 rounded-full">{t}</span>
+                  ))}
+                </div>
+              )}
+              {socialMentions.posts.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[0.6875rem] text-slate-400 font-semibold">HackerNews discussions</p>
+                  {socialMentions.posts.map((post, i) => (
+                    <a key={i} href={post.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 hover:border-[#c4a8e8] hover:bg-[#faf8ff] transition group">
+                      <span className="text-orange-500 font-bold text-sm flex-shrink-0 mt-px">Y</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 group-hover:text-[#6b21d6] line-clamp-2">{post.title}</p>
+                        <div className="flex gap-3 mt-0.5 text-[0.6875rem] text-slate-400">
+                          <span>▲ {post.score}</span>
+                          <span>{post.num_comments} comments</span>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">No social data available.</p>
+          )}
+        </div>
       </div>
       </div>
     </>
@@ -438,6 +532,25 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
   );
 }
 
+function exportCSV(rows: Row[], context: string) {
+  const headers = ["Keyword", "Trend", "Growth %", "Volume", "Rising Queries"];
+  const data = rows.map(r => [
+    `"${r.keyword.replace(/"/g, '""')}"`,
+    r.trend,
+    r.real ? r.real.growth_pct : r.growth,
+    r.volume,
+    `"${(r.real?.rising_queries ?? []).join(", ").replace(/"/g, '""')}"`,
+  ]);
+  const csv = [headers.join(","), ...data.map(row => row.join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `trends-${context.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Results view ──────────────────────────────────────────────────────────────
 type SortKey = "growth" | "keyword" | "volume";
 type TrendsTimeRange = "24h" | "6m" | "1y";
@@ -506,19 +619,30 @@ function ResultsPage({
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-3 mb-5">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#6b21d6] hover:underline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
-          Back to categories
-        </button>
-        <span className="text-slate-300">/</span>
-        <span className="text-sm font-bold text-slate-700 truncate max-w-xs">{context}</span>
-        {loadingAI && <span className="text-xs text-slate-400 animate-pulse">generating keywords…</span>}
-        {!loadingAI && loadingReal && (
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
-            <span className="w-3 h-3 border-2 border-slate-300 border-t-[#6b21d6] rounded-full animate-spin inline-block" />
-            fetching trends ({realFetchedCount}/{totalReal})…
-          </span>
+      <div className="flex items-center gap-3 mb-5 justify-between flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#6b21d6] hover:underline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to categories
+          </button>
+          <span className="text-slate-300">/</span>
+          <span className="text-sm font-bold text-slate-700 truncate max-w-xs">{context}</span>
+          {loadingAI && <span className="text-xs text-slate-400 animate-pulse">generating keywords…</span>}
+          {!loadingAI && loadingReal && (
+            <span className="text-xs text-slate-400 flex items-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-slate-300 border-t-[#6b21d6] rounded-full animate-spin inline-block" />
+              fetching trends ({realFetchedCount}/{totalReal})…
+            </span>
+          )}
+        </div>
+        {!loadingAI && rows.length > 0 && (
+          <button
+            onClick={() => exportCSV(rows, context)}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:border-[#6b21d6] hover:text-[#6b21d6] transition"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
         )}
       </div>
 
@@ -571,30 +695,31 @@ function ResultsPage({
       {!loadingAI && visible.length > 0 && (
         <>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
+            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
               <button className="text-left flex items-center" onClick={() => toggleSort("keyword")}>Keyword <Arrow k="keyword" /></button>
-              <span className="text-center">{trendsTimeRange === "24h" ? "Trend — 24h" : trendsTimeRange === "6m" ? "Trend — 6m" : "Trend — 1yr"}</span>
+              <span className="hidden sm:block text-center">{trendsTimeRange === "24h" ? "Trend — 24h" : trendsTimeRange === "6m" ? "Trend — 6m" : "Trend — 1yr"}</span>
               <button className="flex items-center" onClick={() => toggleSort("growth")}>Growth <Arrow k="growth" /></button>
-              <button className="flex items-center" onClick={() => toggleSort("volume")}>Volume <Arrow k="volume" /></button>
-              <span>Rising queries</span>
+              <button className="hidden sm:flex items-center" onClick={() => toggleSort("volume")}>Volume <Arrow k="volume" /></button>
+              <span className="hidden sm:block">Rising queries</span>
             </div>
             {visible.map((r, i) => {
               const growth = r.real ? r.real.growth_pct : r.growth;
               const isReal = Boolean(r.real && r.real.sparkline.length > 1);
               const isFetching = !r.real && loadingReal && i < totalReal;
               return (
-                <div key={i} className="grid grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-4 px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
+                <div key={i} className="grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
                   <a
                     href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 truncate flex items-center gap-1.5 group"
+                    className="text-sm font-semibold text-slate-800 hover:text-[#6b21d6] hover:underline underline-offset-2 flex items-center gap-1.5 group min-w-0"
                   >
-                    {r.keyword}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    <span className="truncate">{r.keyword}</span>
+                    <span className="sm:hidden flex-shrink-0"><TrendArrow trend={r.trend} /></span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0 transition hidden sm:block"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                   <button
                     onClick={() => onDetail(r.keyword)}
-                    className="group/spark flex items-center justify-center w-full hover:opacity-80 transition cursor-pointer relative"
+                    className="hidden sm:flex group/spark items-center justify-center w-full hover:opacity-80 transition cursor-pointer relative"
                     title="Click to expand trend"
                   >
                     {isFetching ? <SparklineSkeleton /> : isReal ? <Sparkline data={r.real!.sparkline} growth={growth} /> : <TrendArrow trend={r.trend} />}
@@ -605,10 +730,10 @@ function ResultsPage({
                   <div>
                     <GrowthBadge pct={growth} estimated={!isReal} />
                   </div>
-                  <div>
+                  <div className="hidden sm:block">
                     <VolumeBadge tier={r.volume} />
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="hidden sm:flex flex-wrap gap-1">
                     {(r.real?.rising_queries ?? []).slice(0, 3).map((q, qi) => (
                       <button key={qi} onClick={() => onDrillDown(q)}
                         className="text-xs bg-[#f3eef8] text-[#6b21d6] font-semibold px-2.5 py-0.5 rounded-full hover:bg-[#e9e0f6] transition">

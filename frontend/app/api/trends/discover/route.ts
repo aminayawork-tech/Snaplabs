@@ -12,11 +12,11 @@ export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{
       role: "user",
       content: isKeywordExpansion
-        ? `Expand the keyword "${topic}" into 40 specific search queries that people ACTUALLY type into Google in 2025.
+        ? `Expand the keyword "${topic}" into 80 specific search queries that people ACTUALLY type into Google in 2025.
 
 Include ALL of these types:
 - Long-tail variations (e.g. "${topic} for beginners", "best ${topic} 2025")
@@ -35,7 +35,7 @@ For each keyword return estimated metrics:
 Return ONLY a JSON array sorted by growth descending, no markdown:
 [{"keyword":"...","trend":"rising","growth":45,"volume":"medium"},...]`
 
-        : `Generate 40 specific keyword phrases that people are actively searching on Google right now in 2025 related to "${topic}".
+        : `Generate 80 specific keyword phrases that people are actively searching on Google right now in 2025 related to "${topic}".
 
 Include a mix of:
 - Currently trending rising topics in this space
@@ -59,7 +59,7 @@ Return ONLY a JSON array sorted by growth descending, no markdown:
   try {
     const match = text.match(/\[[\s\S]*\]/);
     const raw = match ? JSON.parse(match[0]) : [];
-    return Response.json({ keywords: raw.slice(0, 40) });
+    return Response.json({ keywords: raw.slice(0, 80) });
   } catch {
     return Response.json({ keywords: [] });
   }
