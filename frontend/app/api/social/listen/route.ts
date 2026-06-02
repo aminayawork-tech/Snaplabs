@@ -6,59 +6,53 @@ export const dynamic = "force-dynamic";
 
 type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
 
-interface PostData {
-  title: string;
-  subreddit: string;
-  score: number;
-  num_comments: number;
-  permalink: string;
-  created_utc: number;
+interface HNHit {
+  title?: string;
+  author: string;
+  points?: number;
+  num_comments?: number;
+  objectID: string;
+  created_at: string;
 }
 
-async function fetchHackerNewsPosts(keyword: string): Promise<PostData[]> {
+async function fetchHackerNewsPosts(keyword: string) {
   try {
-    const res = await fetch(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(keyword)}&hitsPerPage=20&tags=story`);
+    const res = await fetch(
+      `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(keyword)}&hitsPerPage=10&tags=story`,
+      { signal: AbortSignal.timeout(4000) }
+    );
     if (!res.ok) return [];
     const data = await res.json();
     return (data.hits ?? [])
-      .filter((h: { title?: string }) => h.title)
-      .slice(0, 20)
-      .map((h: { title: string; author: string; points?: number; num_comments?: number; objectID: string; created_at: string }) => ({
-        title: h.title,
-        subreddit: h.author,
+      .filter((h: HNHit) => h.title)
+      .slice(0, 10)
+      .map((h: HNHit) => ({
+        title: h.title!,
+        author: h.author,
         score: h.points ?? 0,
         num_comments: h.num_comments ?? 0,
-        permalink: `/item?id=${h.objectID}`,
+        url: `https://news.ycombinator.com/item?id=${h.objectID}`,
         created_utc: Math.floor(new Date(h.created_at).getTime() / 1000),
       }));
   } catch { return []; }
 }
 
-// Placeholder: add real API fetch functions here when credentials are available
-// async function fetchLinkedInPosts(keyword: string): Promise<PostData[]> { ... }
-// async function fetchTikTokPosts(keyword: string): Promise<PostData[]> { ... }
-// async function fetchFacebookPosts(keyword: string): Promise<PostData[]> { ... }
-
 const PLATFORM_LABEL: Record<Platform, string> = {
-  reddit:     "Reddit — subreddits, discussions, AMAs",
-  hackernews: "HackerNews tech/startup community",
-  x:          "X (Twitter) — tweets, threads, viral content",
-  linkedin:   "LinkedIn — professional posts and B2B discussions",
-  tiktok:     "TikTok — short-form video trends and creator content",
-  facebook:   "Facebook — Groups, Pages, community discussions",
+  reddit:     "Reddit",
+  hackernews: "HackerNews",
+  x:          "X (Twitter)",
+  linkedin:   "LinkedIn",
+  tiktok:     "TikTok",
+  facebook:   "Facebook",
 };
 
 const COMMUNITY_TYPE: Record<Platform, string> = {
-  reddit:     "subreddits (no r/ prefix)",
+  reddit:     "subreddit names without r/",
   hackernews: "HN topic areas",
-  x:          "hashtags (no # prefix)",
-  linkedin:   "LinkedIn Groups or professional communities",
-  tiktok:     "TikTok hashtags (no # prefix)",
-  facebook:   "Facebook Groups or Pages",
-};
-
-const POST_URL_BASE: Partial<Record<Platform, string>> = {
-  hackernews: "https://news.ycombinator.com",
+  x:          "hashtags without #",
+  linkedin:   "LinkedIn group names",
+  tiktok:     "TikTok hashtags without #",
+  facebook:   "Facebook group names",
 };
 
 const VALID_PLATFORMS = new Set<Platform>(["reddit", "hackernews", "x", "linkedin", "tiktok", "facebook"]);
@@ -71,65 +65,56 @@ export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
 
   try {
-    let posts: PostData[] = [];
-    let hasRealData = false;
-
-    // HackerNews: real data via free Algolia API (no key needed)
+    // Fetch real posts for HackerNews only
+    let realPosts: Awaited<ReturnType<typeof fetchHackerNewsPosts>> = [];
     if (platform === "hackernews") {
-      posts = await fetchHackerNewsPosts(keyword);
-      hasRealData = posts.length > 0;
+      realPosts = await fetchHackerNewsPosts(keyword);
     }
-    // Reddit + X: AI-powered (Reddit closed new API access; X is $100/mo)
-    // LinkedIn / TikTok / Facebook: AI-powered until real API credentials are added
 
-    const platformLabel = PLATFORM_LABEL[platform];
-    const communityType = COMMUNITY_TYPE[platform];
-    const postContext = hasRealData
-      ? posts.map((p, i) => `[${i}] ${p.subreddit} | "${p.title}" | score:${p.score}`).join("\n")
-      : `Generate realistic insights for "${keyword}" on ${platformLabel}.`;
+    const hasReal = realPosts.length > 0;
+    const postSnippet = hasReal
+      ? `Top posts: ${realPosts.slice(0, 5).map(p => `"${p.title}"`).join("; ")}.`
+      : "";
+
+    // Ultra-lean prompt — keeps total response under 200 tokens for fast Haiku reply
+    const prompt = `Give social media insights for "${keyword}" on ${PLATFORM_LABEL[platform]}. ${postSnippet}
+Respond with ONLY this JSON, using real ${COMMUNITY_TYPE[platform]} for communities:
+{"overall":"positive","summary":"Two sentences about sentiment and discussion.","themes":["t1","t2","t3","t4"],"opportunities":["o1","o2","o3"],"communities":["c1","c2","c3","c4"],"positive_pct":35,"neutral_pct":45,"negative_pct":20}`;
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
-      messages: [{
-        role: "user",
-        content: `Analyze ${hasRealData ? "these posts" : "typical conversations"} about "${keyword}" on ${platformLabel}. ${postContext}
-
-Return ONLY this JSON. Use 3-4 items per array. top_communities must be real ${communityType}:
-{"posts":[{"index":0,"sentiment":"positive","key_insight":"brief"}],"sentiment_summary":{"positive":8,"neutral":10,"negative":7,"overall":"positive","summary":"2 sentences"},"key_themes":["t1","t2","t3"],"opportunities":["o1","o2","o3"],"top_communities":["c1","c2","c3","c4"]}`,
-      }],
+      max_tokens: 220,
+      messages: [{ role: "user", content: prompt }],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "{}";
     const match = text.match(/\{[\s\S]*\}/);
-    const analysis = match ? JSON.parse(match[0]) : {};
+    const ai = match ? JSON.parse(match[0]) : {};
 
-    const sentimentMap: Record<number, string> = {};
-    const insightMap: Record<number, string> = {};
-    for (const p of (analysis.posts ?? [])) {
-      sentimentMap[p.index] = p.sentiment;
-      insightMap[p.index] = p.key_insight;
-    }
-
-    const postUrlBase = POST_URL_BASE[platform] ?? "";
-    const enrichedPosts = posts.map((p, i) => ({
-      title: p.title,
-      subreddit: p.subreddit,
-      score: p.score,
-      num_comments: p.num_comments,
-      url: `${postUrlBase}${p.permalink}`,
-      created_utc: p.created_utc,
-      sentiment: (sentimentMap[i] ?? "neutral") as "positive" | "neutral" | "negative",
-      key_insight: insightMap[i] ?? "",
-    }));
+    const overall = (["positive", "neutral", "negative"].includes(ai.overall) ? ai.overall : "neutral") as "positive" | "neutral" | "negative";
 
     return Response.json({
-      posts: enrichedPosts,
-      sentiment_summary: analysis.sentiment_summary ?? { positive: 0, neutral: 0, negative: 0, overall: "neutral", summary: "Unable to analyze." },
-      top_communities: analysis.top_communities ?? [],
-      key_themes: analysis.key_themes ?? [],
-      opportunities: analysis.opportunities ?? [],
-      data_source: hasRealData ? platform : "ai",
+      posts: realPosts.map(p => ({
+        title: p.title,
+        subreddit: p.author,
+        score: p.score,
+        num_comments: p.num_comments,
+        url: p.url,
+        created_utc: p.created_utc,
+        sentiment: "neutral" as const,
+        key_insight: "",
+      })),
+      sentiment_summary: {
+        positive: ai.positive_pct ?? 35,
+        neutral:  ai.neutral_pct  ?? 45,
+        negative: ai.negative_pct ?? 20,
+        overall,
+        summary: ai.summary ?? "No summary available.",
+      },
+      top_communities: ai.communities ?? [],
+      key_themes:      ai.themes       ?? [],
+      opportunities:   ai.opportunities ?? [],
+      data_source: hasReal ? platform : "ai",
       platform,
     });
   } catch (e) {
