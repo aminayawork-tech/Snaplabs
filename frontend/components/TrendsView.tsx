@@ -171,16 +171,12 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
 
   return (
     <>
-      {/* Backdrop — separate sibling so backdrop-blur covers everything below z-150 (including nav at z-50) */}
-      <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" />
-      {/* Scroll container + click-to-close */}
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" onClick={onClose} />
+      {/* Modal — always centered in viewport */}
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
       <div
-        className="fixed inset-0 z-[200] overflow-y-auto"
-        onClick={onClose}
-      >
-      <div className="flex min-h-full items-center justify-center p-4 py-10">
-      <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto pointer-events-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -320,7 +316,6 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             </div>
           </div>
         )}
-      </div>
       </div>
       </div>
     </>

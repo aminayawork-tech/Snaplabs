@@ -23,7 +23,8 @@ async function fetchHN(keyword: string): Promise<HNPost[]> {
     return (data.hits ?? []).filter((h: any) => h.title).slice(0, 10).map((h: any) => ({
       title: h.title as string, author: h.author as string,
       score: (h.points ?? 0) as number, num_comments: (h.num_comments ?? 0) as number,
-      url: `https://news.ycombinator.com/item?id=${h.objectID}`,
+      // Use original story URL when available; fall back to HN discussion page
+      url: (h.url as string | null) ?? `https://news.ycombinator.com/item?id=${h.objectID}`,
       created_utc: Math.floor(new Date(h.created_at).getTime() / 1000),
     }));
   } catch { return []; }
