@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
 
-async function fetchHN(keyword: string) {
+interface HNPost { title: string; author: string; score: number; num_comments: number; url: string; created_utc: number; }
+
+async function fetchHN(keyword: string): Promise<HNPost[]> {
   try {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 4000);
