@@ -35,7 +35,7 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <span className="w-8 h-8 rounded-xl bg-[#eff6ff] flex items-center justify-center flex-shrink-0">{icon}</span>
-        <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">{title}</p>
+        <p className="text-xs font-bold text-slate-900 uppercase tracking-[0.08em]">{title}</p>
       </div>
       {children}
     </div>

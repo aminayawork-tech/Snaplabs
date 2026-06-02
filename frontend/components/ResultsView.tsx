@@ -476,23 +476,33 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
               return (
                 <div key={i} className="border border-slate-200 rounded-xl px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="font-extrabold text-[#275fe8] text-base leading-tight">{cName}</p>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(cName)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-extrabold text-[#275fe8] text-base leading-tight hover:underline underline-offset-2"
+                    >
+                      {cName}
+                    </a>
                     {traffic && (
                       <span className="flex-shrink-0 text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
                         ~{traffic}
                       </span>
                     )}
                   </div>
-                  {cUrl && (
-                    <a
-                      href={cUrl.startsWith("http") ? cUrl : `https://${cUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-brand underline underline-offset-2 hover:text-brand-600 break-all"
-                    >
-                      {cUrl}
-                    </a>
-                  )}
+                  {cUrl && (() => {
+                    const href = cUrl.startsWith("http") ? cUrl : `https://${cUrl}`;
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-brand underline underline-offset-2 hover:text-brand-600 break-all"
+                      >
+                        {href}
+                      </a>
+                    );
+                  })()}
                   {strength && <p className="text-sm text-slate-700 mt-2"><span className="font-bold text-[#275fe8]">Strength:</span> {String(strength).slice(0, 220)}</p>}
                   {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#275fe8]">Weakness:</span> {String(weakness).slice(0, 220)}</p>}
                   {rankingKws.length > 0 && (
