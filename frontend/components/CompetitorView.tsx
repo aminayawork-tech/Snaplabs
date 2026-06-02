@@ -20,6 +20,29 @@ interface CompetitorData {
   error?: string;
 }
 
+interface MetaAd {
+  id: string;
+  page_name: string;
+  body: string;
+  title: string;
+  description: string;
+  caption: string;
+  snapshot_url: string;
+  start_date: string;
+  end_date: string | null;
+  platforms: string[];
+  impressions: { lower_bound: string; upper_bound: string } | null;
+  spend: { lower_bound: string; upper_bound: string } | null;
+  currency: string;
+}
+
+const PLATFORM_ICON: Record<string, string> = {
+  facebook: "f",
+  instagram: "ig",
+  messenger: "m",
+  audience_network: "an",
+};
+
 function Tag({ label, color = "purple" }: { label: string; color?: "purple" | "green" | "blue" | "orange" }) {
   const styles = {
     purple: "bg-[#eff6ff] text-[#275fe8]",
@@ -47,6 +70,29 @@ export default function CompetitorView() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CompetitorData | null>(null);
   const [error, setError] = useState("");
+  const [metaAds, setMetaAds] = useState<MetaAd[] | null>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaError, setMetaError] = useState("");
+
+  const fetchMetaAds = async (competitorName: string) => {
+    setMetaLoading(true);
+    setMetaError("");
+    setMetaAds(null);
+    try {
+      const res = await fetch("/api/competitor/meta-ads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ competitor_name: competitorName }),
+      });
+      const json = await res.json();
+      if (json.error) setMetaError(json.error);
+      else setMetaAds(json.ads ?? []);
+    } catch {
+      setMetaError("Failed to fetch Meta ads.");
+    } finally {
+      setMetaLoading(false);
+    }
+  };
 
   const analyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +102,8 @@ export default function CompetitorView() {
     setLoading(true);
     setError("");
     setData(null);
+    setMetaAds(null);
+    setMetaError("");
     try {
       const res = await fetch("/api/competitor/analyze", {
         method: "POST",
@@ -64,7 +112,10 @@ export default function CompetitorView() {
       });
       const json = await res.json();
       if (json.error) setError(json.error);
-      else setData(json);
+      else {
+        setData(json);
+        if (json.overview?.name) fetchMetaAds(json.overview.name);
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -215,6 +266,101 @@ export default function CompetitorView() {
               <p className="text-sm text-slate-600 leading-relaxed">{data.social_signals.community_focus}</p>
             </Card>
           )}
+
+          {/* Live Meta Ads */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-[#eff6ff] flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </span>
+                <p className="text-xs font-bold text-slate-900 uppercase tracking-[0.08em]">Live Meta Ads</p>
+                <span className="text-[0.625rem] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">FACEBOOK · INSTAGRAM</span>
+              </div>
+              {metaAds !== null && !metaLoading && (
+                <button
+                  onClick={() => data?.overview?.name && fetchMetaAds(data.overview.name)}
+                  className="text-xs text-[#275fe8] font-semibold hover:underline flex items-center gap-1"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Refresh
+                </button>
+              )}
+            </div>
+
+            {metaLoading && (
+              <div className="flex items-center gap-2 py-6 justify-center text-slate-400 text-sm">
+                <div className="w-4 h-4 border-2 border-slate-200 border-t-[#275fe8] rounded-full animate-spin flex-shrink-0" />
+                Searching Meta Ad Library…
+              </div>
+            )}
+
+            {metaError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                {metaError.includes("META_ACCESS_TOKEN") ? (
+                  <span>Meta credentials not configured. Add <code className="bg-red-100 px-1 rounded">META_ACCESS_TOKEN</code> to your environment variables.</span>
+                ) : metaError}
+              </div>
+            )}
+
+            {metaAds !== null && !metaLoading && metaAds.length === 0 && (
+              <p className="text-sm text-slate-400 py-4 text-center">No active ads found for this competitor in the Meta Ad Library.</p>
+            )}
+
+            {metaAds && metaAds.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-400">{metaAds.length} active ad{metaAds.length !== 1 ? "s" : ""} found</p>
+                {metaAds.map((ad) => (
+                  <div key={ad.id} className="border border-slate-100 rounded-xl p-4 hover:border-[#bfdbfe] hover:bg-[#f0f7ff] transition">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex flex-wrap gap-1">
+                        {ad.platforms.map(p => (
+                          <span key={p} className="text-[0.625rem] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full uppercase">
+                            {PLATFORM_ICON[p] ?? p}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {ad.spend && (
+                          <span className="text-xs text-slate-500">
+                            Spend: <strong>${ad.spend.lower_bound}–${ad.spend.upper_bound}</strong>
+                          </span>
+                        )}
+                        {ad.impressions && (
+                          <span className="text-xs text-slate-500">
+                            Impressions: <strong>{ad.impressions.lower_bound}–{ad.impressions.upper_bound}</strong>
+                          </span>
+                        )}
+                        {ad.snapshot_url && (
+                          <a href={ad.snapshot_url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-semibold text-[#275fe8] hover:underline flex items-center gap-0.5">
+                            View ad
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    {ad.title && <p className="text-sm font-bold text-slate-800 mb-1">{ad.title}</p>}
+                    {ad.body && <p className="text-sm text-slate-600 leading-relaxed">{ad.body}</p>}
+                    {ad.description && <p className="text-xs text-slate-400 mt-1">{ad.description}</p>}
+                    <p className="text-[0.625rem] text-slate-300 mt-2">
+                      Running since {new Date(ad.start_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      {ad.end_date ? ` · ended ${new Date(ad.end_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : " · still active"}
+                    </p>
+                  </div>
+                ))}
+                <a
+                  href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&q=${encodeURIComponent(data?.overview?.name ?? "")}&search_type=keyword_unordered`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#275fe8] hover:underline pt-1"
+                >
+                  View all in Meta Ad Library
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </div>
+            )}
+          </div>
 
           {/* Paid Acquisition */}
           {data.paid_acquisition && (
