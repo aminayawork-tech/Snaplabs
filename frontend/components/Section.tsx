@@ -19,13 +19,13 @@ export default function Section({ title, defaultOpen = false, children }: Props)
           "w-full flex items-center justify-between px-4 py-3 text-left",
           "border rounded-xl font-bold text-base transition-all duration-150",
           open
-            ? "border-[#bfdbfe] rounded-b-none text-[#5aae69]"
-            : "border-[#bfdbfe] text-[#5aae69] hover:opacity-90"
+            ? "border-[#bfdbfe] rounded-b-none text-[#275fe8]"
+            : "border-[#bfdbfe] text-[#275fe8] hover:opacity-90"
         )}
         style={{ background: "#eff6ff" }}
       >
         <span>{title}</span>
-        <span className={clsx("ml-2 text-lg transition-transform duration-150 flex-shrink-0 text-[#5aae69]")}>
+        <span className={clsx("ml-2 text-lg transition-transform duration-150 flex-shrink-0 text-[#275fe8]")}>
           {open ? "▾" : "▸"}
         </span>
       </button>

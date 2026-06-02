@@ -58,7 +58,7 @@ export default function ResearchView({ auditKeywords = [], bizName, initialCateg
               onClick={() => setTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all
                 ${tab === t.key
-                  ? "bg-white text-[#5aae69] shadow-sm"
+                  ? "bg-white text-[#275fe8] shadow-sm"
                   : "text-slate-500 hover:text-slate-700"}`}
             >
               {t.icon}
@@ -74,7 +74,7 @@ export default function ResearchView({ auditKeywords = [], bizName, initialCateg
               onClick={() => setTab(t.key)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition
                 ${tab === t.key
-                  ? "bg-[#5aae69] text-white border-[#5aae69]"
+                  ? "bg-[#275fe8] text-white border-[#275fe8]"
                   : "bg-white text-slate-600 border-slate-200"}`}
             >
               {t.icon}

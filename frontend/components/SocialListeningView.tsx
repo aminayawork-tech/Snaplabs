@@ -97,7 +97,7 @@ const SENTIMENT_STYLES = {
 };
 
 const LEVEL_STYLES = {
-  high:   { bar: "bg-[#5aae69]", label: "bg-[#eff6ff] text-[#5aae69]" },
+  high:   { bar: "bg-[#275fe8]", label: "bg-[#eff6ff] text-[#275fe8]" },
   medium: { bar: "bg-blue-500",  label: "bg-blue-50 text-blue-700" },
   low:    { bar: "bg-slate-300", label: "bg-slate-100 text-slate-500" },
 };
@@ -263,11 +263,11 @@ export default function SocialListeningView() {
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
             placeholder='Enter brand name or keyword (e.g. "cold plunge", "nurses", "weight loss")'
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5aae69] focus:ring-1 focus:ring-[#5aae69] bg-white"
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#275fe8] focus:ring-1 focus:ring-[#275fe8] bg-white"
           />
         </div>
         <button type="submit" disabled={anyLoading || !keyword.trim()}
-          className="bg-[#5aae69] hover:bg-[#4a9e59] disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2 min-w-[100px] justify-center">
+          className="bg-[#275fe8] hover:bg-[#1a4fd0] disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2 min-w-[100px] justify-center">
           Search
         </button>
       </form>
@@ -278,7 +278,7 @@ export default function SocialListeningView() {
         <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
           <span>Loaded from cache — results for <strong>{keyword.trim()}</strong></span>
           <button onClick={() => { const k = keyword.trim().toLowerCase(); socialCache.delete(k); contentDiscoveryCache.delete(k); setResults({}); setContentDiscovery(null); setHasAnalyzed(false); setFromCache(false); }}
-            className="text-[#5aae69] font-semibold hover:underline ml-3">Reload fresh</button>
+            className="text-[#275fe8] font-semibold hover:underline ml-3">Reload fresh</button>
         </div>
       )}
 
@@ -327,7 +327,7 @@ export default function SocialListeningView() {
       {/* Active platform loading state */}
       {isActiveLoading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
           <p className="text-sm text-slate-500">Analyzing {PLATFORMS.find(p => p.key === activePlatform)?.label} conversations…</p>
         </div>
       )}
@@ -343,7 +343,7 @@ export default function SocialListeningView() {
             <p className="text-xs text-red-500 mt-1 font-mono break-all">{errorMap[activePlatform]}</p>
           </div>
           <button onClick={() => fetchPlatform(activePlatform, keyword.trim())}
-            className="bg-[#5aae69] hover:bg-[#4a9e59] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+            className="bg-[#275fe8] hover:bg-[#1a4fd0] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
             Retry {PLATFORMS.find(p => p.key === activePlatform)?.label}
           </button>
         </div>
@@ -370,13 +370,13 @@ export default function SocialListeningView() {
           <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
             <button onClick={() => setActiveSection("social")}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
-                ${activeSection === "social" ? "bg-white text-[#5aae69] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                ${activeSection === "social" ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Social Listening
             </button>
             <button onClick={() => setActiveSection("content")}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition
-                ${activeSection === "content" ? "bg-white text-[#5aae69] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                ${activeSection === "content" ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Content Discovery
             </button>
@@ -407,7 +407,7 @@ export default function SocialListeningView() {
                     <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Key Themes</p>
                     <div className="flex flex-wrap gap-1.5">
                       {data.key_themes.map((t, i) => (
-                        <span key={i} className="text-xs font-semibold bg-[#eff6ff] text-[#5aae69] px-2.5 py-1 rounded-full">{t}</span>
+                        <span key={i} className="text-xs font-semibold bg-[#eff6ff] text-[#275fe8] px-2.5 py-1 rounded-full">{t}</span>
                       ))}
                     </div>
                   </div>
@@ -434,7 +434,7 @@ export default function SocialListeningView() {
               </div>
 
               <div className="bg-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-4">
-                <p className="text-[0.6875rem] font-semibold text-[#5aae69] uppercase tracking-[0.1em] mb-2">AI Summary</p>
+                <p className="text-[0.6875rem] font-semibold text-[#275fe8] uppercase tracking-[0.1em] mb-2">AI Summary</p>
                 <p className="text-sm text-slate-700 leading-relaxed">{data.sentiment_summary.summary}</p>
               </div>
 
@@ -467,7 +467,7 @@ export default function SocialListeningView() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <a href={post.url} target="_blank" rel="noopener noreferrer"
-                              className="text-sm font-semibold text-slate-800 hover:text-[#5aae69] hover:underline line-clamp-2 underline-offset-2">
+                              className="text-sm font-semibold text-slate-800 hover:text-[#275fe8] hover:underline line-clamp-2 underline-offset-2">
                               {post.title}
                             </a>
                             {post.key_insight && (
@@ -488,7 +488,7 @@ export default function SocialListeningView() {
                   </div>
                   {data.posts.length > 8 && !showAll && (
                     <div className="px-5 py-3 border-t border-slate-100 text-center">
-                      <button onClick={() => setShowAll(true)} className="text-sm text-[#5aae69] font-semibold hover:underline">
+                      <button onClick={() => setShowAll(true)} className="text-sm text-[#275fe8] font-semibold hover:underline">
                         Show all {data.posts.length} posts
                       </button>
                     </div>
@@ -502,7 +502,7 @@ export default function SocialListeningView() {
           {activeSection === "content" && (
             contentDiscoveryLoading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
                 <p className="text-sm text-slate-500">Generating content strategy…</p>
               </div>
             ) : contentDiscovery ? (
@@ -535,7 +535,7 @@ export default function SocialListeningView() {
                     <div className="flex flex-wrap gap-2">
                       {(contentDiscovery.top_formats ?? []).map((f, i) => (
                         <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#5aae69]" />{f}
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#275fe8]" />{f}
                         </span>
                       ))}
                     </div>
@@ -545,7 +545,7 @@ export default function SocialListeningView() {
                     <ul className="space-y-1.5">
                       {(contentDiscovery.best_angles ?? []).map((a, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                          <span className="text-[#5aae69] font-bold flex-shrink-0">→</span>{a}
+                          <span className="text-[#275fe8] font-bold flex-shrink-0">→</span>{a}
                         </li>
                       ))}
                     </ul>
@@ -576,7 +576,7 @@ export default function SocialListeningView() {
             ) : (
               <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-[#eff6ff] flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-7 h-7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-7 h-7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 </div>
                 <div>
                   <p className="font-semibold text-slate-800 text-sm">Generate Content Strategy</p>
@@ -584,7 +584,7 @@ export default function SocialListeningView() {
                 </div>
                 <button
                   onClick={() => fetchContentDiscovery(keyword.trim())}
-                  className="bg-[#5aae69] hover:bg-[#4a9e59] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                  className="bg-[#275fe8] hover:bg-[#1a4fd0] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
                   Generate Content Strategy
                 </button>
               </div>

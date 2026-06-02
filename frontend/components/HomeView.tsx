@@ -90,7 +90,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-[#5aae69] to-[#3d9e52] text-white font-semibold rounded-xl py-3 text-[0.9375rem] tracking-wide shadow-md hover:shadow-lg hover:-translate-y-px transition-all"
+          className="w-full bg-gradient-to-r from-[#275fe8] to-[#1a4fd0] text-white font-semibold rounded-xl py-3 text-[0.9375rem] tracking-wide shadow-md hover:shadow-lg hover:-translate-y-px transition-all"
         >
           Audit My Website
         </button>

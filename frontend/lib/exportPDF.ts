@@ -16,7 +16,7 @@ function section(title: string, body: string): string {
     </div>`;
 }
 
-function pill(text: string, color = "#eff6ff", textColor = "#5aae69"): string {
+function pill(text: string, color = "#eff6ff", textColor = "#275fe8"): string {
   return `<span class="pill" style="background:${color};color:${textColor}">${esc(text)}</span>`;
 }
 
@@ -61,12 +61,12 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
         <div class="kw-badges">
           ${obj.monthly_searches ? `<span class="badge" style="background:#f1f5f9;color:#475569">🔍 ${esc(obj.monthly_searches)}/mo</span>` : ""}
           ${obj.difficulty ? `<span class="badge" style="background:${diffColor};color:${diffText}">${esc(obj.difficulty)} difficulty</span>` : ""}
-          ${obj.intent ? `<span class="badge" style="background:#dbeafe;color:#5aae69">${esc(obj.intent)}</span>` : ""}
+          ${obj.intent ? `<span class="badge" style="background:#dbeafe;color:#275fe8">${esc(obj.intent)}</span>` : ""}
         </div>
       </div>`;
     }).join("")}
     ${techIssues.length ? `<p class="label" style="margin-top:16px">Technical Issues</p><ul>${techIssues.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
-    ${Object.keys(paa).length ? `<p class="label" style="margin-top:16px">People Also Ask</p>${Object.entries(paa as Record<string, string[]>).flatMap(([kw, qs]) => qs.map(q => `<div class="kw-row"><span class="kw-text">${esc(q)}</span><span class="badge" style="background:#dbeafe;color:#5aae69">${esc(kw)}</span></div>`)).join("")}` : ""}` : "<p>No SEO data.</p>";
+    ${Object.keys(paa).length ? `<p class="label" style="margin-top:16px">People Also Ask</p>${Object.entries(paa as Record<string, string[]>).flatMap(([kw, qs]) => qs.map(q => `<div class="kw-row"><span class="kw-text">${esc(q)}</span><span class="badge" style="background:#dbeafe;color:#275fe8">${esc(kw)}</span></div>`)).join("")}` : ""}` : "<p>No SEO data.</p>";
 
   const compBody = competitors.length ? competitors.map(comp => {
     if (typeof comp !== "object") return `<p>${esc(String(comp))}</p>`;
@@ -77,13 +77,13 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
     const rankingKws = comp.top_ranking_keywords ?? [];
     return `<div class="card">
       <div class="card-header">
-        <strong style="color:#5aae69">${esc(cName)}</strong>
+        <strong style="color:#275fe8">${esc(cName)}</strong>
         ${comp.estimated_traffic ? `<span class="badge" style="background:#f1f5f9;color:#475569">~${esc(comp.estimated_traffic)}</span>` : ""}
       </div>
-      ${cUrl ? `<div style="font-size:11px;color:#5aae69;margin-bottom:4px">${esc(cUrl)}</div>` : ""}
-      ${strength ? `<p><strong style="color:#5aae69">Strength:</strong> ${esc(String(strength))}</p>` : ""}
-      ${weakness ? `<p><strong style="color:#5aae69">Weakness:</strong> ${esc(String(weakness))}</p>` : ""}
-      ${rankingKws.length ? `<div class="pills">${rankingKws.map(k => pill(k, "#dbeafe", "#5aae69")).join("")}</div>` : ""}
+      ${cUrl ? `<div style="font-size:11px;color:#275fe8;margin-bottom:4px">${esc(cUrl)}</div>` : ""}
+      ${strength ? `<p><strong style="color:#275fe8">Strength:</strong> ${esc(String(strength))}</p>` : ""}
+      ${weakness ? `<p><strong style="color:#275fe8">Weakness:</strong> ${esc(String(weakness))}</p>` : ""}
+      ${rankingKws.length ? `<div class="pills">${rankingKws.map(k => pill(k, "#dbeafe", "#275fe8")).join("")}</div>` : ""}
     </div>`;
   }).join("") : "<p>No competitor data.</p>";
 
@@ -98,7 +98,7 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
         <strong>${i + 1}. ${esc(String(title))}</strong>
         <div>
           ${effort ? `<span class="badge" style="background:${effortColor};color:#fff">${esc(effort)} effort</span>` : ""}
-          ${w.timeline ? `<span class="badge" style="background:#dbeafe;color:#5aae69">${esc(w.timeline)}</span>` : ""}
+          ${w.timeline ? `<span class="badge" style="background:#dbeafe;color:#275fe8">${esc(w.timeline)}</span>` : ""}
         </div>
       </div>
       ${w.expected_impact ?? w.impact ? `<p style="color:#64748b;font-size:12px">${esc(String(w.expected_impact ?? w.impact ?? ""))}</p>` : ""}
@@ -108,10 +108,10 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
 
   const audienceBody = personas.length ? personas.map((p, i) => `
     <div class="card">
-      <strong style="color:#5aae69">${esc(p.persona_name ?? `Segment ${i + 1}`)}</strong>
+      <strong style="color:#275fe8">${esc(p.persona_name ?? `Segment ${i + 1}`)}</strong>
       ${p.demographics ? `<p style="color:#64748b;font-size:12px">${esc(p.demographics)}</p>` : ""}
-      ${(p.pain_points ?? []).length ? `<p><strong style="color:#5aae69">Pain points:</strong> ${esc((p.pain_points ?? []).join(" · "))}</p>` : ""}
-      ${p.where_to_reach ? `<p><strong style="color:#5aae69">Where to reach:</strong> ${esc(p.where_to_reach)}</p>` : ""}
+      ${(p.pain_points ?? []).length ? `<p><strong style="color:#275fe8">Pain points:</strong> ${esc((p.pain_points ?? []).join(" · "))}</p>` : ""}
+      ${p.where_to_reach ? `<p><strong style="color:#275fe8">Where to reach:</strong> ${esc(p.where_to_reach)}</p>` : ""}
     </div>`).join("") : "<p>No audience data.</p>";
 
   const html = `<!DOCTYPE html>
@@ -134,13 +134,13 @@ export function exportPDF(data: ResearchData, bizName: string, score: number, pa
     /* KPIs */
     .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
     .kpi { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; text-align: center; }
-    .kpi-val { font-size: 20px; font-weight: 800; color: #5aae69; }
+    .kpi-val { font-size: 20px; font-weight: 800; color: #275fe8; }
     .kpi-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
 
     /* Sections */
     .section { margin-bottom: 24px; break-inside: avoid; }
-    .section h2 { font-size: 14px; font-weight: 800; color: #5aae69; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
-    .label { font-size: 11px; font-weight: 800; color: #5aae69; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .section h2 { font-size: 14px; font-weight: 800; color: #275fe8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+    .label { font-size: 11px; font-weight: 800; color: #275fe8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
     ul { padding-left: 18px; }
     li { margin-bottom: 3px; font-size: 12px; color: #334155; }
 

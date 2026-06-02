@@ -59,8 +59,8 @@ function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }}>
         <defs>
           <linearGradient id="gt-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#5aae69" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#5aae69" stopOpacity="0" />
+            <stop offset="0%" stopColor="#275fe8" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#275fe8" stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -76,7 +76,7 @@ function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?
         <polygon points={areaPts} fill="url(#gt-fill)" />
 
         {/* Line */}
-        <polyline points={linePts} fill="none" stroke="#5aae69" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={linePts} fill="none" stroke="#275fe8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
         {/* Hover crosshair + dot */}
         {hoverIdx !== null && hoveredPt && (
@@ -84,9 +84,9 @@ function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?
             <line
               x1={xS(hoverIdx)} x2={xS(hoverIdx)}
               y1={PAD.top} y2={yS(0)}
-              stroke="#5aae69" strokeWidth="1" strokeDasharray="3,3" opacity="0.5"
+              stroke="#275fe8" strokeWidth="1" strokeDasharray="3,3" opacity="0.5"
             />
-            <circle cx={xS(hoverIdx)} cy={yS(hoveredPt.value)} r="4.5" fill="white" stroke="#5aae69" strokeWidth="2" />
+            <circle cx={xS(hoverIdx)} cy={yS(hoveredPt.value)} r="4.5" fill="white" stroke="#275fe8" strokeWidth="2" />
           </g>
         )}
 
@@ -114,7 +114,7 @@ function LargeChart({ timeline, height = 220 }: { timeline: TimePoint[]; height?
             <div className="bg-slate-800 text-white rounded-xl px-3 py-2.5 text-xs shadow-xl whitespace-nowrap border border-slate-700">
               <div className="text-slate-300 mb-1">{hoveredPt.date}</div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#5aae69] flex-shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#275fe8] flex-shrink-0" />
                 <span className="font-bold text-white text-sm">~{fmtVol(hoveredPt.value)}</span>
                 <span className="text-slate-400 text-xs">searches/mo</span>
               </div>
@@ -221,16 +221,16 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             className="flex items-center gap-2 bg-[#eff6ff] border border-[#bfdbfe] rounded-full px-4 py-1.5 hover:bg-[#ede5f6] transition group"
             title="Search this keyword in Trends"
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-[#5aae69] flex-shrink-0" />
-            <span className="text-sm font-bold text-[#5aae69]">{keyword}</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#275fe8] flex-shrink-0" />
+            <span className="text-sm font-bold text-[#275fe8]">{keyword}</span>
             {/* search icon */}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#5aae69] opacity-50 group-hover:opacity-100 transition"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#275fe8] opacity-50 group-hover:opacity-100 transition"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
           <div className="flex items-center gap-3">
             <div className="flex bg-slate-100 rounded-lg p-0.5">
               {(["6m", "1y", "5y"] as const).map(r => (
                 <button key={r} onClick={() => setTimeRange(r)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#5aae69] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${timeRange === r ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                   {r === "6m" ? "6 Months" : r === "1y" ? "1 Year" : "5 Years"}
                 </button>
               ))}
@@ -247,7 +247,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             {currentMonthly > 0 && (
               <div>
                 <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Monthly searches</p>
-                <p className="text-2xl font-bold text-[#5aae69] mt-0.5">~{fmtVol(currentMonthly)}</p>
+                <p className="text-2xl font-bold text-[#275fe8] mt-0.5">~{fmtVol(currentMonthly)}</p>
                 <p className="text-xs text-slate-400">est. · {geo === "US" ? "United States" : geo || "Worldwide"}</p>
               </div>
             )}
@@ -272,7 +272,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
           <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Monthly search volume over time</p>
           {loading ? (
             <div className="flex items-center justify-center h-56 gap-2">
-              <div className="w-5 h-5 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
+              <div className="w-5 h-5 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
               <span className="text-sm text-slate-400">Loading trend data…</span>
             </div>
           ) : (
@@ -294,14 +294,14 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                         <a
                           href={`https://www.google.com/search?q=${encodeURIComponent(q.query)}`}
                           target="_blank" rel="noopener noreferrer"
-                          className="text-sm text-slate-700 hover:text-[#5aae69] hover:underline underline-offset-2 truncate max-w-[200px]"
+                          className="text-sm text-slate-700 hover:text-[#275fe8] hover:underline underline-offset-2 truncate max-w-[200px]"
                         >
                           {q.query}
                         </a>
                         <span className="text-xs text-slate-400 ml-2 flex-shrink-0">{q.value}</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#5aae69] rounded-full" style={{ width: `${q.value}%` }} />
+                        <div className="h-full bg-[#275fe8] rounded-full" style={{ width: `${q.value}%` }} />
                       </div>
                     </div>
                   ))}
@@ -324,7 +324,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                         <span className="text-xs text-slate-400 ml-2 flex-shrink-0">{r.value}</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden ml-6">
-                        <div className="h-full bg-[#5aae69] rounded-full" style={{ width: `${(r.value / maxRegionVal) * 100}%` }} />
+                        <div className="h-full bg-[#275fe8] rounded-full" style={{ width: `${(r.value / maxRegionVal) * 100}%` }} />
                       </div>
                     </div>
                   ))}
@@ -343,7 +343,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                 <a key={i}
                   href={`https://www.google.com/search?q=${encodeURIComponent(q)}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="text-xs font-semibold bg-[#eff6ff] text-[#5aae69] px-3 py-1.5 rounded-full hover:bg-[#dbeafe] transition flex items-center gap-1"
+                  className="text-xs font-semibold bg-[#eff6ff] text-[#275fe8] px-3 py-1.5 rounded-full hover:bg-[#dbeafe] transition flex items-center gap-1"
                 >
                   <span className="text-green-500">↑</span> {q}
                 </a>
@@ -360,7 +360,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
           </div>
           {socialLoading ? (
             <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
-              <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-[#5aae69] rounded-full animate-spin flex-shrink-0" />
+              <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-[#275fe8] rounded-full animate-spin flex-shrink-0" />
               Loading social data…
             </div>
           ) : socialMentions ? (
@@ -383,7 +383,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
               {socialMentions.themes.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {socialMentions.themes.map((t, i) => (
-                    <span key={i} className="text-xs bg-[#eff6ff] text-[#5aae69] font-semibold px-2.5 py-0.5 rounded-full">{t}</span>
+                    <span key={i} className="text-xs bg-[#eff6ff] text-[#275fe8] font-semibold px-2.5 py-0.5 rounded-full">{t}</span>
                   ))}
                 </div>
               )}
@@ -395,7 +395,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                       className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 hover:border-[#bfdbfe] hover:bg-[#f0f7ff] transition group">
                       <span className="text-orange-500 font-bold text-sm flex-shrink-0 mt-px">Y</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-700 group-hover:text-[#5aae69] line-clamp-2">{post.title}</p>
+                        <p className="text-xs font-semibold text-slate-700 group-hover:text-[#275fe8] line-clamp-2">{post.title}</p>
                         <div className="flex gap-3 mt-0.5 text-[0.6875rem] text-slate-400">
                           <span>▲ {post.score}</span>
                           <span>{post.num_comments} comments</span>
@@ -466,7 +466,7 @@ function Sparkline({ data, growth }: { data: number[]; growth: number }) {
   const pts = data.map((v, i) =>
     `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * (H - 4) - 2}`
   ).join(" ");
-  const color = growth >= 0 ? "#5aae69" : "#ef4444";
+  const color = growth >= 0 ? "#275fe8" : "#ef4444";
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -511,10 +511,10 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder='Enter any keyword to expand (e.g. "mushroom coffee", "cold plunge")'
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5aae69] focus:ring-1 focus:ring-[#5aae69] bg-white"
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#275fe8] focus:ring-1 focus:ring-[#275fe8] bg-white"
           />
         </div>
-        <button type="submit" className="bg-[#5aae69] hover:bg-[#4a9e59] text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
+        <button type="submit" className="bg-[#275fe8] hover:bg-[#1a4fd0] text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
           Expand
         </button>
       </form>
@@ -522,8 +522,8 @@ function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; o
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {CATEGORIES.map(cat => (
           <button key={cat.name} onClick={() => onSelect(cat.name)}
-            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#5aae69] hover:bg-[#f0f7ff] transition group">
-            <p className="font-bold text-slate-800 text-sm group-hover:text-[#5aae69] transition leading-snug">{cat.name}</p>
+            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#275fe8] hover:bg-[#f0f7ff] transition group">
+            <p className="font-bold text-slate-800 text-sm group-hover:text-[#275fe8] transition leading-snug">{cat.name}</p>
             <p className="text-xs text-slate-400 mt-1 leading-snug">{cat.desc}</p>
           </button>
         ))}
@@ -614,14 +614,14 @@ function ResultsPage({
     .slice(0, 12);
 
   const Arrow = ({ k }: { k: SortKey }) => sortKey === k
-    ? <span className="text-[#5aae69] ml-0.5 text-[10px]">{sortDir === -1 ? "↓" : "↑"}</span> : null;
+    ? <span className="text-[#275fe8] ml-0.5 text-[10px]">{sortDir === -1 ? "↓" : "↑"}</span> : null;
 
   return (
     <div>
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-5 justify-between flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#5aae69] hover:underline">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-[#275fe8] hover:underline">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
             Back to categories
           </button>
@@ -630,7 +630,7 @@ function ResultsPage({
           {loadingAI && <span className="text-xs text-slate-400 animate-pulse">generating keywords…</span>}
           {!loadingAI && loadingReal && (
             <span className="text-xs text-slate-400 flex items-center gap-1.5">
-              <span className="w-3 h-3 border-2 border-slate-300 border-t-[#5aae69] rounded-full animate-spin inline-block" />
+              <span className="w-3 h-3 border-2 border-slate-300 border-t-[#275fe8] rounded-full animate-spin inline-block" />
               fetching trends ({realFetchedCount}/{totalReal})…
             </span>
           )}
@@ -638,7 +638,7 @@ function ResultsPage({
         {!loadingAI && rows.length > 0 && (
           <button
             onClick={() => exportCSV(rows, context)}
-            className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:border-[#5aae69] hover:text-[#5aae69] transition"
+            className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:border-[#275fe8] hover:text-[#275fe8] transition"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
@@ -649,7 +649,7 @@ function ResultsPage({
       {/* Rising from real data */}
       {risingQueries.length > 0 && (
         <div className="mb-4 bg-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-4">
-          <p className="text-[0.6875rem] font-semibold text-[#5aae69] uppercase tracking-[0.1em] mb-3">Rising Opportunities</p>
+          <p className="text-[0.6875rem] font-semibold text-[#275fe8] uppercase tracking-[0.1em] mb-3">Rising Opportunities</p>
           <div className="flex flex-wrap gap-2">
             {risingQueries.map((r, i) => (
               <button key={i} onClick={() => onDrillDown(r.query)}
@@ -667,7 +667,7 @@ function ResultsPage({
           <div className="flex items-center gap-2 flex-wrap">
             {(["all", "rising", "stable", "declining"] as const).map(f => (
               <button key={f} onClick={() => { setFilter(f); setPage(1); }}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#5aae69] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#5aae69]"}`}>
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition capitalize ${filter === f ? "bg-[#275fe8] text-white" : "bg-white border border-slate-200 text-slate-600 hover:border-[#275fe8]"}`}>
                 {f === "all" ? `All (${rows.length})` : f === "rising" ? `↑ Rising (${rows.filter(r => r.trend === "rising").length})` : f === "stable" ? `→ Stable (${rows.filter(r => r.trend === "stable").length})` : `↓ Declining (${rows.filter(r => r.trend === "declining").length})`}
               </button>
             ))}
@@ -675,7 +675,7 @@ function ResultsPage({
           <div className="flex bg-slate-100 rounded-lg p-0.5">
             {(["24h", "6m", "1y"] as const).map(t => (
               <button key={t} onClick={() => onTimeRangeChange(t)}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${trendsTimeRange === t ? "bg-white text-[#5aae69] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${trendsTimeRange === t ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 {t === "24h" ? "24 Hours" : t === "6m" ? "6 Months" : "1 Year"}
               </button>
             ))}
@@ -686,7 +686,7 @@ function ResultsPage({
       {/* Loading AI */}
       {loadingAI && (
         <div className="flex items-center justify-center py-20 gap-3 flex-col">
-          <div className="w-7 h-7 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
           <p className="text-sm text-slate-500">Discovering trending keywords…</p>
         </div>
       )}
@@ -711,7 +711,7 @@ function ResultsPage({
                   <a
                     href={`https://www.google.com/search?q=${encodeURIComponent(r.keyword)}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-slate-800 hover:text-[#5aae69] hover:underline underline-offset-2 flex items-center gap-1.5 group min-w-0"
+                    className="text-sm font-semibold text-slate-800 hover:text-[#275fe8] hover:underline underline-offset-2 flex items-center gap-1.5 group min-w-0"
                   >
                     <span className="truncate">{r.keyword}</span>
                     <span className="sm:hidden flex-shrink-0"><TrendArrow trend={r.trend} /></span>
@@ -724,7 +724,7 @@ function ResultsPage({
                   >
                     {isFetching ? <SparklineSkeleton /> : isReal ? <Sparkline data={r.real!.sparkline} growth={growth} /> : <TrendArrow trend={r.trend} />}
                     {(isReal || !isFetching) && (
-                      <span className="absolute inset-0 rounded-lg border-2 border-transparent group-hover/spark:border-[#5aae69] transition pointer-events-none" />
+                      <span className="absolute inset-0 rounded-lg border-2 border-transparent group-hover/spark:border-[#275fe8] transition pointer-events-none" />
                     )}
                   </button>
                   <div>
@@ -736,7 +736,7 @@ function ResultsPage({
                   <div className="hidden sm:flex flex-wrap gap-1">
                     {(r.real?.rising_queries ?? []).slice(0, 3).map((q, qi) => (
                       <button key={qi} onClick={() => onDrillDown(q)}
-                        className="text-xs bg-[#eff6ff] text-[#5aae69] font-semibold px-2.5 py-0.5 rounded-full hover:bg-[#dbeafe] transition">
+                        className="text-xs bg-[#eff6ff] text-[#275fe8] font-semibold px-2.5 py-0.5 rounded-full hover:bg-[#dbeafe] transition">
                         {q}
                       </button>
                     ))}
@@ -751,12 +751,12 @@ function ResultsPage({
           {pages > 1 && (
             <div className="flex items-center justify-center gap-3 mt-4">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#5aae69] disabled:opacity-30 disabled:cursor-not-allowed transition">
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#275fe8] disabled:opacity-30 disabled:cursor-not-allowed transition">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <span className="text-sm text-slate-600 font-medium">Page {page} of {pages}</span>
               <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
-                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#5aae69] disabled:opacity-30 disabled:cursor-not-allowed transition">
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:border-[#275fe8] disabled:opacity-30 disabled:cursor-not-allowed transition">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
@@ -874,7 +874,7 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
         </div>
         {auditKeywords.length > 0 && page === "home" && (
           <button onClick={runAuditKeywords}
-            className="flex items-center gap-2 bg-[#eff6ff] border border-[#bfdbfe] text-[#5aae69] text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#ede5f6] transition">
+            className="flex items-center gap-2 bg-[#eff6ff] border border-[#bfdbfe] text-[#275fe8] text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#ede5f6] transition">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             {bizName ? `${bizName} trends` : "My audit keywords"}
           </button>

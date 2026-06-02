@@ -22,7 +22,7 @@ interface CompetitorData {
 
 function Tag({ label, color = "purple" }: { label: string; color?: "purple" | "green" | "blue" | "orange" }) {
   const styles = {
-    purple: "bg-[#eff6ff] text-[#5aae69]",
+    purple: "bg-[#eff6ff] text-[#275fe8]",
     green:  "bg-green-50 text-green-700",
     blue:   "bg-blue-50 text-blue-700",
     orange: "bg-orange-50 text-orange-700",
@@ -87,11 +87,11 @@ export default function CompetitorView() {
             value={url}
             onChange={e => setUrl(e.target.value)}
             placeholder="https://competitor.com"
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5aae69] focus:ring-1 focus:ring-[#5aae69] bg-white"
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#275fe8] focus:ring-1 focus:ring-[#275fe8] bg-white"
           />
         </div>
         <button type="submit" disabled={loading || !url.trim()}
-          className="bg-[#5aae69] hover:bg-[#4a9e59] disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
+          className="bg-[#275fe8] hover:bg-[#1a4fd0] disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
           {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
           {loading ? "Analyzing…" : "Analyze"}
         </button>
@@ -101,7 +101,7 @@ export default function CompetitorView() {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
           <p className="text-sm text-slate-500">Crawling site and analyzing strategy…</p>
           <p className="text-xs text-slate-400">This takes about 15–20 seconds</p>
         </div>
@@ -114,11 +114,11 @@ export default function CompetitorView() {
             <div className="bg-gradient-to-r from-[#eff6ff] to-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[0.6875rem] font-semibold text-[#5aae69] uppercase tracking-[0.1em] mb-1">{data.overview.industry}</p>
+                  <p className="text-[0.6875rem] font-semibold text-[#275fe8] uppercase tracking-[0.1em] mb-1">{data.overview.industry}</p>
                   <h3 className="font-display text-xl font-bold text-slate-900">{data.overview.name}</h3>
                   <p className="text-sm text-slate-600 mt-1 leading-relaxed">{data.overview.tagline}</p>
                 </div>
-                <span className="text-xs font-bold bg-white border border-[#bfdbfe] text-[#5aae69] px-3 py-1.5 rounded-full flex-shrink-0 capitalize">{data.overview.scale}</span>
+                <span className="text-xs font-bold bg-white border border-[#bfdbfe] text-[#275fe8] px-3 py-1.5 rounded-full flex-shrink-0 capitalize">{data.overview.scale}</span>
               </div>
               <div className="mt-3 pt-3 border-t border-[#bfdbfe]/40">
                 <span className="text-xs text-slate-500"><strong className="text-slate-700">Target audience:</strong> {data.overview.target_audience}</span>
@@ -129,7 +129,7 @@ export default function CompetitorView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Content Strategy */}
             {data.content_strategy && (
-              <Card title="Content Strategy" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}>
+              <Card title="Content Strategy" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}>
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-slate-400 mb-1.5">Main topics</p>
@@ -150,11 +150,11 @@ export default function CompetitorView() {
 
             {/* Keyword Themes */}
             {data.keyword_themes && (
-              <Card title="Keyword Themes" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}>
+              <Card title="Keyword Themes" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}>
                 <div className="flex flex-wrap gap-2">
                   {data.keyword_themes.map((k, i) => (
                     <div key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#5aae69]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#275fe8]" />
                       <span className="text-sm font-medium text-slate-700">{k}</span>
                     </div>
                   ))}
@@ -164,14 +164,14 @@ export default function CompetitorView() {
 
             {/* Positioning */}
             {data.positioning && (
-              <Card title="Positioning & Messaging" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>}>
+              <Card title="Positioning & Messaging" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>}>
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-slate-400 mb-1.5">Unique value props</p>
                     <ul className="space-y-1">
                       {data.positioning.unique_value_props.map((v, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                          <span className="text-[#5aae69] mt-0.5 flex-shrink-0">✓</span>{v}
+                          <span className="text-[#275fe8] mt-0.5 flex-shrink-0">✓</span>{v}
                         </li>
                       ))}
                     </ul>
@@ -183,7 +183,7 @@ export default function CompetitorView() {
 
             {/* Content Gaps */}
             {data.content_gaps && (
-              <Card title="Content Gaps & Opportunities" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>}>
+              <Card title="Content Gaps & Opportunities" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>}>
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-slate-400 mb-1.5">Topics they&apos;re missing</p>
@@ -208,7 +208,7 @@ export default function CompetitorView() {
 
           {/* Social Signals */}
           {data.social_signals && (
-            <Card title="Social & Community Signals" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}>
+            <Card title="Social & Community Signals" icon={<svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}>
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {data.social_signals.mentioned_channels.map((c, i) => <Tag key={i} label={c} color="green" />)}
               </div>
@@ -221,7 +221,7 @@ export default function CompetitorView() {
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-8 h-8 rounded-xl bg-[#eff6ff] flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#5aae69" strokeWidth="2" className="w-4 h-4"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                 </span>
                 <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Acquisition Strategy</p>
               </div>
@@ -259,7 +259,7 @@ export default function CompetitorView() {
                   <ul className="space-y-1.5">
                     {data.paid_acquisition.campaign_themes.map((t, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <span className="text-[#5aae69] font-bold flex-shrink-0 mt-0.5">▸</span>{t}
+                        <span className="text-[#275fe8] font-bold flex-shrink-0 mt-0.5">▸</span>{t}
                       </li>
                     ))}
                   </ul>
