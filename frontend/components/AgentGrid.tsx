@@ -107,7 +107,7 @@ export default function AgentGrid({ researchData, bizName, initialOutputs = {}, 
       <button
         onClick={runAll}
         disabled={!!running || runningAll}
-        className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-3 text-sm shadow-md hover:shadow-lg hover:-translate-y-px transition-all disabled:opacity-60 disabled:cursor-not-allowed mb-2"
+        className="w-full bg-gradient-to-r from-[#5aae69] to-[#3d9e52] text-white font-bold rounded-xl py-3 text-sm shadow-md hover:shadow-lg hover:-translate-y-px transition-all disabled:opacity-60 disabled:cursor-not-allowed mb-2"
       >
         {runningAll ? "Running agents…" : "Run All 7 Agents — Do It For Me"}
       </button>
@@ -121,11 +121,11 @@ export default function AgentGrid({ researchData, bizName, initialOutputs = {}, 
         const meta = AGENTS.find((a) => a.id === aid);
         const isOpen = expanded[aid] ?? false;
         return (
-          <div key={aid} className="mb-2 border border-[#c4a8e8] rounded-xl overflow-hidden">
+          <div key={aid} className="mb-2 border border-[#bfdbfe] rounded-xl overflow-hidden">
             <button
               onClick={() => setExpanded((e) => ({ ...e, [aid]: !e[aid] }))}
-              className="w-full flex items-center justify-between px-4 py-3 text-left font-bold text-base text-[#6b21d6] transition hover:opacity-90"
-              style={{ background: "#f3eef8" }}
+              className="w-full flex items-center justify-between px-4 py-3 text-left font-bold text-base text-[#5aae69] transition hover:opacity-90"
+              style={{ background: "#eff6ff" }}
             >
               <span>{meta?.label ?? aid} — {out.timestamp}</span>
               <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export default function AgentGrid({ researchData, bizName, initialOutputs = {}, 
                 >
                   ✕
                 </button>
-                <span className="text-lg text-[#6b21d6]">{isOpen ? "▾" : "▸"}</span>
+                <span className="text-lg text-[#5aae69]">{isOpen ? "▾" : "▸"}</span>
               </div>
             </button>
 

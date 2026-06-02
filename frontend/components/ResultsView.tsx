@@ -25,17 +25,17 @@ function PAAItem({ question, keyword }: { question: string; keyword: string }) {
   return (
     <button
       onClick={() => setOpen(o => !o)}
-      className="w-full text-left border border-slate-200 rounded-xl px-4 py-2.5 hover:border-[#c4a8e8] transition group"
+      className="w-full text-left border border-slate-200 rounded-xl px-4 py-2.5 hover:border-[#bfdbfe] transition group"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
         <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
-          <span className="text-[10px] font-bold bg-[#f3eef8] text-[#6b21d6] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px]">
+          <span className="text-[10px] font-bold bg-[#eff6ff] text-[#5aae69] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px]">
             {keyword}
           </span>
           <svg
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            className={`w-4 h-4 text-[#6b21d6] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-[#5aae69] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -145,7 +145,7 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
         onClick={() => setOpen((o) => !o)}
         className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition"
       >
-        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#f3eef8] text-[#6b21d6] text-xs font-extrabold flex items-center justify-center mt-0.5">
+        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#eff6ff] text-[#5aae69] text-xs font-extrabold flex items-center justify-center mt-0.5">
           {index + 1}
         </span>
         <div className="flex-1 min-w-0">
@@ -167,14 +167,14 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
           {/* Audience selector */}
           {personas.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">Who are we targeting?</p>
+              <p className="text-xs font-extrabold text-[#5aae69] uppercase tracking-wide mb-2">Who are we targeting?</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { setSelectedPersona("all"); setOutput(null); }}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                     selectedPersona === "all"
-                      ? "bg-[#6b21d6] text-white border-[#6b21d6]"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-[#c4a8e8]"
+                      ? "bg-[#5aae69] text-white border-[#5aae69]"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-[#bfdbfe]"
                   }`}
                 >
                   All audiences
@@ -185,8 +185,8 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
                     onClick={() => { setSelectedPersona(pi); setOutput(null); }}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                       selectedPersona === pi
-                        ? "bg-[#6b21d6] text-white border-[#6b21d6]"
-                        : "bg-white text-slate-600 border-slate-200 hover:border-[#c4a8e8]"
+                        ? "bg-[#5aae69] text-white border-[#5aae69]"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-[#bfdbfe]"
                     }`}
                   >
                     {p.persona_name ?? `Segment ${pi + 1}`}
@@ -194,15 +194,15 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
                 ))}
               </div>
               {selectedPersona !== "all" && personas[selectedPersona as number] && (
-                <div className="mt-2 bg-white border border-[#c4a8e8] rounded-xl px-3 py-2.5 text-xs text-slate-600">
-                  <span className="font-bold text-[#6b21d6]">Demographics: </span>
+                <div className="mt-2 bg-white border border-[#bfdbfe] rounded-xl px-3 py-2.5 text-xs text-slate-600">
+                  <span className="font-bold text-[#5aae69]">Demographics: </span>
                   {personas[selectedPersona as number].demographics}
                   {(personas[selectedPersona as number].pain_points ?? []).length > 0 && (
-                    <><br /><span className="font-bold text-[#6b21d6]">Pain points: </span>
+                    <><br /><span className="font-bold text-[#5aae69]">Pain points: </span>
                     {(personas[selectedPersona as number].pain_points ?? []).slice(0, 3).join(" · ")}</>
                   )}
                   {personas[selectedPersona as number].where_to_reach && (
-                    <><br /><span className="font-bold text-[#6b21d6]">Where to reach: </span>
+                    <><br /><span className="font-bold text-[#5aae69]">Where to reach: </span>
                     {personas[selectedPersona as number].where_to_reach}</>
                   )}
                 </div>
@@ -212,11 +212,11 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
 
           {steps.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">How to Complete</p>
+              <p className="text-xs font-extrabold text-[#5aae69] uppercase tracking-wide mb-2">How to Complete</p>
               <ol className="space-y-2">
                 {steps.map((s, si) => (
                   <li key={si} className="flex gap-2.5 text-sm text-slate-700">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-[#c4a8e8] text-[#6b21d6] text-xs font-bold flex items-center justify-center mt-0.5">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-[#bfdbfe] text-[#5aae69] text-xs font-bold flex items-center justify-center mt-0.5">
                       {si + 1}
                     </span>
                     <span>{s.replace(/^Step \d+:\s*/i, "")}</span>
@@ -236,7 +236,7 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
             <button
               onClick={activate}
               disabled={running}
-              className="w-full bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition"
+              className="w-full bg-gradient-to-r from-[#5aae69] to-[#3d9e52] text-white font-bold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-md transition"
             >
               {running ? (
                 <>
@@ -257,9 +257,9 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
           {(streamText || output) && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-extrabold text-[#6b21d6] uppercase tracking-wide">
+                <p className="text-xs font-extrabold text-[#5aae69] uppercase tracking-wide">
                   {agentMeta?.label} Agent Output{output ? ` · ${output.timestamp}` : ""}
-                  {running && <span className="inline-block w-1.5 h-3.5 bg-[#6b21d6] ml-1 animate-pulse align-middle" />}
+                  {running && <span className="inline-block w-1.5 h-3.5 bg-[#5aae69] ml-1 animate-pulse align-middle" />}
                 </p>
                 <div className="flex gap-2">
                   {!running && output && (
@@ -367,7 +367,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div>
             {services.length > 0 && (
               <>
-                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Services</p>
+                <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-1">Services</p>
                 <ul className="list-disc list-inside text-sm text-slate-700 space-y-1 mb-3">
                   {services.map((s, i) => <li key={i}>{s}</li>)}
                 </ul>
@@ -375,7 +375,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
             )}
             {strengths.length > 0 && (
               <>
-                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Strengths</p>
+                <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-1">Strengths</p>
                 <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
                   {strengths.map((s, i) => <li key={i}>{s}</li>)}
                 </ul>
@@ -385,7 +385,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div>
             {gaps.length > 0 && (
               <>
-                <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-1">Marketing Gaps</p>
+                <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-1">Marketing Gaps</p>
                 <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
                   {gaps.map((g, i) => <li key={i}>{g}</li>)}
                 </ul>
@@ -400,7 +400,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div className="flex justify-end mb-3">
             <button
               onClick={() => onExploreTrends(industry)}
-              className="flex items-center gap-1.5 text-xs font-bold text-[#6b21d6] bg-[#f3eef8] border border-[#c4a8e8] px-3 py-1.5 rounded-full hover:bg-[#ede5f6] transition"
+              className="flex items-center gap-1.5 text-xs font-bold text-[#5aae69] bg-[#eff6ff] border border-[#bfdbfe] px-3 py-1.5 rounded-full hover:bg-[#ede5f6] transition"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               Explore trends for {industry}
@@ -409,7 +409,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         )}
         {keywords.length > 0 && (
           <div className="mb-4">
-            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">Long-tail Keyword Opportunities</p>
+            <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-3">Long-tail Keyword Opportunities</p>
             <div className="grid md:grid-cols-2 gap-2">
               {keywords.slice(0, 15).map((kw, i) => {
                 const obj = typeof kw === "string" ? { keyword: kw } : (kw as Keyword);
@@ -417,7 +417,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
                 const intent = (obj.intent ?? "").toLowerCase();
                 const vol = obj.monthly_searches ?? "";
                 const diffColor = diff === "low" ? "bg-green-100 text-green-700" : diff === "medium" ? "bg-amber-100 text-amber-700" : diff === "high" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500";
-                const intentColor = intent === "transactional" ? "bg-purple-100 text-purple-700" : intent === "commercial" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500";
+                const intentColor = intent === "transactional" ? "bg-blue-100 text-blue-700" : intent === "commercial" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500";
                 return (
                   <div key={i} className="border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 flex-wrap">
                     <span className="text-sm font-semibold text-slate-800 flex-1 min-w-[160px]">{obj.keyword}</span>
@@ -439,7 +439,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         )}
         {Object.keys(paa).length > 0 && (
           <div className="mt-4">
-            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-3">People Also Ask</p>
+            <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-3">People Also Ask</p>
             <div className="grid md:grid-cols-2 gap-2">
               {Object.entries(paa).map(([kw, questions]) =>
                 questions.map((q, qi) => (
@@ -451,7 +451,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
         )}
         {techIssues.length > 0 && (
           <div className="mt-4">
-            <p className="text-sm font-extrabold text-[#6b21d6] uppercase tracking-wide mb-2">Technical Issues to Fix</p>
+            <p className="text-sm font-extrabold text-[#5aae69] uppercase tracking-wide mb-2">Technical Issues to Fix</p>
             <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
               {techIssues.slice(0, 8).map((t, i) => <li key={i}>{t}</li>)}
             </ul>
@@ -476,7 +476,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
               return (
                 <div key={i} className="border border-slate-200 rounded-xl px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="font-extrabold text-[#6b21d6] text-base leading-tight">{cName}</p>
+                    <p className="font-extrabold text-[#5aae69] text-base leading-tight">{cName}</p>
                     {traffic && (
                       <span className="flex-shrink-0 text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
                         ~{traffic}
@@ -493,8 +493,8 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
                       {cUrl}
                     </a>
                   )}
-                  {strength && <p className="text-sm text-slate-700 mt-2"><span className="font-bold text-[#6b21d6]">Strength:</span> {String(strength).slice(0, 220)}</p>}
-                  {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#6b21d6]">Weakness:</span> {String(weakness).slice(0, 220)}</p>}
+                  {strength && <p className="text-sm text-slate-700 mt-2"><span className="font-bold text-[#5aae69]">Strength:</span> {String(strength).slice(0, 220)}</p>}
+                  {weakness && <p className="text-sm text-slate-700 mt-0.5"><span className="font-bold text-[#5aae69]">Weakness:</span> {String(weakness).slice(0, 220)}</p>}
                   {rankingKws.length > 0 && (
                     <div className="mt-2.5">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Likely ranking for</p>
@@ -545,16 +545,16 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           <div className="flex flex-col gap-4">
             {personas.slice(0, 4).map((p, i) => (
               <div key={i}>
-                <p className="font-extrabold text-[#6b21d6] text-base">{p.persona_name ?? `Segment ${i + 1}`}</p>
+                <p className="font-extrabold text-[#5aae69] text-base">{p.persona_name ?? `Segment ${i + 1}`}</p>
                 {p.demographics && <p className="text-sm text-slate-500 mt-0.5">{p.demographics}</p>}
                 {(p.pain_points ?? []).length > 0 && (
                   <p className="text-sm text-slate-700 mt-1.5">
-                    <span className="font-bold text-[#6b21d6]">Pain points:</span> {(p.pain_points ?? []).slice(0, 4).join(" · ")}
+                    <span className="font-bold text-[#5aae69]">Pain points:</span> {(p.pain_points ?? []).slice(0, 4).join(" · ")}
                   </p>
                 )}
                 {p.where_to_reach && (
                   <p className="text-sm text-slate-700 mt-0.5">
-                    <span className="font-bold text-[#6b21d6]">Where to reach:</span> {p.where_to_reach}
+                    <span className="font-bold text-[#5aae69]">Where to reach:</span> {p.where_to_reach}
                   </p>
                 )}
                 {i < personas.length - 1 && <hr className="border-slate-100 mt-3" />}
@@ -584,7 +584,7 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
           </a>
           <button
             onClick={() => exportPDF(data, bizName, scoreVal, pages_crawled)}
-            className="flex-1 text-center bg-[#6b21d6] hover:bg-[#5b17be] text-white text-sm font-semibold py-2.5 rounded-xl transition"
+            className="flex-1 text-center bg-[#5aae69] hover:bg-[#4a9e59] text-white text-sm font-semibold py-2.5 rounded-xl transition"
           >
             Export PDF
           </button>

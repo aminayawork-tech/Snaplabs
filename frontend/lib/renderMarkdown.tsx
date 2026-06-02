@@ -38,7 +38,7 @@ export function renderMarkdown(text: string): React.ReactNode {
     // Blockquote
     if (lines.every((l) => l.startsWith("> "))) {
       return (
-        <blockquote key={bi} className="border-l-2 border-[#c4a8e8] pl-3 text-slate-600 my-1">
+        <blockquote key={bi} className="border-l-2 border-[#bfdbfe] pl-3 text-slate-600 my-1">
           {inlineMarkdown(lines.map((l) => l.slice(2)).join(" "))}
         </blockquote>
       );

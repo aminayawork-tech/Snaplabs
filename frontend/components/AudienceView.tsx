@@ -46,13 +46,13 @@ const audienceCache = new Map<string, AudienceData>();
 
 const STAGE_COLORS = {
   awareness:     { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-500" },
-  consideration: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", dot: "bg-purple-500" },
+  consideration: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", dot: "bg-blue-500" },
   decision:      { bg: "bg-green-50",  border: "border-green-200",  text: "text-green-700",  dot: "bg-green-500" },
   retention:     { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-500" },
 };
 
 const PERSONA_COLORS = [
-  { bg: "from-[#f3eef8] to-[#ede9fe]", border: "border-[#c4a8e8]", accent: "text-[#6b21d6]" },
+  { bg: "from-[#eff6ff] to-[#dbeafe]", border: "border-[#bfdbfe]", accent: "text-[#5aae69]" },
   { bg: "from-blue-50 to-indigo-50",   border: "border-blue-200",  accent: "text-blue-700" },
   { bg: "from-green-50 to-emerald-50", border: "border-green-200", accent: "text-green-700" },
 ];
@@ -130,11 +130,11 @@ export default function AudienceView() {
             value={market}
             onChange={e => setMarket(e.target.value)}
             placeholder='Describe your market (e.g. "plant-based protein powder", "SaaS HR software")'
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#6b21d6] focus:ring-1 focus:ring-[#6b21d6] bg-white"
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5aae69] focus:ring-1 focus:ring-[#5aae69] bg-white"
           />
         </div>
         <button type="submit" disabled={loading || !market.trim()}
-          className="bg-[#6b21d6] hover:bg-[#5b17be] disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
+          className="bg-[#5aae69] hover:bg-[#4a9e59] disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition flex items-center gap-2">
           {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
           {loading ? "Researching…" : "Research"}
         </button>
@@ -146,13 +146,13 @@ export default function AudienceView() {
         <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
           <span>Loaded from cache — results for <strong>{market.trim()}</strong></span>
           <button onClick={() => { audienceCache.delete(market.trim().toLowerCase()); setData(null); setFromCache(false); }}
-            className="text-[#6b21d6] font-semibold hover:underline ml-3">Reload fresh</button>
+            className="text-[#5aae69] font-semibold hover:underline ml-3">Reload fresh</button>
         </div>
       )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-8 h-8 border-4 border-[#f3eef8] border-t-[#6b21d6] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#5aae69] rounded-full animate-spin" />
           <p className="text-sm text-slate-500">Building personas and journey maps…</p>
           <p className="text-xs text-slate-400">This takes about 15–20 seconds</p>
         </div>
@@ -168,7 +168,7 @@ export default function AudienceView() {
               {data.personas.map((p, i) => (
                 <button key={i} onClick={() => setActivePersona(i)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition
-                    ${activePersona === i ? "bg-[#6b21d6] text-white border-[#6b21d6]" : "bg-white text-slate-600 border-slate-200 hover:border-[#6b21d6]"}`}>
+                    ${activePersona === i ? "bg-[#5aae69] text-white border-[#5aae69]" : "bg-white text-slate-600 border-slate-200 hover:border-[#5aae69]"}`}>
                   <span>{p.emoji}</span> {p.name}
                 </button>
               ))}
@@ -183,7 +183,7 @@ export default function AudienceView() {
                   {/* Header */}
                   <div className="flex items-start gap-4 mb-5">
                     <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm flex-shrink-0">
-                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#6b21d6" className="w-6 h-6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="#5aae69" className="w-6 h-6"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
                     <div>
                       <h3 className={`font-display text-xl font-bold ${c.accent}`}>{p.name}</h3>
@@ -227,7 +227,7 @@ export default function AudienceView() {
                       <ul className="space-y-1.5">
                         {p.buying_triggers.map((t, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700">
-                            <span className="text-[#6b21d6] flex-shrink-0 mt-0.5">→</span>{t}
+                            <span className="text-[#5aae69] flex-shrink-0 mt-0.5">→</span>{t}
                           </li>
                         ))}
                       </ul>
@@ -310,7 +310,7 @@ export default function AudienceView() {
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Market Trends</p>
                   <ul className="space-y-1">
                     {data.market_insights.market_trends.map((t, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700"><span className="text-[#6b21d6] flex-shrink-0">↑</span>{t}</li>
+                      <li key={i} className="flex items-start gap-1.5 text-sm text-slate-700"><span className="text-[#5aae69] flex-shrink-0">↑</span>{t}</li>
                     ))}
                   </ul>
                 </div>

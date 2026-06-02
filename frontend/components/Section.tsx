@@ -19,19 +19,19 @@ export default function Section({ title, defaultOpen = false, children }: Props)
           "w-full flex items-center justify-between px-4 py-3 text-left",
           "border rounded-xl font-bold text-base transition-all duration-150",
           open
-            ? "border-[#c4a8e8] rounded-b-none text-[#6b21d6]"
-            : "border-[#c4a8e8] text-[#6b21d6] hover:opacity-90"
+            ? "border-[#bfdbfe] rounded-b-none text-[#5aae69]"
+            : "border-[#bfdbfe] text-[#5aae69] hover:opacity-90"
         )}
-        style={{ background: "#f3eef8" }}
+        style={{ background: "#eff6ff" }}
       >
         <span>{title}</span>
-        <span className={clsx("ml-2 text-lg transition-transform duration-150 flex-shrink-0 text-[#6b21d6]")}>
+        <span className={clsx("ml-2 text-lg transition-transform duration-150 flex-shrink-0 text-[#5aae69]")}>
           {open ? "▾" : "▸"}
         </span>
       </button>
 
       {open && (
-        <div className="border border-[#c4a8e8] border-t-0 rounded-b-xl px-4 py-4 bg-white">
+        <div className="border border-[#bfdbfe] border-t-0 rounded-b-xl px-4 py-4 bg-white">
           {children}
         </div>
       )}
