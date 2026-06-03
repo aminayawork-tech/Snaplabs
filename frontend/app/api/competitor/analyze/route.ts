@@ -14,10 +14,27 @@ export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
 
   try {
-    const scraped = await fc.scrapeUrl(url, { formats: ["markdown"] });
-    const markdown = (scraped?.markdown ?? scraped?.data?.markdown ?? "").slice(0, 12000);
+    let scraped = await fc.scrapeUrl(url, { formats: ["markdown"] });
+    let markdown = (scraped?.markdown ?? scraped?.data?.markdown ?? "").slice(0, 12000);
 
-    if (!markdown) return Response.json({ error: "Could not scrape that URL. Check it's publicly accessible." }, { status: 422 });
+    // If first attempt fails, try adding/removing www
+    if (!markdown || scraped?.success === false) {
+      const urlObj = new URL(url);
+      const altHost = urlObj.hostname.startsWith("www.")
+        ? urlObj.hostname.slice(4)
+        : `www.${urlObj.hostname}`;
+      const altUrl = `${urlObj.protocol}//${altHost}${urlObj.pathname}${urlObj.search}`;
+      scraped = await fc.scrapeUrl(altUrl, { formats: ["markdown"] });
+      markdown = (scraped?.markdown ?? scraped?.data?.markdown ?? "").slice(0, 12000);
+    }
+
+    if (!markdown) {
+      const fcErr = scraped?.error ?? scraped?.data?.error ?? "";
+      const msg = fcErr
+        ? `Could not scrape that site: ${fcErr}`
+        : "Could not scrape that URL — the site may be blocking scrapers or is unreachable. Try a different URL.";
+      return Response.json({ error: msg }, { status: 422 });
+    }
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
