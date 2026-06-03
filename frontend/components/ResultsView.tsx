@@ -21,34 +21,20 @@ function guessAgentId(tactic: string): string {
 }
 
 function PAAItem({ question, keyword }: { question: string; keyword: string }) {
-  const [open, setOpen] = useState(false);
   return (
-    <button
-      onClick={() => setOpen(o => !o)}
-      className="w-full text-left border border-slate-200 rounded-xl px-4 py-2.5 hover:border-[#bfdbfe] transition group"
-    >
-      <div className="flex items-start justify-between gap-3">
+    <div className="w-full text-left border border-slate-200 rounded-xl px-4 py-3">
+      <div className="flex items-start justify-between gap-3 mb-2">
         <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
-        <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
-          <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px]">
-            {keyword}
-          </span>
-          <svg
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            className={`w-4 h-4 text-[#275fe8] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px] flex-shrink-0">
+          {keyword}
+        </span>
       </div>
-      {open && (
-        <p className="mt-2 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
-          This question surfaces on Google when users search for <em>&ldquo;{keyword}&rdquo;</em>.
-          Creating a page or blog post that directly answers this question can earn a featured snippet
-          and capture high-intent traffic.
-        </p>
-      )}
-    </button>
+      <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
+        This question surfaces on Google when users search for <em>&ldquo;{keyword}&rdquo;</em>.
+        Creating a page or blog post that directly answers this question can earn a featured snippet
+        and capture high-intent traffic.
+      </p>
+    </div>
   );
 }
 

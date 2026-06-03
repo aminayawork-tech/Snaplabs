@@ -144,6 +144,9 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
     communities: string[];
   } | null>(null);
   const [socialLoading, setSocialLoading] = useState(true);
+  const [ytVideos, setYtVideos] = useState<Array<{ id: string; title: string; channel: string; thumbnail: string; url: string }>>([]);
+  const [ytLoading, setYtLoading] = useState(true);
+  const [ytNoKey, setYtNoKey] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +206,28 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
         }
       })
       .catch(() => { if (!cancelled) setSocialLoading(false); });
+    return () => { cancelled = true; };
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setYtLoading(true);
+    setYtVideos([]);
+    setYtNoKey(false);
+    fetch("/api/trends/youtube-content", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) {
+          setYtNoKey(!!d.no_key);
+          setYtVideos(d.videos ?? []);
+          setYtLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setYtLoading(false); });
     return () => { cancelled = true; };
   }, [keyword]);
 
@@ -411,34 +436,61 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                 </div>
               )}
 
-              {/* Content Opportunities */}
-              {(socialMentions.opportunities.length > 0 || socialMentions.communities.length > 0) && (
-                <div className="border-t border-slate-100 pt-4 space-y-4">
-                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Content Opportunities</p>
+              {/* Platform content */}
+              <div className="border-t border-slate-100 pt-4 space-y-4">
+                <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Content Being Created</p>
 
-                  {socialMentions.opportunities.length > 0 && (
-                    <div className="space-y-2">
-                      {socialMentions.opportunities.map((opp, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-[#f8faff] border border-[#e8effd]">
-                          <span className="w-5 h-5 rounded-full bg-[#275fe8] text-white text-[0.6rem] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                          <p className="text-sm text-slate-700 leading-relaxed">{opp}</p>
-                        </div>
+                {/* Platform search buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "TikTok", color: "bg-black text-white", url: `https://www.tiktok.com/search?q=${encodeURIComponent(keyword)}`, icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.2 8.2 0 0 0 4.79 1.52V6.78a4.85 4.85 0 0 1-1.02-.09z"/></svg> },
+                    { label: "Instagram", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white", url: `https://www.instagram.com/explore/search/keyword/${encodeURIComponent(keyword)}/`, icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg> },
+                    { label: "LinkedIn", color: "bg-[#0077b5] text-white", url: `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(keyword)}`, icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg> },
+                    { label: "YouTube", color: "bg-red-600 text-white", url: `https://www.youtube.com/results?search_query=${encodeURIComponent(keyword)}`, icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/></svg> },
+                  ].map(p => (
+                    <a key={p.label} href={p.url} target="_blank" rel="noopener noreferrer"
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl font-semibold text-xs transition opacity-90 hover:opacity-100 ${p.color}`}>
+                      {p.icon}
+                      Search &quot;{keyword.length > 20 ? keyword.slice(0, 20) + "…" : keyword}&quot; on {p.label}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 ml-auto flex-shrink-0"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  ))}
+                </div>
+
+                {/* YouTube videos */}
+                {ytLoading ? (
+                  <div className="flex items-center gap-2 text-slate-400 text-xs py-1">
+                    <div className="w-3 h-3 border-2 border-slate-200 border-t-red-500 rounded-full animate-spin flex-shrink-0" />
+                    Loading YouTube videos…
+                  </div>
+                ) : !ytNoKey && ytVideos.length > 0 ? (
+                  <div>
+                    <p className="text-[0.6875rem] text-slate-400 font-semibold mb-2">Top YouTube videos</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {ytVideos.map(v => (
+                        <a key={v.id} href={v.url} target="_blank" rel="noopener noreferrer"
+                          className="group rounded-xl overflow-hidden border border-slate-100 hover:border-red-200 hover:shadow-md transition">
+                          <div className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={v.thumbnail || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`} alt={v.title} className="w-full aspect-video object-cover" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition flex items-center justify-center">
+                              <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-lg">
+                                <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4 ml-0.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-2">
+                            <p className="text-xs font-semibold text-slate-800 line-clamp-2 group-hover:text-red-600 transition leading-tight">{v.title}</p>
+                            <p className="text-[0.625rem] text-slate-400 mt-0.5 truncate">{v.channel}</p>
+                          </div>
+                        </a>
                       ))}
                     </div>
-                  )}
-
-                  {socialMentions.communities.length > 0 && (
-                    <div>
-                      <p className="text-[0.6875rem] text-slate-400 font-semibold mb-2">Where this audience hangs out</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {socialMentions.communities.map((c, i) => (
-                          <span key={i} className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{c}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : ytNoKey ? (
+                  <p className="text-[0.6875rem] text-slate-400">Add <code className="bg-slate-100 px-1 rounded">YOUTUBE_API_KEY</code> to env vars to show real YouTube videos here.</p>
+                ) : null}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-slate-400">No social data available.</p>
