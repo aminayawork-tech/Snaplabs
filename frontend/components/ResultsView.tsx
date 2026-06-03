@@ -22,18 +22,11 @@ function guessAgentId(tactic: string): string {
 
 function PAAItem({ question, keyword }: { question: string; keyword: string }) {
   return (
-    <div className="w-full text-left border border-slate-200 rounded-xl px-4 py-3">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
-        <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px] flex-shrink-0">
-          {keyword}
-        </span>
-      </div>
-      <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
-        This question surfaces on Google when users search for <em>&ldquo;{keyword}&rdquo;</em>.
-        Creating a page or blog post that directly answers this question can earn a featured snippet
-        and capture high-intent traffic.
-      </p>
+    <div className="w-full text-left border border-slate-200 rounded-xl px-4 py-3 flex items-start justify-between gap-3">
+      <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
+      <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px] flex-shrink-0">
+        {keyword}
+      </span>
     </div>
   );
 }

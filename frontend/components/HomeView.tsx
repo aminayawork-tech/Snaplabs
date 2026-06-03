@@ -36,7 +36,7 @@ export default function HomeView({ onStartAudit, onOpenSaved }: Props) {
       {/* Hero */}
       <div className="text-center py-8 px-4">
         <h1 className="font-display text-[2.1rem] font-bold text-slate-900 tracking-tight leading-[1.15] mb-3">
-          Your AI <span className="text-brand">Marketing Analyst</span>
+          Get a Better Marketing Strategy Than Your Agency — <span className="text-brand">In 47 Seconds</span>
         </h1>
         <p className="text-slate-500 text-[0.9375rem] leading-relaxed max-w-sm mx-auto font-normal">
           Enter your website URL and get a full marketing audit — SEO, competitors, content gaps, and quick wins — in under 60 seconds.
