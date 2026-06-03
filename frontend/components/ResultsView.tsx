@@ -22,9 +22,9 @@ function guessAgentId(tactic: string): string {
 
 function PAAItem({ question, keyword }: { question: string; keyword: string }) {
   return (
-    <div className="w-full text-left border border-slate-200 rounded-xl px-4 py-3 flex items-start justify-between gap-3">
-      <span className="text-sm font-semibold text-slate-800 leading-snug">{question}</span>
-      <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full whitespace-nowrap hidden sm:block truncate max-w-[140px] flex-shrink-0">
+    <div className="w-full text-left border border-slate-200 rounded-xl px-4 py-3">
+      <span className="text-sm font-semibold text-slate-800 leading-snug block mb-1.5">{question}</span>
+      <span className="text-[10px] font-bold bg-[#eff6ff] text-[#275fe8] px-2 py-0.5 rounded-full hidden sm:inline-block">
         {keyword}
       </span>
     </div>
@@ -538,12 +538,12 @@ export default function ResultsView({ result, bizName, initialAgentOutputs, onAg
                 {p.demographics && <p className="text-sm text-slate-500 mt-0.5">{p.demographics}</p>}
                 {(p.pain_points ?? []).length > 0 && (
                   <p className="text-sm text-slate-700 mt-1.5">
-                    <span className="font-bold text-[#275fe8]">Pain points:</span> {(p.pain_points ?? []).slice(0, 4).join(" · ")}
+                    <span className="font-bold text-slate-900">Pain points:</span> {(p.pain_points ?? []).slice(0, 4).join(" · ")}
                   </p>
                 )}
                 {p.where_to_reach && (
                   <p className="text-sm text-slate-700 mt-0.5">
-                    <span className="font-bold text-[#275fe8]">Where to reach:</span> {p.where_to_reach}
+                    <span className="font-bold text-slate-900">Where to reach:</span> {p.where_to_reach}
                   </p>
                 )}
                 {i < personas.length - 1 && <hr className="border-slate-100 mt-3" />}

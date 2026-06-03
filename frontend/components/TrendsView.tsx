@@ -781,7 +781,7 @@ function ResultsPage({
       {!loadingAI && visible.length > 0 && (
         <>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">
+            <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_100px_96px_72px_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50 text-[0.6875rem] font-bold text-slate-900 uppercase tracking-[0.1em]">
               <button className="text-left flex items-center" onClick={() => toggleSort("keyword")}>Keyword <Arrow k="keyword" /></button>
               <span className="hidden sm:block text-center">{trendsTimeRange === "24h" ? "Trend — 24h" : trendsTimeRange === "6m" ? "Trend — 6m" : "Trend — 1yr"}</span>
               <button className="flex items-center" onClick={() => toggleSort("growth")}>Growth <Arrow k="growth" /></button>
