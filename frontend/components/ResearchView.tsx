@@ -42,6 +42,14 @@ interface Props {
 
 export default function ResearchView({ auditKeywords = [], bizName, initialCategory, initialTab = "trends" }: Props) {
   const [tab, setTab] = useState<ResearchTab>(initialTab);
+  const [trendsKey, setTrendsKey] = useState(0);
+  const [trendsKeyword, setTrendsKeyword] = useState<string | undefined>(initialCategory);
+
+  const navigateToTrends = (keyword: string) => {
+    setTrendsKeyword(keyword);
+    setTrendsKey(k => k + 1);
+    setTab("trends");
+  };
 
   return (
     <div>
@@ -86,13 +94,13 @@ export default function ResearchView({ auditKeywords = [], bizName, initialCateg
 
       {/* Active tool — all mounted, only active one shown */}
       <div className={tab === "trends" ? "" : "hidden"}>
-        <TrendsView auditKeywords={auditKeywords} bizName={bizName} initialCategory={initialCategory} />
+        <TrendsView key={trendsKey} auditKeywords={auditKeywords} bizName={bizName} initialCategory={trendsKeyword} />
       </div>
       <div className={tab === "competitor" ? "" : "hidden"}>
         <CompetitorView />
       </div>
       <div className={tab === "social" ? "" : "hidden"}>
-        <SocialListeningView />
+        <SocialListeningView onNavigateToTrends={navigateToTrends} />
       </div>
       <div className={tab === "audience" ? "" : "hidden"}>
         <AudienceView />

@@ -149,7 +149,7 @@ type ErrorMap = Partial<Record<Platform, string>>;
 const socialCache = new Map<string, ResultsMap>();
 const contentDiscoveryCache = new Map<string, ContentDiscovery>();
 
-export default function SocialListeningView() {
+export default function SocialListeningView({ onNavigateToTrends }: { onNavigateToTrends?: (keyword: string) => void }) {
   const [keyword, setKeyword] = useState("");
   const [activePlatform, setActivePlatform] = useState<Platform>("reddit");
   const [results, setResults] = useState<ResultsMap>({});
@@ -557,7 +557,14 @@ export default function SocialListeningView() {
                     <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Trending Topics to Cover</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(contentDiscovery.trending_topics ?? []).map((t, i) => (
-                        <span key={i} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">{t}</span>
+                        <button
+                          key={i}
+                          onClick={() => onNavigateToTrends?.(t)}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-full transition ${onNavigateToTrends ? "bg-blue-50 text-blue-700 hover:bg-[#275fe8] hover:text-white cursor-pointer" : "bg-blue-50 text-blue-700"}`}
+                          title={onNavigateToTrends ? `Search "${t}" in Keyword Trends` : undefined}
+                        >
+                          {t} {onNavigateToTrends && <span className="opacity-60">↗</span>}
+                        </button>
                       ))}
                     </div>
                   </div>
