@@ -140,6 +140,8 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
     summary: string; themes: string[];
     posts: Array<{ title: string; url: string; score: number; num_comments: number }>;
     pos: number; neu: number; neg: number;
+    opportunities: string[];
+    communities: string[];
   } | null>(null);
   const [socialLoading, setSocialLoading] = useState(true);
 
@@ -194,6 +196,8 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             pos: d.sentiment_summary?.positive ?? 33,
             neu: d.sentiment_summary?.neutral ?? 44,
             neg: d.sentiment_summary?.negative ?? 23,
+            opportunities: d.opportunities ?? [],
+            communities: d.top_communities ?? [],
           });
           setSocialLoading(false);
         }
@@ -352,7 +356,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
           </div>
         )}
 
-        {/* Social mentions */}
+        {/* Social mentions + Content Opportunities */}
         <div className="border-t border-slate-100 px-6 py-5">
           <div className="flex items-center gap-2 mb-4">
             <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Social Mentions</p>
@@ -365,6 +369,7 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
             </div>
           ) : socialMentions ? (
             <div className="space-y-4">
+              {/* Sentiment bar */}
               <div>
                 <div className="flex h-1.5 rounded-full overflow-hidden">
                   <div className="bg-[#275fe8] transition-all" style={{ width: `${socialMentions.pos}%` }} />
@@ -403,6 +408,35 @@ function TrendDetailModal({ keyword, geo, onClose, onDrillDown }: { keyword: str
                       </div>
                     </a>
                   ))}
+                </div>
+              )}
+
+              {/* Content Opportunities */}
+              {(socialMentions.opportunities.length > 0 || socialMentions.communities.length > 0) && (
+                <div className="border-t border-slate-100 pt-4 space-y-4">
+                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Content Opportunities</p>
+
+                  {socialMentions.opportunities.length > 0 && (
+                    <div className="space-y-2">
+                      {socialMentions.opportunities.map((opp, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-[#f8faff] border border-[#e8effd]">
+                          <span className="w-5 h-5 rounded-full bg-[#275fe8] text-white text-[0.6rem] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                          <p className="text-sm text-slate-700 leading-relaxed">{opp}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {socialMentions.communities.length > 0 && (
+                    <div>
+                      <p className="text-[0.6875rem] text-slate-400 font-semibold mb-2">Where this audience hangs out</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {socialMentions.communities.map((c, i) => (
+                          <span key={i} className="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
