@@ -601,7 +601,7 @@ function Sparkline({ data, growth }: { data: number[]; growth: number }) {
   const pts = data.map((v, i) =>
     `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * (H - 4) - 2}`
   ).join(" ");
-  const color = growth >= 0 ? "#275fe8" : "#ef4444";
+  const color = growth >= 0 ? "#10b981" : "#ef4444";
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -611,7 +611,7 @@ function Sparkline({ data, growth }: { data: number[]; growth: number }) {
 }
 
 function TrendArrow({ trend }: { trend: TrendDir }) {
-  if (trend === "rising")   return <span className="text-[#275fe8] font-bold text-base">↑</span>;
+  if (trend === "rising")   return <span className="text-emerald-500 font-bold text-base">↑</span>;
   if (trend === "declining")return <span className="text-red-500 font-bold text-base">↓</span>;
   return <span className="text-slate-400 font-bold text-base">→</span>;
 }
@@ -619,7 +619,7 @@ function TrendArrow({ trend }: { trend: TrendDir }) {
 function GrowthBadge({ pct, estimated }: { pct: number; estimated?: boolean }) {
   const up = pct >= 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-[#eff6ff] text-[#275fe8]" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${up ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"} ${estimated ? "opacity-70" : ""}`}>
       {up ? "▲" : "▼"} {Math.abs(pct)}%{estimated ? <span className="font-normal opacity-70 ml-0.5">est</span> : null}
     </span>
   );
@@ -845,7 +845,7 @@ function CategoryHome({
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {topKeywords.map((kw, i) => {
                 const trendIcon = kw.trend === "rising" ? "↑" : kw.trend === "declining" ? "↓" : "→";
-                const trendColor = kw.trend === "rising" ? "text-[#275fe8]" : kw.trend === "declining" ? "text-red-500" : "text-slate-400";
+                const trendColor = kw.trend === "rising" ? "text-emerald-500" : kw.trend === "declining" ? "text-red-500" : "text-slate-400";
                 return (
                   <button
                     key={i}
