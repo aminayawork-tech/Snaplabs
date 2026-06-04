@@ -4,6 +4,36 @@ import type { Keyword } from "@/lib/types";
 
 type VolumeTier = "high" | "medium" | "low";
 
+interface TrendingTopic {
+  title: string;
+  traffic: string;
+  picture: string;
+  newsTitle: string;
+  newsUrl: string;
+  newsSource: string;
+}
+
+const COUNTRIES = [
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "FR", name: "France", flag: "🇫🇷" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱" },
+  { code: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "SG", name: "Singapore", flag: "🇸🇬" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "AR", name: "Argentina", flag: "🇦🇷" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtVol(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -523,22 +553,32 @@ interface Row extends AIKeyword {
 }
 
 const CATEGORIES = [
-  { name: "Food & Beverage",     desc: "Recipes, ingredients & food trends" },
-  { name: "Health & Wellness",   desc: "Fitness, supplements & mental health" },
-  { name: "Technology & AI",     desc: "Software, AI tools & digital trends" },
-  { name: "Fashion & Apparel",   desc: "Clothing, accessories & style" },
-  { name: "Home & Garden",       desc: "Interior design, renovation & plants" },
-  { name: "Beauty & Skincare",   desc: "Skincare, makeup & hair care" },
-  { name: "Finance & Investing", desc: "Investing, budgeting & fintech" },
-  { name: "Education & Courses", desc: "Online learning, skills & training" },
-  { name: "Sports & Fitness",    desc: "Workouts, gear & athletics" },
-  { name: "Travel & Hospitality",desc: "Destinations, experiences & tourism" },
-  { name: "Marketing & Growth",  desc: "SEO, social media & brand building" },
-  { name: "Real Estate",         desc: "Buying, selling & property trends" },
-  { name: "E-commerce & Retail", desc: "Shopping, products & consumer trends" },
-  { name: "Parenting & Family",  desc: "Childcare, education & family life" },
-  { name: "Legal & Professional",desc: "Law, consulting & B2B services" },
-  { name: "Automotive",          desc: "Cars, EVs & maintenance trends" },
+  { name: "Food & Beverage",          desc: "Recipes, ingredients & food trends" },
+  { name: "Health & Wellness",        desc: "Fitness, supplements & longevity" },
+  { name: "Technology & AI",          desc: "Software, AI tools & digital trends" },
+  { name: "Fashion & Apparel",        desc: "Clothing, accessories & style" },
+  { name: "Home & Garden",            desc: "Interior design, renovation & plants" },
+  { name: "Beauty & Skincare",        desc: "Skincare, makeup & hair care" },
+  { name: "Finance & Investing",      desc: "Investing, budgeting & fintech" },
+  { name: "Education & Courses",      desc: "Online learning, skills & training" },
+  { name: "Sports & Fitness",         desc: "Workouts, gear & athletics" },
+  { name: "Travel & Hospitality",     desc: "Destinations, experiences & tourism" },
+  { name: "Marketing & Growth",       desc: "SEO, social media & brand building" },
+  { name: "Real Estate",              desc: "Buying, selling & property trends" },
+  { name: "E-commerce & Retail",      desc: "Shopping, products & consumer trends" },
+  { name: "Parenting & Family",       desc: "Childcare, education & family life" },
+  { name: "Legal & Professional",     desc: "Law, consulting & B2B services" },
+  { name: "Automotive",               desc: "Cars, EVs & maintenance trends" },
+  { name: "Gaming & Esports",         desc: "Video games, streaming & tournaments" },
+  { name: "Mental Health",            desc: "Therapy, mindfulness & self-care" },
+  { name: "Sustainability & Eco",     desc: "Green living, climate & clean energy" },
+  { name: "Business & Entrepreneurship", desc: "Startups, SaaS & business strategy" },
+  { name: "Pets & Animals",           desc: "Pet care, training & accessories" },
+  { name: "Music & Entertainment",    desc: "Artists, streaming & live events" },
+  { name: "DIY & Crafts",             desc: "Maker culture, crafting & hobbies" },
+  { name: "Art & Design",             desc: "Visual art, UX/UI & creative tools" },
+  { name: "Crypto & Web3",            desc: "Bitcoin, DeFi & blockchain trends" },
+  { name: "Food Delivery & Dining",   desc: "Restaurants, delivery & food tech" },
 ];
 
 const PAGE_SIZE = 20;
@@ -586,30 +626,131 @@ function SparklineSkeleton() {
 }
 
 // ── Category home ─────────────────────────────────────────────────────────────
-function CategoryHome({ onSelect, onSearch }: { onSelect: (c: string) => void; onSearch: (q: string) => void }) {
+function CategoryHome({
+  onSelect,
+  onSearch,
+  geo,
+  onGeoChange,
+}: {
+  onSelect: (c: string) => void;
+  onSearch: (q: string) => void;
+  geo: string;
+  onGeoChange: (g: string) => void;
+}) {
   const [q, setQ] = useState("");
+  const [trending, setTrending] = useState<TrendingTopic[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+  const [trendingError, setTrendingError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTrendingLoading(true);
+    setTrendingError(false);
+    fetch(`/api/trends/trending-now?geo=${geo}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) {
+          setTrending(d.topics ?? []);
+          setTrendingError(!d.topics?.length);
+          setTrendingLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) { setTrendingError(true); setTrendingLoading(false); } });
+    return () => { cancelled = true; };
+  }, [geo]);
+
+  const currentCountry = COUNTRIES.find(c => c.code === geo);
+
   return (
     <div>
+      {/* Search bar */}
       <form onSubmit={e => { e.preventDefault(); if (q.trim()) onSearch(q.trim()); }} className="flex gap-2 mb-8">
         <div className="flex-1 relative">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder='Enter any keyword to expand (e.g. "mushroom coffee", "cold plunge")'
+            placeholder='Explore any keyword (e.g. "mushroom coffee", "cold plunge")'
             className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#275fe8] focus:ring-1 focus:ring-[#275fe8] bg-white"
           />
         </div>
         <button type="submit" className="bg-[#275fe8] hover:bg-[#1a4fd0] text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
-          Expand
+          Explore
         </button>
       </form>
+
+      {/* Trending Now */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.12em]">Trending Now</span>
+            <span className="text-[0.6875rem] text-slate-300">·</span>
+            <select
+              value={geo}
+              onChange={e => onGeoChange(e.target.value)}
+              className="text-xs font-semibold bg-white border border-slate-200 rounded-lg pl-2 pr-6 py-1.5 text-slate-700 focus:outline-none focus:border-[#275fe8] cursor-pointer appearance-none"
+              style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+            >
+              {COUNTRIES.map(c => (
+                <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+              ))}
+            </select>
+          </div>
+          <span className="text-[0.6875rem] text-slate-400 flex items-center gap-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Google Trends · updated every 5 min
+          </span>
+        </div>
+
+        {trendingLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 animate-pulse h-[72px]">
+                <div className="w-4 h-3 bg-slate-100 rounded mb-2" />
+                <div className="w-3/4 h-3.5 bg-slate-100 rounded mb-1.5" />
+                <div className="w-1/2 h-2.5 bg-slate-100 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : trendingError ? (
+          <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-xl px-4 py-3">
+            Could not load trending topics for {currentCountry?.name ?? geo} right now. Try a different country or search above.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {trending.map((t, i) => (
+              <button
+                key={i}
+                onClick={() => onSearch(t.title)}
+                className="group text-left bg-white border border-slate-100 rounded-xl p-3 hover:border-[#275fe8] hover:bg-[#f0f7ff] transition-all duration-150 hover:shadow-sm"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[1.1rem] font-black text-slate-200 leading-none w-6 text-right flex-shrink-0 group-hover:text-[#bfdbfe] transition-colors">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-800 text-xs leading-snug group-hover:text-[#275fe8] transition-colors line-clamp-2">{t.title}</p>
+                    {t.traffic && (
+                      <p className="text-[0.625rem] text-slate-400 mt-0.5 font-medium">{t.traffic} searches</p>
+                    )}
+                    {t.newsTitle && (
+                      <p className="text-[0.625rem] text-slate-500 mt-1 leading-tight line-clamp-1 hidden sm:block">{t.newsTitle}</p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Categories */}
       <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.12em] mb-4">Browse by category</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
         {CATEGORIES.map(cat => (
           <button key={cat.name} onClick={() => onSelect(cat.name)}
-            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#275fe8] hover:bg-[#f0f7ff] transition group">
-            <p className="font-bold text-slate-800 text-sm group-hover:text-[#275fe8] transition leading-snug">{cat.name}</p>
+            className="text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-[#275fe8] hover:bg-[#f0f7ff] transition-all duration-150 hover:shadow-sm group">
+            <p className="font-bold text-slate-800 text-sm group-hover:text-[#275fe8] transition-colors leading-snug">{cat.name}</p>
             <p className="text-xs text-slate-400 mt-1 leading-snug">{cat.desc}</p>
           </button>
         ))}
@@ -872,12 +1013,12 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingReal, setLoadingReal] = useState(false);
   const [realFetchedCount, setRealFetchedCount] = useState(0);
-  const [geo] = useState("US");
+  const [geo, setGeo] = useState("US");
   const [trendsTimeRange, setTrendsTimeRange] = useState<TrendsTimeRange>("1y");
   const [detailKeyword, setDetailKeyword] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchRealTrends = useCallback(async (aiRows: Row[], timeRange: TrendsTimeRange = "1y") => {
+  const fetchRealTrends = useCallback(async (aiRows: Row[], timeRange: TrendsTimeRange = "1y", geoCode = "US") => {
     const topKws = aiRows.slice(0, REAL_FETCH_LIMIT).map(r => r.keyword);
     if (!topKws.length) return;
     setLoadingReal(true);
@@ -886,7 +1027,7 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       const res = await fetch("/api/trends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords: topKws, geo: "US", timeRange }),
+        body: JSON.stringify({ keywords: topKws, geo: geoCode, timeRange }),
       });
       const data = await res.json();
       const realMap: Record<string, RealTrend> = {};
@@ -902,8 +1043,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     setTrendsTimeRange(t);
     const stripped = rows.map(({ keyword, trend, growth, volume }) => ({ keyword, trend, growth, volume }));
     setRows(stripped);
-    fetchRealTrends(stripped, t);
-  }, [fetchRealTrends, rows]);
+    fetchRealTrends(stripped, t, geo);
+  }, [fetchRealTrends, rows, geo]);
 
   const run = useCallback(async (ctx: string, body: object) => {
     abortRef.current?.abort();
@@ -928,11 +1069,11 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       }));
       setRows(aiRows);
       setLoadingAI(false);
-      if (aiRows.length) fetchRealTrends(aiRows, trendsTimeRange);
+      if (aiRows.length) fetchRealTrends(aiRows, trendsTimeRange, geo);
     } catch (e) {
       if ((e as Error).name !== "AbortError") setLoadingAI(false);
     }
-  }, [fetchRealTrends, trendsTimeRange]);
+  }, [fetchRealTrends, trendsTimeRange, geo]);
 
   const runAuditKeywords = useCallback(() => {
     const kws = auditKeywords.slice(0, 8).map(k => typeof k === "string" ? k : k.keyword).filter(Boolean);
@@ -942,8 +1083,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     setPage("results");
     setRows(aiRows);
     setLoadingAI(false);
-    fetchRealTrends(aiRows, trendsTimeRange);
-  }, [auditKeywords, bizName, fetchRealTrends, trendsTimeRange]);
+    fetchRealTrends(aiRows, trendsTimeRange, geo);
+  }, [auditKeywords, bizName, fetchRealTrends, trendsTimeRange, geo]);
 
   useEffect(() => {
     if (initialCategory) run(initialCategory, { category: initialCategory });
@@ -971,6 +1112,8 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
         <CategoryHome
           onSelect={cat => run(cat, { category: cat })}
           onSearch={q => run(`"${q}"`, { keyword: q })}
+          geo={geo}
+          onGeoChange={setGeo}
         />
       )}
 
