@@ -13,6 +13,13 @@ interface TrendingTopic {
   newsSource: string;
 }
 
+interface TopKeyword {
+  keyword: string;
+  category: string;
+  monthly_volume: string;
+  trend: "rising" | "stable" | "declining";
+}
+
 const COUNTRIES = [
   { code: "US", name: "United States", flag: "🇺🇸" },
   { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
@@ -32,6 +39,8 @@ const COUNTRIES = [
   { code: "KR", name: "South Korea", flag: "🇰🇷" },
   { code: "NG", name: "Nigeria", flag: "🇳🇬" },
   { code: "AR", name: "Argentina", flag: "🇦🇷" },
+  { code: "DO", name: "Dominican Republic", flag: "🇩🇴" },
+  { code: "CO", name: "Colombia", flag: "🇨🇴" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -625,6 +634,22 @@ function SparklineSkeleton() {
   return <div className="w-[90px] h-[28px] bg-slate-100 rounded animate-pulse" />;
 }
 
+const SELECT_STYLE = {
+  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E\")",
+  backgroundRepeat: "no-repeat" as const,
+  backgroundPosition: "right 8px center",
+};
+
+function CardSkeleton() {
+  return (
+    <div className="bg-white border border-slate-100 rounded-xl p-3 animate-pulse h-[76px]">
+      <div className="w-16 h-2.5 bg-slate-100 rounded mb-2.5" />
+      <div className="w-3/4 h-3.5 bg-slate-100 rounded mb-1.5" />
+      <div className="w-1/3 h-2.5 bg-slate-100 rounded" />
+    </div>
+  );
+}
+
 // ── Category home ─────────────────────────────────────────────────────────────
 function CategoryHome({
   onSelect,
@@ -638,9 +663,15 @@ function CategoryHome({
   onGeoChange: (g: string) => void;
 }) {
   const [q, setQ] = useState("");
+  const [topTab, setTopTab] = useState<"trending" | "volume">("trending");
+
   const [trending, setTrending] = useState<TrendingTopic[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [trendingError, setTrendingError] = useState(false);
+
+  const [topKeywords, setTopKeywords] = useState<TopKeyword[]>([]);
+  const [volumeLoading, setVolumeLoading] = useState(false);
+  const [volumeFetchedGeo, setVolumeFetchedGeo] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -658,6 +689,24 @@ function CategoryHome({
       .catch(() => { if (!cancelled) { setTrendingError(true); setTrendingLoading(false); } });
     return () => { cancelled = true; };
   }, [geo]);
+
+  useEffect(() => {
+    if (topTab !== "volume") return;
+    if (volumeFetchedGeo === geo) return;
+    let cancelled = false;
+    setVolumeLoading(true);
+    fetch(`/api/trends/top-keywords?geo=${geo}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) {
+          setTopKeywords(d.keywords ?? []);
+          setVolumeFetchedGeo(geo);
+          setVolumeLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setVolumeLoading(false); });
+    return () => { cancelled = true; };
+  }, [topTab, geo, volumeFetchedGeo]);
 
   const currentCountry = COUNTRIES.find(c => c.code === geo);
 
@@ -679,68 +728,125 @@ function CategoryHome({
         </button>
       </form>
 
-      {/* Trending Now */}
+      {/* Top Keywords section */}
       <div className="mb-10">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.12em]">Trending Now</span>
-            <span className="text-[0.6875rem] text-slate-300">·</span>
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Tab toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setTopTab("trending")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${topTab === "trending" ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Trending Today
+              </button>
+              <button
+                onClick={() => setTopTab("volume")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${topTab === "volume" ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Highest Volume
+              </button>
+            </div>
+
+            {/* Country selector */}
             <select
               value={geo}
-              onChange={e => onGeoChange(e.target.value)}
-              className="text-xs font-semibold bg-white border border-slate-200 rounded-lg pl-2 pr-6 py-1.5 text-slate-700 focus:outline-none focus:border-[#275fe8] cursor-pointer appearance-none"
-              style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+              onChange={e => { onGeoChange(e.target.value); setVolumeFetchedGeo(null); }}
+              className="text-xs font-semibold bg-white border border-slate-200 rounded-lg pl-2 pr-7 py-1.5 text-slate-700 focus:outline-none focus:border-[#275fe8] cursor-pointer appearance-none"
+              style={SELECT_STYLE}
             >
               {COUNTRIES.map(c => (
                 <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
               ))}
             </select>
           </div>
-          <span className="text-[0.6875rem] text-slate-400 flex items-center gap-1">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Google Trends · updated every 5 min
-          </span>
+
+          {topTab === "trending" ? (
+            <span className="text-[0.6875rem] text-slate-400 flex items-center gap-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Google Trends · refreshes every 5 min
+            </span>
+          ) : (
+            <span className="text-[0.6875rem] text-slate-400 flex items-center gap-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              AI estimates · cross-category · cached 1 hr
+            </span>
+          )}
         </div>
 
-        {trendingLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 animate-pulse h-[72px]">
-                <div className="w-4 h-3 bg-slate-100 rounded mb-2" />
-                <div className="w-3/4 h-3.5 bg-slate-100 rounded mb-1.5" />
-                <div className="w-1/2 h-2.5 bg-slate-100 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : trendingError ? (
-          <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-xl px-4 py-3">
-            Could not load trending topics for {currentCountry?.name ?? geo} right now. Try a different country or search above.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {trending.map((t, i) => (
-              <button
-                key={i}
-                onClick={() => onSearch(t.title)}
-                className="group text-left bg-white border border-slate-100 rounded-xl p-3 hover:border-[#275fe8] hover:bg-[#f0f7ff] transition-all duration-150 hover:shadow-sm"
-              >
-                <div className="flex items-start gap-2.5">
-                  <span className="text-[1.1rem] font-black text-slate-200 leading-none w-6 text-right flex-shrink-0 group-hover:text-[#bfdbfe] transition-colors">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-slate-800 text-xs leading-snug group-hover:text-[#275fe8] transition-colors line-clamp-2">{t.title}</p>
-                    {t.traffic && (
-                      <p className="text-[0.625rem] text-slate-400 mt-0.5 font-medium">{t.traffic} searches</p>
-                    )}
-                    {t.newsTitle && (
-                      <p className="text-[0.625rem] text-slate-500 mt-1 leading-tight line-clamp-1 hidden sm:block">{t.newsTitle}</p>
-                    )}
+        {/* Trending Today grid */}
+        {topTab === "trending" && (
+          trendingLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : trendingError ? (
+            <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-xl px-4 py-3">
+              Could not load trending topics for {currentCountry?.name ?? geo}. Try a different country or search above.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {trending.map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => onSearch(t.title)}
+                  className="group text-left bg-white border border-slate-100 rounded-xl p-3 hover:border-[#275fe8] hover:bg-[#f0f7ff] transition-all duration-150 hover:shadow-sm"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-[1rem] font-black text-slate-200 leading-none w-5 text-right flex-shrink-0 group-hover:text-[#bfdbfe] transition-colors">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-slate-800 text-xs leading-snug group-hover:text-[#275fe8] transition-colors line-clamp-2">{t.title}</p>
+                      {t.traffic && (
+                        <p className="text-[0.625rem] text-slate-400 mt-0.5 font-medium">{t.traffic} searches</p>
+                      )}
+                      {t.newsTitle && (
+                        <p className="text-[0.625rem] text-slate-500 mt-1 leading-tight line-clamp-1 hidden sm:block">{t.newsTitle}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* Highest Volume grid */}
+        {topTab === "volume" && (
+          volumeLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {Array.from({ length: 12 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : topKeywords.length === 0 ? (
+            <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-xl px-4 py-3">
+              Could not load keyword data. Try again or search above.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {topKeywords.map((kw, i) => {
+                const trendIcon = kw.trend === "rising" ? "↑" : kw.trend === "declining" ? "↓" : "→";
+                const trendColor = kw.trend === "rising" ? "text-[#275fe8]" : kw.trend === "declining" ? "text-red-500" : "text-slate-400";
+                return (
+                  <button
+                    key={i}
+                    onClick={() => onSearch(kw.keyword)}
+                    className="group text-left bg-white border border-slate-100 rounded-xl p-3.5 hover:border-[#275fe8] hover:bg-[#f0f7ff] transition-all duration-150 hover:shadow-sm"
+                  >
+                    <p className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1.5 truncate">{kw.category}</p>
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="font-bold text-slate-800 text-xs leading-snug group-hover:text-[#275fe8] transition-colors line-clamp-2 flex-1">{kw.keyword}</p>
+                      <span className={`text-xs font-bold flex-shrink-0 ml-1 ${trendColor}`}>{trendIcon}</span>
+                    </div>
+                    {kw.monthly_volume && (
+                      <p className="text-[0.625rem] text-slate-400 mt-1 font-medium">{kw.monthly_volume}/mo</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 
