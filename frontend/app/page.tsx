@@ -91,7 +91,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#efefee]">
+    <div className="min-h-screen bg-[#f9fafd]">
       <Nav view={view} onNav={handleNav} hasAudit={Boolean(result)} />
 
       <main className="md:ml-[220px] pb-[72px] md:pb-8 px-4 md:px-8 pt-6 max-w-[720px] mx-auto md:mx-0 md:max-w-none">
