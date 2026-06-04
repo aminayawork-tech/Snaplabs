@@ -671,7 +671,8 @@ function CategoryHome({
 
   const [topKeywords, setTopKeywords] = useState<TopKeyword[]>([]);
   const [volumeLoading, setVolumeLoading] = useState(false);
-  const [volumeFetchedGeo, setVolumeFetchedGeo] = useState<string | null>(null);
+  const [volumeTimeframe, setVolumeTimeframe] = useState<"1m" | "6m" | "1y">("1m");
+  const [volumeCacheKey, setVolumeCacheKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -692,21 +693,23 @@ function CategoryHome({
 
   useEffect(() => {
     if (topTab !== "volume") return;
-    if (volumeFetchedGeo === geo) return;
+    const key = `${geo}-${volumeTimeframe}`;
+    if (volumeCacheKey === key) return;
     let cancelled = false;
     setVolumeLoading(true);
-    fetch(`/api/trends/top-keywords?geo=${geo}`)
+    setTopKeywords([]);
+    fetch(`/api/trends/top-keywords?geo=${geo}&timeframe=${volumeTimeframe}`)
       .then(r => r.json())
       .then(d => {
         if (!cancelled) {
           setTopKeywords(d.keywords ?? []);
-          setVolumeFetchedGeo(geo);
+          setVolumeCacheKey(key);
           setVolumeLoading(false);
         }
       })
       .catch(() => { if (!cancelled) setVolumeLoading(false); });
     return () => { cancelled = true; };
-  }, [topTab, geo, volumeFetchedGeo]);
+  }, [topTab, geo, volumeTimeframe, volumeCacheKey]);
 
   const currentCountry = COUNTRIES.find(c => c.code === geo);
 
@@ -732,7 +735,7 @@ function CategoryHome({
       <div className="mb-10">
         {/* Header row */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {/* Tab toggle */}
             <div className="flex bg-slate-100 rounded-lg p-0.5">
               <button
@@ -749,10 +752,25 @@ function CategoryHome({
               </button>
             </div>
 
+            {/* Timeframe toggle — only for volume tab */}
+            {topTab === "volume" && (
+              <div className="flex bg-slate-100 rounded-lg p-0.5">
+                {(["1m", "6m", "1y"] as const).map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setVolumeTimeframe(tf)}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition ${volumeTimeframe === tf ? "bg-white text-[#275fe8] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    {tf === "1m" ? "This Month" : tf === "6m" ? "6 Months" : "This Year"}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Country selector */}
             <select
               value={geo}
-              onChange={e => { onGeoChange(e.target.value); setVolumeFetchedGeo(null); }}
+              onChange={e => { onGeoChange(e.target.value); setVolumeCacheKey(null); }}
               className="text-xs font-semibold bg-white border border-slate-200 rounded-lg pl-2 pr-7 py-1.5 text-slate-700 focus:outline-none focus:border-[#275fe8] cursor-pointer appearance-none"
               style={SELECT_STYLE}
             >
@@ -770,7 +788,7 @@ function CategoryHome({
           ) : (
             <span className="text-[0.6875rem] text-slate-400 flex items-center gap-1">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              AI estimates · cross-category · cached 1 hr
+              AI estimates · cached 1 hr
             </span>
           )}
         </div>
