@@ -4,62 +4,130 @@ import Anthropic from "@anthropic-ai/sdk";
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+
+// Fetch real-time Google Autocomplete suggestions
+async function fetchSuggestions(query: string, gl = "us"): Promise<string[]> {
+  try {
+    const url = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}&hl=en&gl=${gl}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Snappymarketer/1.0)" },
+      signal: AbortSignal.timeout(4000),
+    });
+    const data = await res.json();
+    return Array.isArray(data[1]) ? (data[1] as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Deduplicate and clean suggestion list
+function dedup(arr: string[]): string[] {
+  const seen = new Set<string>();
+  return arr.filter(s => {
+    const k = s.toLowerCase().trim();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// Strip stale year references older than current year
+function stripStaleYears(keywords: { keyword: string; trend: string; growth: number; volume: string }[], currentYear: number) {
+  return keywords.map(kw => ({
+    ...kw,
+    keyword: kw.keyword
+      .replace(new RegExp(`\\b(20[0-9]{2})\\b`, "g"), (match) => {
+        const y = parseInt(match);
+        return y < currentYear ? "" : match;
+      })
+      .replace(/\s{2,}/g, " ")
+      .trim(),
+  })).filter(kw => kw.keyword.length > 0);
+}
+
 export async function POST(req: NextRequest) {
-  const { category, industry, keyword } = await req.json();
+  const { category, industry, keyword, geo = "us" } = await req.json();
   const topic = keyword || category || industry || "general business";
   const isKeywordExpansion = Boolean(keyword);
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
-  const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
-    messages: [{
-      role: "user",
-      content: isKeywordExpansion
-        ? `Expand the keyword "${topic}" into 80 specific search queries that people ACTUALLY type into Google in 2025.
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.toLocaleString("en-US", { month: "long" });
+  const todayStr = `${currentMonth} ${currentYear}`;
+  const glCode = (geo as string).toLowerCase().slice(0, 2);
 
-Include ALL of these types:
-- Long-tail variations (e.g. "${topic} for beginners", "best ${topic} 2025")
-- Question queries (what is, how to, why, when)
-- Comparison queries (vs, alternative to, instead of)
-- Modifier queries (cheap, near me, online, professional, DIY)
-- Use-case queries (for weight loss, for women, for home, etc.)
-- Brand/product specific if relevant
-- Seasonal or trending angles
+  // Fetch real Google suggestions in parallel for seed data
+  const seedQueries = isKeywordExpansion
+    ? [topic, `best ${topic}`, `${topic} near me`, `how to ${topic}`, `${topic} vs`, `cheap ${topic}`]
+    : [`${topic} trends`, `best ${topic}`, `${topic} tips`, `${topic} guide`, `${topic} tools`];
 
-For each keyword return estimated metrics:
-- "trend": "rising" | "stable" | "declining"
-- "growth": integer YoY% estimate (-50 to +200)
-- "volume": "high" | "medium" | "low"
+  const suggestionArrays = await Promise.all(seedQueries.map(q => fetchSuggestions(q, glCode)));
+  const realSuggestions = dedup(suggestionArrays.flat()).slice(0, 40);
+
+  const seedBlock = realSuggestions.length > 0
+    ? `\n\nReal Google Autocomplete suggestions for this topic right now (use these as a base — they reflect what people are ACTUALLY searching today):\n${realSuggestions.map(s => `- ${s}`).join("\n")}`
+    : "";
+
+  const sharedRules = `
+Today is ${todayStr}. Generate keywords relevant as of ${currentYear}.
+
+CRITICAL rules:
+- NEVER include year numbers older than ${currentYear} in any keyword (no 2025, 2024, 2023, etc.)
+- If a keyword is seasonal/time-sensitive (game schedules, holidays, events), write the timeless version: "knicks playoff tickets" NOT "knicks playoff tickets 2025"
+- If the current year IS needed for context, you may use ${currentYear}
+- Base keywords on what real users search TODAY in ${currentYear}
+- Include real team matchups, current events, and trends from ${currentYear} where relevant${seedBlock}
 
 Return ONLY a JSON array sorted by growth descending, no markdown:
-[{"keyword":"...","trend":"rising","growth":45,"volume":"medium"},...]`
+[{"keyword":"...","trend":"rising","growth":45,"volume":"medium"},...]`;
 
-        : `Generate 80 specific keyword phrases that people are actively searching on Google right now in 2025 related to "${topic}".
+  const prompt = isKeywordExpansion
+    ? `Expand "${topic}" into 80 specific search queries people type into Google in ${currentYear}.
+
+Include ALL of these types:
+- Long-tail variations ("${topic} for beginners", "best ${topic}")
+- Question queries (what is, how to, why, when, where)
+- Comparison queries (vs, alternative to, instead of)
+- Modifier queries (cheap, near me, online, professional, DIY)
+- Use-case queries (for beginners, for home, for professionals)
+- Buyer-intent queries (buy, price, discount, deal)
+- Seasonal or currently trending angles specific to ${currentYear}
+
+For each keyword:
+- "trend": "rising" | "stable" | "declining"
+- "growth": integer YoY% (-50 to +200)
+- "volume": "high" | "medium" | "low"
+${sharedRules}`
+
+    : `Generate 80 specific keyword phrases people are actively searching on Google right now in ${currentYear} related to "${topic}".
 
 Include a mix of:
-- Currently trending rising topics in this space
+- Currently trending topics in this space in ${currentYear}
 - Question-based queries (how to, what is, best)
 - Comparison & alternative queries
 - Niche sub-topics and specific use cases
 - Buyer-intent and commercial keywords
 - Location or demographic modifiers where relevant
 
-For each keyword return estimated metrics:
+For each keyword:
 - "trend": "rising" | "stable" | "declining"
-- "growth": integer YoY% estimate (-50 to +200)
+- "growth": integer YoY% (-50 to +200)
 - "volume": "high" | "medium" | "low"
+${sharedRules}`;
 
-Return ONLY a JSON array sorted by growth descending, no markdown:
-[{"keyword":"...","trend":"rising","growth":65,"volume":"high"},...]`
-    }],
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: prompt }],
   });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "[]";
   try {
     const match = text.match(/\[[\s\S]*\]/);
     const raw = match ? JSON.parse(match[0]) : [];
-    return Response.json({ keywords: raw.slice(0, 80) });
+    const cleaned = stripStaleYears(raw, currentYear);
+    return Response.json({ keywords: cleaned.slice(0, 80) });
   } catch {
     return Response.json({ keywords: [] });
   }
