@@ -25,7 +25,9 @@ Key takeaways: ${(insights.key_takeaways ?? []).join("; ")}`
 Initial analysis of this keyword:
 ${insightsSummary}
 
-Answer follow-up questions concisely and with specific, actionable marketing advice. Keep responses to 2-4 sentences unless more detail is explicitly requested. Avoid generic advice — be specific to this keyword and its audience.`;
+Answer follow-up questions concisely and with specific, actionable marketing advice. Keep responses to 2-4 sentences unless more detail is explicitly requested. Avoid generic advice — be specific to this keyword and its audience.
+
+IMPORTANT: Write in plain prose only. No markdown — no headers (##), no bold (**), no bullet points with asterisks or hyphens, no backticks. Just clean, readable sentences.`;
 
   const stream = await client.messages.stream({
     model: "claude-haiku-4-5-20251001",
