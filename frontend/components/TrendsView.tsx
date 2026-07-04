@@ -907,6 +907,7 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -984,10 +985,10 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
   return (
     <>
       <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" onClick={onClose} />
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
+      <div className={`fixed z-[200] flex items-center justify-center pointer-events-none ${maximized ? "inset-0 p-3" : "inset-0 p-4"}`}>
         <div
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col pointer-events-auto"
-          style={{ maxHeight: "88vh" }}
+          className={`relative bg-white shadow-2xl flex flex-col pointer-events-auto transition-all duration-200 ${maximized ? "rounded-2xl w-full h-full" : "rounded-2xl w-full max-w-2xl"}`}
+          style={maximized ? undefined : { maxHeight: "88vh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -1001,13 +1002,26 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
                 <p className="font-bold text-slate-900 text-sm leading-tight truncate">{keyword}</p>
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition ml-4 flex-shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+            <div className="flex items-center gap-1 ml-4 flex-shrink-0">
+              <button
+                onClick={() => setMaximized(m => !m)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition"
+                title={maximized ? "Restore" : "Maximize"}
+              >
+                {maximized ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><line x1="15" y1="9" x2="21" y2="3"/><line x1="9" y1="15" x2="3" y2="21"/></svg>
+                )}
+              </button>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 min-h-0">
+          <div className={`flex-1 overflow-y-auto min-h-0 ${maximized ? "px-8 py-6" : "px-6 py-5"} space-y-6`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="w-7 h-7 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
