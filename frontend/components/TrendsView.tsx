@@ -883,6 +883,165 @@ function CategoryHome({
   );
 }
 
+// ── Keyword AI Insights Modal ─────────────────────────────────────────────────
+interface KeywordInsightsData {
+  summary?: string;
+  rising_trends?: string[];
+  audience_intent?: string;
+  content_opportunities?: string[];
+  key_takeaways?: string[];
+  suggestions?: string[];
+}
+
+function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<KeywordInsightsData | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    fetch("/api/trends/ai-insights", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) {
+          if (d.error) setError(d.error);
+          else setData(d);
+          setLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) { setError("Failed to load insights."); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [keyword]);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" onClick={onClose} />
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto pointer-events-auto"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-[#275fe8] flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-0.5">AI Insights</p>
+                <p className="font-bold text-slate-900 text-sm leading-tight truncate">{keyword}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition ml-4 flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-5 space-y-6">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-7 h-7 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
+                <p className="text-sm text-slate-400">Analyzing real search patterns…</p>
+              </div>
+            ) : error ? (
+              <p className="text-sm text-red-500 py-8 text-center">{error}</p>
+            ) : data ? (
+              <>
+                {/* Summary */}
+                {data.summary && (
+                  <div>
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">What&apos;s Happening Now</p>
+                    <p className="text-sm text-slate-700 leading-relaxed">{data.summary}</p>
+                  </div>
+                )}
+
+                {/* Rising Trends */}
+                {data.rising_trends && data.rising_trends.length > 0 && (
+                  <div>
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Rising Trends</p>
+                    <div className="flex flex-wrap gap-2">
+                      {data.rising_trends.map((t, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 px-3 py-1.5 rounded-full">
+                          <span className="text-emerald-500">↑</span> {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Real search signals */}
+                {data.suggestions && data.suggestions.length > 0 && (
+                  <div>
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Real Search Signals <span className="normal-case font-normal tracking-normal text-slate-300">· Google Autocomplete</span></p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {data.suggestions.map((s, i) => (
+                        <span key={i} className="text-xs text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-full">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audience Intent */}
+                {data.audience_intent && (
+                  <div className="bg-[#f0f7ff] border border-[#bfdbfe] rounded-xl px-4 py-3.5">
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-[#275fe8] mb-1.5">Audience Intent</p>
+                    <p className="text-sm text-slate-700 leading-relaxed">{data.audience_intent}</p>
+                  </div>
+                )}
+
+                {/* Content Opportunities */}
+                {data.content_opportunities && data.content_opportunities.length > 0 && (
+                  <div>
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Content Opportunities</p>
+                    <div className="space-y-2">
+                      {data.content_opportunities.map((o, i) => (
+                        <div key={i} className="flex items-start gap-2.5 bg-white border border-slate-100 rounded-xl px-4 py-3 hover:border-slate-200 transition">
+                          <div className="w-5 h-5 rounded-md bg-[#eff6ff] flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2.5" className="w-3 h-3"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                          </div>
+                          <p className="text-sm text-slate-700 leading-snug">{o}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Takeaways */}
+                {data.key_takeaways && data.key_takeaways.length > 0 && (
+                  <div className="border-t border-slate-100 pt-5">
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">Key Takeaways</p>
+                    <div className="space-y-2">
+                      {data.key_takeaways.map((t, i) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <span className="text-[#275fe8] font-black text-base leading-none mt-0.5 flex-shrink-0">→</span>
+                          <p className="text-sm font-medium text-slate-800 leading-snug">{t}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function exportCSV(rows: Row[], context: string) {
   const headers = ["Keyword", "Trend", "Growth %", "Volume", "Rising Queries"];
   const data = rows.map(r => [
@@ -937,6 +1096,7 @@ function ResultsPage({
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
   const [filter, setFilter] = useState<"all" | "rising" | "stable" | "declining">("all");
   const [page, setPage] = useState(1);
+  const [insightsKeyword, setInsightsKeyword] = useState<string | null>(null);
 
   function toggleSort(k: SortKey) {
     if (sortKey === k) setSortDir(d => d === 1 ? -1 : 1);
@@ -1084,14 +1244,21 @@ function ResultsPage({
                   <div className="hidden sm:block">
                     <VolumeBadge tier={r.volume} />
                   </div>
-                  <div className="hidden sm:flex flex-wrap gap-1">
-                    {(r.real?.rising_queries ?? []).slice(0, 3).map((q, qi) => (
+                  <div className="hidden sm:flex flex-wrap gap-1 items-center">
+                    {(r.real?.rising_queries ?? []).slice(0, 2).map((q, qi) => (
                       <button key={qi} onClick={() => onDrillDown(q)}
                         className="text-xs bg-[#eff6ff] text-[#275fe8] font-semibold px-2.5 py-0.5 rounded-full hover:bg-[#dbeafe] transition">
                         {q}
                       </button>
                     ))}
-                    {(!r.real || r.real.rising_queries.length === 0) && <span className="text-slate-300 text-sm">—</span>}
+                    <button
+                      onClick={() => setInsightsKeyword(r.keyword)}
+                      className="flex items-center gap-1 text-[0.625rem] font-bold text-[#275fe8] bg-[#eff6ff] hover:bg-[#dbeafe] px-2 py-0.5 rounded-full transition flex-shrink-0"
+                      title="AI Insights"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
+                      AI Insights
+                    </button>
                   </div>
                 </div>
               );
@@ -1116,6 +1283,9 @@ function ResultsPage({
             {rows.filter(r => r.real).length} keywords with real Google Trends data · rest are AI estimates · Growth = last 6 months vs prior 6 months
           </p>
         </>
+      )}
+      {insightsKeyword && (
+        <KeywordInsightsModal keyword={insightsKeyword} onClose={() => setInsightsKeyword(null)} />
       )}
     </div>
   );
