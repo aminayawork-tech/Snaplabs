@@ -21,6 +21,31 @@ async function fetchSuggestions(query: string, gl = "us"): Promise<string[]> {
   }
 }
 
+// Fetch recent Google News RSS headlines for a topic
+async function fetchNewsHeadlines(query: string, gl = "us"): Promise<string[]> {
+  try {
+    const lang = ["es", "fr", "de", "pt", "it", "ja", "ko"].includes(gl) ? gl : "en";
+    const cc = gl.toUpperCase();
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${lang}-${cc}&gl=${cc}&ceid=${cc}:${lang}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Snappymarketer/1.0)" },
+      signal: AbortSignal.timeout(5000),
+    });
+    const text = await res.text();
+    const headlines: string[] = [];
+    // Extract item titles (skip channel title)
+    const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g;
+    let m: RegExpExecArray | null;
+    while ((m = itemRegex.exec(text)) !== null && headlines.length < 12) {
+      const raw = m[1].replace(/<!\[CDATA\[(.*?)\]\]>/s, "$1").replace(/<[^>]+>/g, "").trim();
+      if (raw) headlines.push(raw);
+    }
+    return headlines;
+  } catch {
+    return [];
+  }
+}
+
 // Deduplicate and clean suggestion list
 function dedup(arr: string[]): string[] {
   const seen = new Set<string>();
@@ -57,17 +82,25 @@ export async function POST(req: NextRequest) {
   const todayStr = `${currentMonth} ${currentYear}`;
   const glCode = (geo as string).toLowerCase().slice(0, 2);
 
-  // Fetch real Google suggestions in parallel for seed data
+  // Fetch real Google suggestions + recent news in parallel
   const seedQueries = isKeywordExpansion
     ? [topic, `best ${topic}`, `${topic} near me`, `how to ${topic}`, `${topic} vs`, `cheap ${topic}`]
     : [`${topic} trends`, `best ${topic}`, `${topic} tips`, `${topic} guide`, `${topic} tools`];
 
-  const suggestionArrays = await Promise.all(seedQueries.map(q => fetchSuggestions(q, glCode)));
+  const [suggestionArrays, newsHeadlines] = await Promise.all([
+    Promise.all(seedQueries.map(q => fetchSuggestions(q, glCode))),
+    fetchNewsHeadlines(topic, glCode),
+  ]);
   const realSuggestions = dedup(suggestionArrays.flat()).slice(0, 40);
 
-  const seedBlock = realSuggestions.length > 0
-    ? `\n\nReal Google Autocomplete suggestions for this topic right now (use these as a base — they reflect what people are ACTUALLY searching today):\n${realSuggestions.map(s => `- ${s}`).join("\n")}`
-    : "";
+  const seedBlock = [
+    realSuggestions.length > 0
+      ? `\nReal Google Autocomplete suggestions right now (reflect what people are ACTUALLY searching today):\n${realSuggestions.map(s => `- ${s}`).join("\n")}`
+      : "",
+    newsHeadlines.length > 0
+      ? `\nRecent news headlines (breaking/current events — use these to surface timely keywords):\n${newsHeadlines.map(h => `- ${h}`).join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n");
 
   const sharedRules = `
 Today is ${todayStr}. Generate keywords relevant as of ${currentYear}.
