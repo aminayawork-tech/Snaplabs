@@ -37,7 +37,7 @@ async function fetchNewsHeadlines(query: string, gl = "us"): Promise<string[]> {
     const itemRegex = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g;
     let m: RegExpExecArray | null;
     while ((m = itemRegex.exec(text)) !== null && headlines.length < 12) {
-      const raw = m[1].replace(/<!\[CDATA\[(.*?)\]\]>/s, "$1").replace(/<[^>]+>/g, "").trim();
+      const raw = m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").replace(/<[^>]+>/g, "").trim();
       if (raw) headlines.push(raw);
     }
     return headlines;
