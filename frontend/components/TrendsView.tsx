@@ -893,10 +893,22 @@ interface KeywordInsightsData {
   suggestions?: string[];
 }
 
+const CHAT_SUGGESTIONS = [
+  "Who should I target with this?",
+  "What content format works best?",
+  "How competitive is this keyword?",
+  "What's the best platform to reach this audience?",
+];
+
 function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<KeywordInsightsData | null>(null);
   const [error, setError] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -925,16 +937,61 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
     return () => { cancelled = true; };
   }, [keyword]);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  async function sendMessage(msg?: string) {
+    const text = (msg ?? chatInput).trim();
+    if (!text || chatLoading) return;
+    setChatInput("");
+    const newMessages: { role: "user" | "assistant"; content: string }[] = [
+      ...chatMessages,
+      { role: "user", content: text },
+    ];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/trends/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword, insights: data, messages: newMessages }),
+      });
+      if (!res.body) throw new Error("no body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMsg = "";
+      setChatMessages(prev => [...prev, { role: "assistant", content: "" }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        assistantMsg += decoder.decode(value, { stream: true });
+        setChatMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: "assistant", content: assistantMsg };
+          return updated;
+        });
+      }
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+      inputRef.current?.focus();
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-[150] bg-black/50 backdrop-blur-md" onClick={onClose} />
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto pointer-events-auto"
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col pointer-events-auto"
+          style={{ maxHeight: "88vh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-[#275fe8] flex items-center justify-center flex-shrink-0">
                 <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
@@ -949,8 +1006,8 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
             </button>
           </div>
 
-          {/* Content */}
-          <div className="px-6 py-5 space-y-6">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 min-h-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="w-7 h-7 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
@@ -1033,9 +1090,77 @@ function KeywordInsightsModal({ keyword, onClose }: { keyword: string; onClose: 
                     </div>
                   </div>
                 )}
+
+                {/* Chat messages */}
+                {chatMessages.length > 0 && (
+                  <div className="border-t border-slate-100 pt-5 space-y-3">
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-slate-400">Follow-up</p>
+                    {chatMessages.map((m, i) => (
+                      <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                          m.role === "user"
+                            ? "bg-[#275fe8] text-white rounded-br-sm"
+                            : "bg-slate-100 text-slate-800 rounded-bl-sm"
+                        }`}>
+                          {m.content ? m.content : (
+                            <span className="flex gap-1 items-center py-0.5">
+                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
               </>
             ) : null}
           </div>
+
+          {/* Chat input — sticky at bottom */}
+          {!loading && !error && data && (
+            <div className="px-6 pb-5 pt-3 border-t border-slate-100 flex-shrink-0">
+              {chatMessages.length === 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {CHAT_SUGGESTIONS.map(q => (
+                    <button
+                      key={q}
+                      onClick={() => sendMessage(q)}
+                      className="text-[0.6875rem] text-slate-500 bg-white border border-slate-200 hover:border-[#275fe8] hover:text-[#275fe8] px-2.5 py-1 rounded-full transition"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-within:border-[#275fe8] focus-within:ring-1 focus-within:ring-[#275fe8] transition">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#275fe8] flex-shrink-0"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                  placeholder="Ask a follow-up question…"
+                  className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
+                  disabled={chatLoading}
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={!chatInput.trim() || chatLoading}
+                  className="w-7 h-7 bg-[#275fe8] disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg flex items-center justify-center transition flex-shrink-0"
+                >
+                  {chatLoading ? (
+                    <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
