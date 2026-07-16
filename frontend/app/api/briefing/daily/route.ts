@@ -6,7 +6,6 @@ export const maxDuration = 60;
 
 const client = new Anthropic();
 
-// Server-side cache keyed by YYYY-MM-DD, refreshes every 6 hours
 const cache = new Map<string, { data: BriefingResponse; ts: number }>();
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
@@ -25,41 +24,59 @@ interface BriefingResponse {
   topics: BriefingTopic[];
 }
 
-async function fetchTrendingTopics(): Promise<string[]> {
+// Category seeds — business/consumer trend verticals only, no sports/politics/celebrity
+const CATEGORY_SEEDS = [
+  { name: "Food & Beverage",        query: "food technology innovation restaurant trend" },
+  { name: "Technology & AI",        query: "AI tool startup trend 2026" },
+  { name: "Health & Wellness",      query: "health wellness biohacking supplement trend" },
+  { name: "Sustainability",         query: "sustainable eco product clean energy startup" },
+  { name: "Finance & Investing",    query: "fintech personal finance investment trend" },
+  { name: "Beauty & Skincare",      query: "beauty skincare ingredient brand innovation" },
+  { name: "E-commerce & Retail",    query: "ecommerce retail consumer product trend" },
+  { name: "Creator Economy",        query: "creator economy content monetization social media" },
+  { name: "Mental Health",          query: "mental health app therapy wellness innovation" },
+  { name: "Real Estate",            query: "real estate proptech housing market trend" },
+  { name: "Automotive & Mobility",  query: "EV autonomous vehicle mobility startup trend" },
+  { name: "Travel & Hospitality",   query: "travel hospitality tourism trend 2026" },
+  { name: "Business & Startup",     query: "startup business opportunity emerging niche" },
+  { name: "Crypto & Web3",          query: "crypto blockchain web3 DeFi trend 2026" },
+];
+
+// Pick 6 categories deterministically based on day-of-year so the selection rotates daily
+function pickCategories(dayOfYear: number): typeof CATEGORY_SEEDS {
+  const shuffled = [...CATEGORY_SEEDS];
+  // Rotate starting index by day so different categories surface each day
+  const start = dayOfYear % shuffled.length;
+  const rotated = [...shuffled.slice(start), ...shuffled.slice(0, start)];
+  return rotated.slice(0, 6);
+}
+
+async function fetchAutocomplete(query: string): Promise<string[]> {
   try {
-    const res = await fetch("https://trends.google.com/trending/rss?geo=US", {
+    const url = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}&hl=en&gl=us`;
+    const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; Snappymarketer/1.0)" },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(4000),
     });
-    const xml = await res.text();
-    const titles: string[] = [];
-    const re = /<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/g;
-    let m: RegExpExecArray | null;
-    let skip = true;
-    while ((m = re.exec(xml)) !== null) {
-      if (skip) { skip = false; continue; } // skip channel title
-      const t = (m[1] || m[2] || "").trim();
-      if (t) titles.push(t);
-      if (titles.length >= 20) break;
-    }
-    return titles;
+    const data = await res.json();
+    return Array.isArray(data[1]) ? (data[1] as string[]).slice(0, 6) : [];
   } catch {
     return [];
   }
 }
 
-async function fetchNewsForTopic(topic: string): Promise<string[]> {
+async function fetchNews(query: string): Promise<string[]> {
   try {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en-US&gl=US&ceid=US:en`;
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; Snappymarketer/1.0)" },
       signal: AbortSignal.timeout(5000),
     });
     const text = await res.text();
     const headlines: string[] = [];
-    const itemRe = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g;
+    const re = /<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g;
     let m: RegExpExecArray | null;
-    while ((m = itemRe.exec(text)) !== null && headlines.length < 8) {
+    while ((m = re.exec(text)) !== null && headlines.length < 6) {
       const raw = m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").replace(/<[^>]+>/g, "").trim();
       if (raw) headlines.push(raw);
     }
@@ -69,20 +86,10 @@ async function fetchNewsForTopic(topic: string): Promise<string[]> {
   }
 }
 
-// Pick 3 diverse topics — prefer ones that look like substantive topics (not just person names)
-function pickDiverseTopics(topics: string[]): string[] {
-  const scored = topics.map(t => ({
-    t,
-    score: t.split(" ").length >= 2 ? 1 : 0, // multi-word topics preferred
-  }));
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 3).map(s => s.t);
-}
-
 export async function GET(req: NextRequest) {
   const now = new Date();
   const dateKey = now.toISOString().slice(0, 10);
-  const hourBucket = Math.floor(now.getHours() / 6); // 4 buckets per day
+  const hourBucket = Math.floor(now.getHours() / 6);
   const cacheKey = `${dateKey}-${hourBucket}`;
 
   const cached = cache.get(cacheKey);
@@ -90,44 +97,55 @@ export async function GET(req: NextRequest) {
     return Response.json(cached.data);
   }
 
-  // 1. Get trending topics
-  const allTopics = await fetchTrendingTopics();
-  const picked = allTopics.length >= 3
-    ? pickDiverseTopics(allTopics)
-    : ["AI startups 2026", "real estate market", "health tech trends"];
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+  const categories = pickCategories(dayOfYear);
 
-  // 2. Fetch news for each in parallel
-  const newsArrays = await Promise.all(picked.map(t => fetchNewsForTopic(t)));
+  // Fetch autocomplete + news for each category in parallel
+  const signals = await Promise.all(
+    categories.map(async (cat) => {
+      const [autocomplete, news] = await Promise.all([
+        fetchAutocomplete(cat.query),
+        fetchNews(cat.query),
+      ]);
+      return { cat, autocomplete, news };
+    })
+  );
 
-  // 3. Build briefing context
-  const topicsContext = picked.map((topic, i) => {
-    const headlines = newsArrays[i].slice(0, 6);
-    return `Topic ${i + 1}: "${topic}"\nRecent news headlines:\n${headlines.map(h => `- ${h}`).join("\n") || "- No specific headlines found"}`;
+  // Build context block for Claude
+  const contextBlock = signals.map(({ cat, autocomplete, news }) => {
+    const ac = autocomplete.length > 0 ? `Google searches: ${autocomplete.join(" | ")}` : "";
+    const nl = news.length > 0 ? `News: ${news.slice(0, 4).join(" | ")}` : "";
+    return `[${cat.name}]\n${ac}\n${nl}`.trim();
   }).join("\n\n");
 
   const dateStr = now.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
-  // 4. Generate briefing with Claude
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
     messages: [{
       role: "user",
-      content: `Today is ${dateStr}. You are writing a daily trend briefing newsletter in the style of Exploding Topics. For each topic below, write a concise, engaging brief based on the real news headlines provided.
+      content: `Today is ${dateStr}. You are the editor of a daily business trend newsletter, similar to Exploding Topics.
 
-${topicsContext}
+Below is real-time Google search + news data from 6 different industry categories. Your job is to:
+1. Identify the single most interesting genuinely RISING business or consumer trend from each category
+2. Choose the 3 best trends across 3 DIFFERENT categories — prioritize innovation, emerging technology, and business opportunity
+3. DO NOT pick sports scores, celebrity gossip, political news, or one-day news events — only pick structural, growing business/consumer trends
 
-Return ONLY a JSON array (no markdown) with exactly 3 objects:
+Category data:
+${contextBlock}
+
+Write a concise Exploding Topics-style brief for each of the 3 chosen trends. Return ONLY a JSON array (no markdown, no extra text):
 [
   {
-    "name": "exact topic name",
-    "category": "one of: Technology, Business, Health, Culture, Finance, Sports, Politics, Science",
-    "summary": "3-4 sentences explaining what this topic/company/trend is and why it is surging right now. Be specific — mention real companies, people, numbers from the headlines. Write in a newsletter style: clear, punchy, informative.",
-    "what_next": "3-4 sentences on where this trend is heading and what it means for the future. Reference the broader meta-trend. Be specific and forward-looking.",
-    "related": ["2-3 related topics or companies also trending in this space"],
-    "momentum": "exploding or rising or steady"
+    "name": "The specific trend or product name (e.g. 'Robotic Kitchen Automation', 'AI Skincare Diagnostics')",
+    "category": "The category name from above",
+    "summary": "3-4 sentences: what is this trend, which companies or products are driving it, specific numbers or facts that show it is growing. Newsletter style — punchy, specific, informative. No generic phrases.",
+    "what_next": "3-4 sentences on the broader meta-trend this is part of and where it is heading. Name specific companies, markets, or dynamics. Be forward-looking and specific.",
+    "related": ["2-3 closely related trends or companies also growing in this space"],
+    "momentum": "exploding or rising or steady — based on how fast the trend is accelerating"
   }
-]`
+]`,
     }],
   });
 
