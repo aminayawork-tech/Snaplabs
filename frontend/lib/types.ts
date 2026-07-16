@@ -1,4 +1,4 @@
-export type View = "home" | "running" | "results" | "saved" | "research";
+export type View = "home" | "running" | "results" | "saved" | "research" | "briefing";
 export type ResearchTab = "trends" | "competitor" | "social" | "audience";
 
 export interface Client {

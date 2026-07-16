@@ -6,6 +6,7 @@ import RunningView from "@/components/RunningView";
 import ResultsView from "@/components/ResultsView";
 import SavedView from "@/components/SavedView";
 import ResearchView from "@/components/ResearchView";
+import DailyBriefingView from "@/components/DailyBriefingView";
 import { storage } from "@/lib/storage";
 import type { View, AuditResult, AgentOutput, Keyword } from "@/lib/types";
 
@@ -123,6 +124,9 @@ export default function App() {
             onAgentOutput={handleAgentOutput}
             onExploreTrends={handleExploreTrends}
           />
+        )}
+        {view === "briefing" && (
+          <DailyBriefingView />
         )}
         {view === "saved" && (
           <SavedView onOpen={openSaved} />
