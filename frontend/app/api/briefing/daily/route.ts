@@ -88,9 +88,7 @@ async function fetchNews(query: string): Promise<string[]> {
 
 export async function GET(req: NextRequest) {
   const now = new Date();
-  const dateKey = now.toISOString().slice(0, 10);
-  const hourBucket = Math.floor(now.getHours() / 6);
-  const cacheKey = `${dateKey}-${hourBucket}`;
+  const cacheKey = now.toISOString().slice(0, 10); // one result per calendar day
 
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {

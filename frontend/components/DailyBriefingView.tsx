@@ -80,6 +80,8 @@ function TopicSkeleton() {
   );
 }
 
+const todayKey = () => `briefing_${new Date().toISOString().slice(0, 10)}`;
+
 export default function DailyBriefingView() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,14 +89,37 @@ export default function DailyBriefingView() {
   const [refreshing, setRefreshing] = useState(false);
 
   async function load(force = false) {
-    if (!force) setLoading(true);
-    else setRefreshing(true);
+    const key = todayKey();
+
+    // Return cached version immediately — no spinner, no network call
+    if (!force) {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try {
+          setBriefing(JSON.parse(stored));
+          setLoading(false);
+          return;
+        } catch { /* fall through to fetch */ }
+      }
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+
     setError("");
     try {
-      const res = await fetch(`/api/briefing/daily${force ? "?bust=" + Date.now() : ""}`);
+      const res = await fetch("/api/briefing/daily");
       const data = await res.json();
-      if (data.error) setError(data.error);
-      else setBriefing(data);
+      if (data.error) {
+        setError(data.error);
+      } else {
+        // Evict any old day entries before storing today's
+        Object.keys(localStorage)
+          .filter(k => k.startsWith("briefing_") && k !== key)
+          .forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(key, JSON.stringify(data));
+        setBriefing(data);
+      }
     } catch {
       setError("Failed to load briefing. Please try again.");
     } finally {
@@ -193,7 +218,7 @@ export default function DailyBriefingView() {
           })}
 
           <p className="text-xs text-slate-400 text-center pt-2">
-            Generated from real-time Google Trends + News · Refreshes every 6 hours
+            Generated from real-time Google Trends + News · Updates daily
           </p>
         </div>
       ) : null}
