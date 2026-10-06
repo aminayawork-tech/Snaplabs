@@ -1,12 +1,24 @@
 import React from "react";
 
 function inlineMarkdown(text: string): React.ReactNode[] {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**")
-      ? <strong key={i}>{p.slice(2, -2)}</strong>
-      : p
-  );
+  // Handle bold+italic, bold, italic, inline code
+  const parts = text.split(/(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith("```") || p.startsWith("`") && p.endsWith("`"))
+      return <code key={i} className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono">{p.slice(1, -1)}</code>;
+    if (p.startsWith("***") && p.endsWith("***"))
+      return <strong key={i}><em>{p.slice(3, -3)}</em></strong>;
+    if (p.startsWith("**") && p.endsWith("**"))
+      return <strong key={i}>{p.slice(2, -2)}</strong>;
+    if (p.startsWith("*") && p.endsWith("*"))
+      return <em key={i}>{p.slice(1, -1)}</em>;
+    return p;
+  });
+}
+
+// Strip any number of leading `> ` blockquote markers
+function stripBlockquote(line: string): string {
+  return line.replace(/^(>\s*)+/, "").trim();
 }
 
 export function renderMarkdown(text: string): React.ReactNode {
@@ -24,51 +36,59 @@ export function renderMarkdown(text: string): React.ReactNode {
       );
     }
 
-    // Heading
-    if (/^#{1,3} /.test(lines[0])) {
-      const clean = lines[0].replace(/^#{1,3} /, "");
-      return <p key={bi} className="font-bold text-slate-800 mt-3 mb-0.5">{inlineMarkdown(clean)}</p>;
+    // Heading h1–h6
+    const headingMatch = lines[0].match(/^(#{1,6}) (.+)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const content = headingMatch[2];
+      const sizeClass =
+        level === 1 ? "text-base font-extrabold text-slate-900 mt-4 mb-1" :
+        level === 2 ? "text-sm font-bold text-slate-800 mt-3 mb-0.5" :
+                     "text-sm font-semibold text-slate-700 mt-2 mb-0.5";
+      return <p key={bi} className={sizeClass}>{inlineMarkdown(content)}</p>;
     }
 
     // HR
-    if (lines[0].trim() === "---") {
-      return <hr key={bi} className="border-slate-200 my-2" />;
+    if (lines[0].trim() === "---" || lines[0].trim() === "***") {
+      return <hr key={bi} className="border-slate-200 my-3" />;
     }
 
-    // Blockquote
-    if (lines.every((l) => l.startsWith("> "))) {
+    // Blockquote (handles > and > > etc.)
+    if (lines.every((l) => /^>\s/.test(l.trim()) || l.trim() === "")) {
       return (
-        <blockquote key={bi} className="border-l-2 border-[#bfdbfe] pl-3 text-slate-600 my-1">
-          {inlineMarkdown(lines.map((l) => l.slice(2)).join(" "))}
+        <blockquote key={bi} className="border-l-2 border-[#bfdbfe] pl-3 text-slate-600 my-1 space-y-1">
+          {lines.filter(l => l.trim()).map((l, i) => (
+            <p key={i}>{inlineMarkdown(stripBlockquote(l))}</p>
+          ))}
         </blockquote>
       );
     }
 
     // Bullet list
-    const isBullets = lines.every((l) => /^[-*] /.test(l.trim()) || l.trim() === "");
+    const isBullets = lines.every((l) => /^[-*•] /.test(l.trim()) || l.trim() === "");
     if (isBullets) {
       return (
-        <ul key={bi} className="list-disc list-inside space-y-1 my-1">
+        <ul key={bi} className="list-disc list-inside space-y-1 my-1 text-slate-700">
           {lines.filter((l) => l.trim()).map((l, i) => (
-            <li key={i}>{inlineMarkdown(l.replace(/^[-*] /, ""))}</li>
+            <li key={i}>{inlineMarkdown(l.replace(/^[-*•]\s/, ""))}</li>
           ))}
         </ul>
       );
     }
 
     // Numbered list
-    const isNumbered = lines.every((l) => /^\d+\. /.test(l.trim()) || l.trim() === "");
+    const isNumbered = lines.every((l) => /^\d+\.\s/.test(l.trim()) || l.trim() === "");
     if (isNumbered) {
       return (
-        <ol key={bi} className="list-decimal list-inside space-y-1 my-1">
+        <ol key={bi} className="list-decimal list-inside space-y-1 my-1 text-slate-700">
           {lines.filter((l) => l.trim()).map((l, i) => (
-            <li key={i}>{inlineMarkdown(l.replace(/^\d+\. /, ""))}</li>
+            <li key={i}>{inlineMarkdown(l.replace(/^\d+\.\s/, ""))}</li>
           ))}
         </ol>
       );
     }
 
-    // Wide/pre-formatted content (ASCII art, tables — lines with lots of | or spaces)
+    // Wide/pre-formatted content (ASCII art, tables)
     const looksPreformatted = lines.some((l) => (l.match(/\|/g) ?? []).length > 2 || l.startsWith("│") || l.startsWith("+--"));
     if (looksPreformatted) {
       return (
@@ -78,6 +98,6 @@ export function renderMarkdown(text: string): React.ReactNode {
       );
     }
 
-    return <p key={bi} className="my-1">{inlineMarkdown(block)}</p>;
+    return <p key={bi} className="my-1 text-slate-700">{inlineMarkdown(block)}</p>;
   });
 }
