@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { RecentResearch, SavedBar } from "./RecentResearch";
+import { buildResearchMarkdown, downloadMarkdown } from "@/lib/exportResearch";
 
 type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
 
@@ -333,7 +334,23 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
       {/* Platform tabs — visible once Analyze All has been clicked */}
       {hasAnalyzed && (
         <div className="mb-5">
-          <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-2">Platform</p>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em]">Platform</p>
+            {(Object.keys(results).length > 0 || contentDiscovery) && (
+              <button
+                onClick={() => downloadMarkdown(
+                  `${keyword.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-content-research.md`,
+                  buildResearchMarkdown(keyword.trim(), results, contentDiscovery)
+                )}
+                title="Download blog briefs, pain points, questions and sources as a Markdown file"
+                className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 bg-white text-slate-600 px-3 py-1.5 rounded-lg hover:border-[#275fe8] hover:text-[#275fe8] transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export .md
+                <span className="text-slate-400 font-normal">· {Object.keys(results).length + (contentDiscovery ? 1 : 0)} source{Object.keys(results).length + (contentDiscovery ? 1 : 0) === 1 ? "" : "s"}</span>
+              </button>
+            )}
+          </div>
           <div className="flex gap-2 flex-wrap">
             {PLATFORMS.map(p => {
               const isLoading = !!loadingMap[p.key];
