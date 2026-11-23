@@ -31,6 +31,7 @@ interface PlatformActivity {
 }
 
 interface ContentDiscovery {
+  topic?: string;
   questions?: string[];
   top_content?: { title: string; platform: string; url: string; metric: string }[];
   ideas?: { title: string; platform: string; hook: string }[];
@@ -52,6 +53,7 @@ interface ListenData {
   content_ideas: { title: string; format: string; why: string }[];
   search_questions: string[];
   data_source: "live" | "estimated";
+  topic?: string;
   ai_error?: string;
   needs_key?: string;
   platform: Platform;
@@ -388,8 +390,18 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                 {data.needs_key
                   ? <><strong>Not connected</strong> — add <code className="font-mono">{data.needs_key}</code> in Vercel to pull live {PLATFORMS.find(p => p.key === activePlatform)?.label} posts. </>
                   : <><strong>Estimated</strong> — {PLATFORMS.find(p => p.key === activePlatform)?.label} has no public data API. </>}
-                This analysis is grounded in {data.search_questions.length} real Google searches and today&apos;s news. Try Reddit, YouTube, Bluesky or HackerNews for real posts.
+                {data.search_questions.length > 0
+                  ? `Based on ${data.search_questions.length} real Google searches and today's news.`
+                  : "Based on AI knowledge of this audience."}
+                {" "}Reddit, YouTube, Bluesky and HackerNews show real posts.
               </span>
+            </div>
+          )}
+
+          {data.topic && data.topic.toLowerCase() !== keyword.trim().toLowerCase() && (
+            <div className="flex items-start gap-2 bg-[#f0f7ff] border border-[#bfdbfe] rounded-xl px-4 py-2.5 text-xs text-slate-700">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#275fe8" strokeWidth="2" className="w-4 h-4 flex-shrink-0 mt-px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span><strong>&ldquo;{keyword.trim()}&rdquo;</strong> has no conversation of its own yet, so this shows the broader <strong>&ldquo;{data.topic}&rdquo;</strong> conversation — the audience you&apos;re trying to reach.</span>
             </div>
           )}
 
@@ -419,8 +431,8 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
           {/* ── SOCIAL LISTENING ── */}
           {activeSection === "social" && (
             <>
-              {!data.ai_error && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              {!data.ai_error && <div className={`grid grid-cols-1 gap-4 ${totalPosts > 0 ? "md:grid-cols-2" : ""}`}>
+                {totalPosts > 0 && <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Sentiment Overview</p>
                   <div className="flex items-center gap-3 mb-4">
                     <SentimentIcon overall={data.sentiment_summary.overall} />
@@ -434,7 +446,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                     <SentimentBar label="Neutral"  count={data.sentiment_summary.neutral}  total={totalPosts || 100} color="bg-slate-400" />
                     <SentimentBar label="Negative" count={data.sentiment_summary.negative} total={totalPosts || 100} color="bg-red-500" />
                   </div>
-                </div>
+                </div>}
 
                 <div className="flex flex-col gap-3">
                   <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex-1">

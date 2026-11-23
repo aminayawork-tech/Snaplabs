@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   fetchReddit, fetchYouTube, fetchBluesky, fetchHackerNews,
-  fetchSearchQuestions, fetchNewsHeadlines, type SourcePost,
+  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, type SourcePost,
 } from "@/lib/socialSources";
 
 export const maxDuration = 60;
@@ -45,11 +45,24 @@ export async function POST(req: NextRequest) {
   const platform: Platform = raw in LABEL ? raw : "reddit";
   const fetcher = FETCHERS[platform];
 
-  const [posts, questions, news] = await Promise.all([
-    fetcher ? fetcher(keyword) : Promise.resolve([] as SourcePost[]),
-    fetchSearchQuestions(keyword),
-    fetchNewsHeadlines(keyword),
+  const gather = (kw: string) => Promise.all([
+    fetcher ? fetcher(kw) : Promise.resolve([] as SourcePost[]),
+    fetchSearchQuestions(kw),
+    fetchNewsHeadlines(kw),
   ]);
+
+  let topic: string = keyword;
+  let [posts, questions, news] = await gather(keyword);
+  if (posts.length < 3 && questions.length < 3) {
+    const broader = await broaderTopic(keyword);
+    if (broader) {
+      const [p2, q2, n2] = await gather(broader);
+      if (p2.length + q2.length > posts.length + questions.length) {
+        topic = broader;
+        [posts, questions, news] = [p2, q2, n2];
+      }
+    }
+  }
   const live = posts.length > 0;
   const analysed = [...posts].sort((a, b) => (b.num_comments + b.score / 10) - (a.num_comments + a.score / 10)).slice(0, 20);
 
@@ -58,19 +71,19 @@ export async function POST(req: NextRequest) {
     return `[${i}] (${p.community}, ${p.score} ${platform === "youtube" ? "views" : "pts"}, ${p.num_comments} comments) ${p.title}${p.text && p.text !== p.title ? `\n   ${p.text}` : ""}${comments}`;
   }).join("\n");
 
-  const prompt = `You are a social listening analyst. Topic: "${keyword}". Platform: ${LABEL[platform]}.
-
+  const prompt = `You are a social listening analyst. Topic: "${topic}". Platform: ${LABEL[platform]}.
+${topic !== keyword ? `(The user searched "${keyword}", a brand or phrase too new or niche to have its own data. Analyze the broader "${topic}" conversation — what this audience needs, asks and complains about — and frame opportunities for "${keyword}".)\n` : ""}
 ${live
     ? `REAL ${LABEL[platform].toUpperCase()} POSTS (collected just now):\n${postBlock}`
-    : `${LABEL[platform]} has no public data API, so there are no posts. Base your analysis on the real search and news signals below, and on what you know about how this audience talks on ${LABEL[platform]}. Be specific to "${keyword}", never generic.`}
+    : `${LABEL[platform]} has no public data API, so there are no posts. Base your analysis on the real search and news signals below, and on what you know about how this audience talks on ${LABEL[platform]}. Be specific to "${topic}", never generic.`}
 
 REAL GOOGLE SEARCHES people type about this topic:
-${questions.join("; ") || "(none)"}
+${questions.join("; ") || "(none — rely on your knowledge of this audience)"}
 
 LATEST NEWS HEADLINES:
 ${news.join("; ") || "(none)"}
 
-Rules: be concrete and specific to this topic and these people. No generic marketing advice like "create educational content" or "engage with communities". Every opportunity and content idea must name the specific pain point, question or angle it targets.${live ? " Pain point quotes must be copied verbatim (shortened if needed) from the posts or replies above." : " Leave quote empty when you have no real source."}
+Rules: be concrete and specific to this topic and these people. Never write about missing data, low visibility, or the absence of discussion — always describe what the audience actually wants, asks and struggles with. No generic marketing advice like "create educational content" or "engage with communities". Every opportunity and content idea must name the specific pain point, question or angle it targets.${live ? " Pain point quotes must be copied verbatim (shortened if needed) from the posts or replies above." : " Leave quote empty when you have no real source."}
 
 Reply with ONLY this JSON:
 {
@@ -128,6 +141,7 @@ Reply with ONLY this JSON:
 
   return Response.json({
     platform,
+    topic,
     data_source: live ? "live" : "estimated",
     posts: outPosts,
     sentiment_summary: { ...counts, overall, summary: (ai?.summary as string) ?? "" },

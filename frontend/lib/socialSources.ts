@@ -218,3 +218,21 @@ export async function fetchNewsHeadlines(keyword: string): Promise<string[]> {
     clearTimeout(t);
   }
 }
+
+// For brand names / ultra-niche phrases with no data, find the broader topic their audience actually searches.
+export async function broaderTopic(keyword: string): Promise<string | null> {
+  const words = keyword.trim().split(/\s+/);
+  if (words.length < 2) return null;
+  const variants = [...new Set([
+    words.slice(1).join(" "),
+    words.slice(0, -1).join(" "),
+    words.length > 2 ? words.slice(-2).join(" ") : "",
+    words.length > 2 ? words.slice(1, -1).join(" ") : "",
+  ])].filter((v) => v && v.toLowerCase() !== keyword.toLowerCase());
+
+  const scored = await Promise.all(variants.map(async (v) => ({ v, n: (await fetchSearchQuestions(v)).length })));
+  // Prefer the most specific variant that still has real search demand.
+  const words_ = (v: string) => v.split(/\s+/).length;
+  const best = scored.filter((s) => s.n >= 3).sort((a, b) => words_(b.v) - words_(a.v) || b.n - a.n)[0];
+  return best?.v ?? null;
+}

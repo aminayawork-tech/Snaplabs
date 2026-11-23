@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { fetchYouTube, fetchBluesky, fetchHackerNews, fetchSearchQuestions, fetchNewsHeadlines, type SourcePost } from "@/lib/socialSources";
+import { fetchYouTube, fetchBluesky, fetchHackerNews, fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, type SourcePost } from "@/lib/socialSources";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -11,10 +11,24 @@ export async function POST(req: NextRequest) {
   const { keyword } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
 
-  const [youtube, bluesky, hn, questions, news] = await Promise.all([
-    fetchYouTube(keyword), fetchBluesky(keyword), fetchHackerNews(keyword),
-    fetchSearchQuestions(keyword), fetchNewsHeadlines(keyword),
+  const gather = (kw: string) => Promise.all([
+    fetchYouTube(kw), fetchBluesky(kw), fetchHackerNews(kw),
+    fetchSearchQuestions(kw), fetchNewsHeadlines(kw),
   ]);
+  let topic: string = keyword;
+  let [youtube, bluesky, hn, questions, news] = await gather(keyword);
+  const signal = () => youtube.length + bluesky.length + hn.length + questions.length;
+  if (signal() < 6) {
+    const broader = await broaderTopic(keyword);
+    if (broader) {
+      const before = signal();
+      const next = await gather(broader);
+      if (next[0].length + next[1].length + next[2].length + next[3].length > before) {
+        topic = broader;
+        [youtube, bluesky, hn, questions, news] = next;
+      }
+    }
+  }
 
   const top = (posts: SourcePost[], n: number) => [...posts].sort((a, b) => b.score - a.score).slice(0, n);
   const topContent = [
@@ -40,12 +54,12 @@ export async function POST(req: NextRequest) {
         max_tokens: 2500,
         messages: [{
           role: "user",
-          content: `You are a content strategist. Topic: "${keyword}".
+          content: `You are a content strategist. Topic: "${topic}".${topic !== keyword ? ` (The user searched "${keyword}", a brand or phrase too new to have its own data — plan content for "${keyword}" using the broader "${topic}" landscape. Never comment on the lack of data.)` : ""}
 Here is real data collected just now:
 
 ${evidence || "(no live data found — rely on your knowledge, and be specific)"}
 
-Using this evidence, work out what content is winning and what is missing. Be specific to "${keyword}" — no generic advice. Gaps must be questions or angles from the evidence that the existing content does not answer well.
+Using this evidence, work out what content is winning and what is missing. Be specific to "${topic}" — no generic advice. Gaps must be questions or angles from the evidence that the existing content does not answer well.
 
 Reply with ONLY this JSON:
 {"top_formats":["4 specific formats, e.g. '10-min registry practice walkthrough video'"],
@@ -63,7 +77,7 @@ Give 6 ideas.`,
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const start = text.indexOf("{");
     const data = start >= 0 ? JSON.parse(text.slice(start, text.lastIndexOf("}") + 1)) : {};
-    return Response.json({ ...data, questions: questions.slice(0, 15), top_content: topContent });
+    return Response.json({ ...data, topic, questions: questions.slice(0, 15), top_content: topContent });
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 500 });
   }
