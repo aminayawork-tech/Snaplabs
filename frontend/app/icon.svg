@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="15" fill="#275fe8"/>
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- index finger (back) -->
+    <path d="M22.5 34 L23 10.5" stroke="#275fe8" stroke-width="10.5"/>
+    <path d="M22.5 34 L23 10.5" stroke="#fff" stroke-width="7.5"/>
+    <!-- middle finger bent over to the thumb -->
+    <path d="M28.5 35 L31 20.5 L42.5 21" stroke="#275fe8" stroke-width="10.5"/>
+    <path d="M28.5 35 L31 20.5 L42.5 21" stroke="#fff" stroke-width="7.5"/>
+  </g>
+  <!-- fist with curled fingers -->
+  <rect x="13" y="31" width="23" height="25" rx="9" fill="#fff" stroke="#275fe8" stroke-width="1.6" transform="rotate(-10 24.5 43.5)"/>
+  <path d="M17 41.5 h9 M17.5 48 h8.5" stroke="#275fe8" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- thumb pressing up into the middle finger -->
+  <path d="M33.5 45 L40.5 28.5" stroke="#275fe8" stroke-width="10.5" stroke-linecap="round"/>
+  <path d="M33.5 45 L40.5 28.5" stroke="#fff" stroke-width="7.5" stroke-linecap="round"/>
+  <!-- snap sparks -->
+  <g stroke="#fde047" stroke-width="3.2" stroke-linecap="round">
+    <path d="M47.5 14.5 l3-4.5"/><path d="M51 21 l5.5-1"/><path d="M49.5 27.5 l4.5 3"/>
+  </g>
+</svg>

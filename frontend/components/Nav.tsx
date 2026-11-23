@@ -1,6 +1,7 @@
 "use client";
 import clsx from "clsx";
 import type { View } from "@/lib/types";
+import SnapLogo from "./SnapLogo";
 
 const NAV_ITEMS = [
   {
@@ -74,7 +75,8 @@ export default function Nav({ view, onNav, hasAudit }: Props) {
       {/* ── Desktop sidebar ── */}
       <nav className="hidden md:flex fixed left-0 top-0 h-full w-[220px] flex-col bg-white border-r border-slate-200 shadow-[1px_0_0_#e2e8f0] z-50 px-3 py-5">
         {/* Brand */}
-        <div className="flex items-center mb-1 px-1">
+        <div className="flex items-center gap-2 mb-1 px-1">
+          <SnapLogo size={26} />
           <div className="font-display font-bold text-[1.05rem] text-slate-900 leading-none tracking-tight">
             Snappy<span className="text-brand">marketer</span>
           </div>

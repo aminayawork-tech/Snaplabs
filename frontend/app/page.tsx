@@ -1,13 +1,17 @@
 import Link from "next/link";
+import SnapLogo from "@/components/SnapLogo";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif" }}>
       {/* Header */}
       <header className="border-b border-slate-100 px-6 md:px-12 py-4 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm z-10">
-        <div>
-          <span className="font-bold text-lg text-slate-900 tracking-tight">Snappy<span className="text-[#275fe8]">marketer</span></span>
-          <p className="text-[0.55rem] font-bold uppercase tracking-[0.18em] text-slate-400 leading-none mt-0.5">AI Marketing Platform</p>
+        <div className="flex items-center gap-2.5">
+          <SnapLogo size={34} />
+          <div>
+            <span className="font-bold text-lg text-slate-900 tracking-tight">Snappy<span className="text-[#275fe8]">marketer</span></span>
+            <p className="text-[0.55rem] font-bold uppercase tracking-[0.18em] text-slate-400 leading-none mt-0.5">AI Marketing Platform</p>
+          </div>
         </div>
         <Link href="/login" className="bg-[#275fe8] hover:bg-[#1a4fd0] text-white text-sm font-bold px-5 py-2.5 rounded-xl transition">
           Sign In →
@@ -116,6 +120,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-100 px-6 md:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          <SnapLogo size={22} />
           <span className="font-bold text-slate-900 tracking-tight">Snappy<span className="text-[#275fe8]">marketer</span></span>
           <span className="text-slate-300">·</span>
           <span className="text-slate-400 text-sm">© {new Date().getFullYear()}</span>

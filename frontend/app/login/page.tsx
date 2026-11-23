@@ -1,6 +1,7 @@
 "use client";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import SnapLogo from "@/components/SnapLogo";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
@@ -70,6 +71,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#f9fafd] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <SnapLogo size={56} className="mx-auto mb-3" />
           <div className="font-bold text-2xl text-slate-900 tracking-tight mb-1">
             Snappy<span className="text-[#275fe8]">marketer</span>
           </div>
