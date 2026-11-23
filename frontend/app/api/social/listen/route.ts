@@ -45,6 +45,7 @@ const CACHE_TTL = 6 * 60 * 60 * 1000;
 const cache = new Map<string, { at: number; payload: unknown }>();
 
 export async function POST(req: NextRequest) {
+  const started = Date.now();
   const { keyword, platform: raw, fresh } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
   const platform: Platform = raw in LABEL ? raw : "reddit";
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   let topic: string = keyword;
   let [posts, questions, news] = await gather(keyword);
-  if (fetcher ? posts.length < 3 : questions.length < 3) {
+  if ((fetcher ? posts.length < 3 : questions.length < 3) && Date.now() - started < 22000) {
     const broader = await broaderTopic(keyword);
     if (broader) {
       const [p2, q2, n2] = await gather(broader);
@@ -113,7 +114,7 @@ Reply with ONLY this JSON:
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
     const res = await anthropic.messages.create(
       { model: "claude-haiku-4-5-20251001", max_tokens: 3000, messages: [{ role: "user", content: prompt }] },
-      { timeout: 40000 }
+      { timeout: Math.max(12000, 56000 - (Date.now() - started)), maxRetries: 0 }
     );
     ai = parseJSON(res.content[0].type === "text" ? res.content[0].text : "");
     if (!ai) aiError = "AI analysis returned an unreadable response — try again.";

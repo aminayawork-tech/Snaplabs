@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 interface Persona {
   name: string;
@@ -41,9 +43,6 @@ interface AudienceData {
   market_insights: MarketInsights;
 }
 
-// Session-level cache — persists until page refresh
-const audienceCache = new Map<string, AudienceData>();
-
 const STAGE_COLORS = {
   awareness:     { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-500" },
   consideration: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", dot: "bg-blue-500" },
@@ -67,36 +66,40 @@ export default function AudienceView() {
   const [data, setData] = useState<AudienceData | null>(null);
   const [error, setError] = useState("");
   const [activePersona, setActivePersona] = useState(0);
-  const [fromCache, setFromCache] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | undefined>();
+  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const refreshRecent = () => setRecent(listSaved<AudienceData>("audience"));
+  useEffect(refreshRecent, []);
 
-  const research = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!market.trim()) return;
-
-    const cacheKey = market.trim().toLowerCase();
-    const cached = audienceCache.get(cacheKey);
-    if (cached) {
-      setData(cached);
-      setActivePersona(0);
-      setFromCache(true);
-      setError("");
-      return;
+  const runResearch = async (mkt: string, fresh = false) => {
+    const key = mkt.toLowerCase();
+    if (!fresh) {
+      const saved = getSaved<AudienceData>("audience", key);
+      if (saved) {
+        setMarket(saved.label);
+        setData(saved.data);
+        setSavedAt(saved.updatedAt);
+        setActivePersona(0);
+        setError("");
+        return;
+      }
     }
 
     setLoading(true);
     setError("");
     setData(null);
-    setFromCache(false);
     try {
       const res = await fetch("/api/audience/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ market: market.trim() }),
+        body: JSON.stringify({ market: mkt }),
       });
       const json = await res.json();
       if (json.error) setError(json.error);
       else {
-        audienceCache.set(cacheKey, json);
+        putSaved("audience", key, mkt, json);
+        setSavedAt(Date.now());
+        refreshRecent();
         setData(json);
         setActivePersona(0);
       }
@@ -105,6 +108,11 @@ export default function AudienceView() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const research = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (market.trim()) runResearch(market.trim());
   };
 
   const journeyStages = data?.customer_journey
@@ -142,13 +150,13 @@ export default function AudienceView() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
-      {fromCache && data && (
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
-          <span>Loaded from cache — results for <strong>{market.trim()}</strong></span>
-          <button onClick={() => { audienceCache.delete(market.trim().toLowerCase()); setData(null); setFromCache(false); }}
-            className="text-[#275fe8] font-semibold hover:underline ml-3">Reload fresh</button>
-        </div>
-      )}
+      <RecentResearch
+        className="-mt-3 mb-6"
+        items={recent}
+        activeKey={data ? market.trim().toLowerCase() : null}
+        onOpen={(key) => { const s = getSaved<AudienceData>("audience", key); if (s) runResearch(s.label); }}
+        onDelete={(key) => { deleteSaved("audience", key); refreshRecent(); }}
+      />
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -160,6 +168,7 @@ export default function AudienceView() {
 
       {data && !loading && (
         <div className="flex flex-col gap-6 view-enter">
+          <SavedBar savedAt={savedAt} onRefresh={() => runResearch(market.trim(), true)} />
 
           {/* Persona selector tabs */}
           <div>

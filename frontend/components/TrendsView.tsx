@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Keyword } from "@/lib/types";
+import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 type VolumeTier = "high" | "medium" | "low";
 
@@ -1492,6 +1494,9 @@ interface Props {
 
 const REAL_FETCH_LIMIT = 10;
 
+interface SavedTrends { context: string; rows: Row[]; geo: string; timeRange: TrendsTimeRange; body: object | null }
+const trendKey = (ctx: string, geo: string, range: string) => `${geo}|${range}|${ctx.toLowerCase()}`;
+
 export default function TrendsView({ auditKeywords = [], bizName, initialCategory }: Props) {
   const [page, setPage] = useState<"home" | "results">("home");
   const [context, setContext] = useState("");
@@ -1503,6 +1508,14 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   const [trendsTimeRange, setTrendsTimeRange] = useState<TrendsTimeRange>("1y");
   const [detailKeyword, setDetailKeyword] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [savedAt, setSavedAt] = useState<number | undefined>();
+  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const lastBody = useRef<object | null>(null);
+  const pendingSave = useRef(false);
+  const refreshRecent = () => setRecent(listSaved<SavedTrends>("trends").map(e => ({
+    ...e, label: `${e.data.context.replace(/^"|"$/g, "")}${e.data.geo !== "US" ? ` · ${e.data.geo}` : ""}`,
+  })));
+  useEffect(refreshRecent, []);
 
   const fetchRealTrends = useCallback(async (aiRows: Row[], timeRange: TrendsTimeRange = "1y", geoCode = "US") => {
     const topKws = aiRows.slice(0, REAL_FETCH_LIMIT).map(r => r.keyword);
@@ -1525,14 +1538,40 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     }
   }, []);
 
+  useEffect(() => {
+    if (!pendingSave.current || page !== "results" || loadingAI || loadingReal || !rows.length) return;
+    pendingSave.current = false;
+    putSaved<SavedTrends>("trends", trendKey(context, geo, trendsTimeRange), context, { context, rows, geo, timeRange: trendsTimeRange, body: lastBody.current });
+    setSavedAt(Date.now());
+    refreshRecent();
+  }, [page, loadingAI, loadingReal, rows, context, geo, trendsTimeRange]);
+
   const handleTimeRangeChange = useCallback((t: TrendsTimeRange) => {
+    pendingSave.current = true;
     setTrendsTimeRange(t);
     const stripped = rows.map(({ keyword, trend, growth, volume }) => ({ keyword, trend, growth, volume }));
     setRows(stripped);
     fetchRealTrends(stripped, t, geo);
   }, [fetchRealTrends, rows, geo]);
 
-  const run = useCallback(async (ctx: string, body: object) => {
+  const run = useCallback(async (ctx: string, body: object, fresh = false) => {
+    if (!fresh) {
+      const saved = getSaved<SavedTrends>("trends", trendKey(ctx, geo, trendsTimeRange));
+      if (saved) {
+        abortRef.current?.abort();
+        lastBody.current = saved.data.body;
+        setContext(saved.data.context);
+        setRows(saved.data.rows);
+        setPage("results");
+        setLoadingAI(false);
+        setLoadingReal(false);
+        setSavedAt(saved.updatedAt);
+        return;
+      }
+    }
+    lastBody.current = body;
+    pendingSave.current = true;
+    setSavedAt(undefined);
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     setContext(ctx);
@@ -1568,6 +1607,9 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       .map(k => k.replace(/\b20\d{2}\b/g, y => (Number(y) < year ? "" : y)).replace(/\s{2,}/g, " ").trim())
       .filter(Boolean);
     if (!kws.length) return;
+    lastBody.current = null;
+    pendingSave.current = true;
+    setSavedAt(undefined);
     const aiRows: Row[] = kws.map(k => ({ keyword: k, trend: "stable", growth: 0, volume: "medium" }));
     setContext(bizName ? `${bizName} — audit keywords` : "Audit keywords");
     setPage("results");
@@ -1575,6 +1617,27 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
     setLoadingAI(false);
     fetchRealTrends(aiRows, trendsTimeRange, geo);
   }, [auditKeywords, bizName, fetchRealTrends, trendsTimeRange, geo]);
+
+  const openSaved = (key: string) => {
+    const saved = getSaved<SavedTrends>("trends", key);
+    if (!saved) return;
+    abortRef.current?.abort();
+    pendingSave.current = false;
+    lastBody.current = saved.data.body;
+    setGeo(saved.data.geo);
+    setTrendsTimeRange(saved.data.timeRange);
+    setContext(saved.data.context);
+    setRows(saved.data.rows);
+    setLoadingAI(false);
+    setLoadingReal(false);
+    setSavedAt(saved.updatedAt);
+    setPage("results");
+  };
+
+  const refreshCurrent = () => {
+    if (lastBody.current) run(context, lastBody.current, true);
+    else runAuditKeywords();
+  };
 
   useEffect(() => {
     if (initialCategory) run(initialCategory, { category: initialCategory });
@@ -1599,12 +1662,27 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
       </div>
 
       {page === "home" && (
+        <RecentResearch
+          className="mb-5"
+          items={recent}
+          onOpen={openSaved}
+          onDelete={(key) => { deleteSaved("trends", key); refreshRecent(); }}
+        />
+      )}
+
+      {page === "home" && (
         <CategoryHome
           onSelect={cat => run(cat, { category: cat })}
           onSearch={q => run(`"${q}"`, { keyword: q })}
           geo={geo}
           onGeoChange={setGeo}
         />
+      )}
+
+      {page === "results" && savedAt && !loadingAI && !loadingReal && (
+        <div className="mb-4">
+          <SavedBar savedAt={savedAt} onRefresh={refreshCurrent} />
+        </div>
       )}
 
       {page === "results" && (

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { RecentResearch, SavedBar } from "./RecentResearch";
 
 type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
 
@@ -163,6 +164,16 @@ type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
 type ErrorMap = Partial<Record<Platform, string>>;
 
+async function readJSON(res: Response) {
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch {
+    return { error: res.status === 504 || /timeout|timed out|An error o/i.test(text)
+      ? "This search took too long and timed out. Try again, or try a shorter or more common keyword."
+      : `Server error (${res.status}). Please try again.` };
+  }
+}
+
 // Saved research persists in localStorage so repeat searches don't spend API calls.
 interface SavedResearch { keyword: string; updatedAt: number; results: ResultsMap; content?: ContentDiscovery }
 const STORE_KEY = "snappy_social_research_v1";
@@ -190,14 +201,6 @@ function deleteResearch(keyword: string) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* ignore */ }
 }
 
-function savedAgo(ts?: number): string {
-  if (!ts) return "";
-  const m = Math.floor((Date.now() - ts) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
-}
 
 export default function SocialListeningView({ onNavigateToTrends }: { onNavigateToTrends?: (keyword: string) => void }) {
   const [keyword, setKeyword] = useState("");
@@ -226,7 +229,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keyword: kw, platform, fresh }),
       });
-      const json = await res.json();
+      const json = await readJSON(res);
       if (json.error) {
         setErrorMap(prev => ({ ...prev, [platform]: json.error }));
       } else {
@@ -252,14 +255,18 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keyword: kw, fresh }),
       });
-      const json = await res.json();
-      if (!json.error) {
+      const json = await readJSON(res);
+      if (json.error) setError(json.error);
+      else {
+        setError("");
         const stamped = { ...json, savedAt: Date.now() };
         setContentDiscovery(stamped);
         saveResearch(kw, { content: stamped });
         refreshRecent();
       }
-    } catch { /* silently fail */ }
+    } catch {
+      setError("Couldn't generate the content strategy. Please try again.");
+    }
     finally { setContentDiscoveryLoading(false); }
   };
 
@@ -315,19 +322,13 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
-      {recent.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap -mt-2 mb-5">
-          <span className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mr-1">Recent research</span>
-          {recent.slice(0, 10).map(r => (
-            <span key={r.keyword} className={`inline-flex items-center rounded-full border text-xs transition ${r.keyword.toLowerCase() === keyword.trim().toLowerCase() && hasAnalyzed ? "bg-[#eff6ff] border-[#bfdbfe] text-[#275fe8]" : "bg-white border-slate-200 text-slate-600 hover:border-[#93c5fd]"}`}>
-              <button onClick={() => openResearch(r.keyword)} className="pl-3 pr-1.5 py-1 font-medium" title={`Saved ${savedAgo(r.updatedAt)} · ${Object.keys(r.results).length} platform(s)`}>
-                {r.keyword}
-              </button>
-              <button onClick={() => { deleteResearch(r.keyword); refreshRecent(); }} className="pr-2 text-slate-300 hover:text-red-500" title="Delete saved research">×</button>
-            </span>
-          ))}
-        </div>
-      )}
+      <RecentResearch
+        className="-mt-2 mb-5"
+        items={recent.map(r => ({ key: r.keyword.toLowerCase(), label: r.keyword, updatedAt: r.updatedAt, detail: `${Object.keys(r.results).length} platform(s)` }))}
+        activeKey={hasAnalyzed ? keyword.trim().toLowerCase() : null}
+        onOpen={(key) => { const r = recent.find(x => x.keyword.toLowerCase() === key); if (r) openResearch(r.keyword); }}
+        onDelete={(key) => { deleteResearch(key); refreshRecent(); }}
+      />
 
       {/* Platform tabs — visible once Analyze All has been clicked */}
       {hasAnalyzed && (
@@ -406,10 +407,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
       {data && !isActiveLoading && (
         <div className="flex flex-col gap-4 view-enter">
           {data.savedAt && (
-            <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved {savedAgo(data.savedAt)} — reopening this search costs no API calls</span>
-                  <button onClick={() => fetchPlatform(activePlatform, keyword.trim(), true)} className="text-[#275fe8] font-semibold hover:underline flex-shrink-0">Refresh {PLATFORMS.find(p => p.key === activePlatform)?.label}</button>
-                </div>
+            <SavedBar savedAt={data.savedAt} label={PLATFORMS.find(p => p.key === activePlatform)?.label} onRefresh={() => fetchPlatform(activePlatform, keyword.trim(), true)} />
           )}
 
           {data.data_source === "live" ? (
@@ -642,10 +640,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
             ) : contentDiscovery ? (
               <div className="flex flex-col gap-4">
                 {contentDiscovery.savedAt && (
-                  <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved {savedAgo(contentDiscovery.savedAt)} — reopening this search costs no API calls</span>
-                  <button onClick={() => fetchContentDiscovery(keyword.trim(), true)} className="text-[#275fe8] font-semibold hover:underline flex-shrink-0">Refresh strategy</button>
-                </div>
+                  <SavedBar savedAt={contentDiscovery.savedAt} label="strategy" onRefresh={() => fetchContentDiscovery(keyword.trim(), true)} />
                 )}
                 {(contentDiscovery.top_content ?? []).length > 0 && (
                   <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">

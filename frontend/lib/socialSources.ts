@@ -63,6 +63,8 @@ async function redditAuthHeader(): Promise<Record<string, string> | null> {
 // ── Reddit via RapidAPI (SteadyAPI "Reddit"; RAPIDAPI_KEY + optional RAPIDAPI_REDDIT_HOST) ──
 // Basic plan allows ~1 request/second, so calls are made one at a time.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Vercel cuts functions off at 60s, so optional follow-up calls stop once a fetcher has spent its budget.
+const budget = (ms = 18000) => { const end = Date.now() + ms; return () => end - Date.now() > 4000; };
 
 interface RapidPost { id: string; title: string; author: string; subreddit: string; selftext?: string; score?: number; num_comments?: number; url?: string; permalink?: string; created_utc?: number; over_18?: boolean }
 
@@ -86,14 +88,15 @@ async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
       { headers }, 12000
     ))?.body ?? [];
 
+  const hasTime = budget();
   let raw: RapidPost[] = [];
   const add = (more: RapidPost[]) => {
     const seen = new Set(raw.map((p) => p.id));
     raw = [...raw, ...more.filter((p) => relevant(p) && !seen.has(p.id))];
   };
   add(await search(phrase, "year"));
-  if (raw.length < 5) { await sleep(1100); add(await search(phrase, "all")); }
-  if (raw.length < 3 && phrase !== keyword.trim()) { await sleep(1100); add(await search(keyword.trim(), "all")); }
+  if (raw.length < 5 && hasTime()) { await sleep(1100); add(await search(phrase, "all")); }
+  if (raw.length < 3 && phrase !== keyword.trim() && hasTime()) { await sleep(1100); add(await search(keyword.trim(), "all")); }
 
   const posts: SourcePost[] = raw.filter((p) => !p.over_18).slice(0, 25).map((p) => ({
     title: p.title,
@@ -108,6 +111,7 @@ async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
   }));
 
   for (const p of [...posts].filter((x) => x.num_comments > 0).sort((a, b) => b.num_comments - a.num_comments).slice(0, 2)) {
+    if (!hasTime()) break;
     await sleep(1100);
     const detail = await getJSON<{ body?: { post_comments?: { content?: string; score?: number }[] } }>(
       `https://${host}/v1/reddit/post?url=${encodeURIComponent(p.url)}`, { headers }, 8000
@@ -310,6 +314,7 @@ export async function fetchTikTok(keyword: string): Promise<SourcePost[]> {
   if (!key) return [];
   const host = process.env.RAPIDAPI_TIKTOK_HOST || "tiktok-scraper7.p.rapidapi.com";
   const headers = { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host };
+  const hasTime = budget();
   const search = await getJSON<{ data?: { videos?: TikTokVideo[] } }>(
     `https://${host}/feed/search?keywords=${encodeURIComponent(keyword)}&region=us&count=20&cursor=0&publish_time=0&sort_type=0`,
     { headers }, 15000
@@ -332,6 +337,7 @@ export async function fetchTikTok(keyword: string): Promise<SourcePost[]> {
   });
 
   for (const p of [...posts].sort((a, b) => b.num_comments - a.num_comments).slice(0, 3)) {
+    if (!hasTime()) break;
     await sleep(1100);
     const res = await getJSON<{ data?: { comments?: { text?: string; digg_count?: number }[] } }>(
       `https://${host}/comment/list?url=${(p as SourcePost & { _id: string })._id}&count=20&cursor=0`, { headers }, 8000
@@ -379,10 +385,11 @@ export async function fetchFacebook(keyword: string): Promise<SourcePost[]> {
   const add = (more?: FacebookPost[]) => {
     for (const p of more ?? []) if (p.message && !raw.some((r) => r.post_id === p.post_id)) raw.push(p);
   };
+  const hasTime = budget();
   const first = await page(phrase);
   add(first?.results);
-  if (first?.cursor) { await sleep(1100); add((await page(phrase, first.cursor))?.results); }
-  if (raw.length < 3 && phrase !== keyword.trim()) { await sleep(1100); add((await page(keyword.trim()))?.results); }
+  if (first?.cursor && hasTime()) { await sleep(1100); add((await page(phrase, first.cursor))?.results); }
+  if (raw.length < 3 && phrase !== keyword.trim() && hasTime()) { await sleep(1100); add((await page(keyword.trim()))?.results); }
 
   return raw.slice(0, 20).map((p) => ({
     title: clip(p.message!.replace(/\s+/g, " "), 140),

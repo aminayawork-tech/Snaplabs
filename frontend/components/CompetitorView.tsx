@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 interface CompetitorData {
   overview?: { name: string; industry: string; tagline: string; target_audience: string; scale: string };
@@ -65,6 +67,10 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
   );
 }
 
+interface SavedCompetitor { analysis: CompetitorData; metaAds: MetaAd[] | null }
+
+const siteKey = (u: string) => u.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "").toLowerCase();
+
 export default function CompetitorView() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,8 +79,12 @@ export default function CompetitorView() {
   const [metaAds, setMetaAds] = useState<MetaAd[] | null>(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaError, setMetaError] = useState("");
+  const [savedAt, setSavedAt] = useState<number | undefined>();
+  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const refreshRecent = () => setRecent(listSaved<SavedCompetitor>("competitor"));
+  useEffect(refreshRecent, []);
 
-  const fetchMetaAds = async (competitorName: string) => {
+  const fetchMetaAds = async (competitorName: string, key: string) => {
     setMetaLoading(true);
     setMetaError("");
     setMetaAds(null);
@@ -86,7 +96,11 @@ export default function CompetitorView() {
       });
       const json = await res.json();
       if (json.error) setMetaError(json.error);
-      else setMetaAds(json.ads ?? []);
+      else {
+        setMetaAds(json.ads ?? []);
+        const saved = getSaved<SavedCompetitor>("competitor", key);
+        if (saved) putSaved<SavedCompetitor>("competitor", key, saved.label, { ...saved.data, metaAds: json.ads ?? [] });
+      }
     } catch {
       setMetaError("Failed to fetch Meta ads.");
     } finally {
@@ -94,11 +108,22 @@ export default function CompetitorView() {
     }
   };
 
-  const analyze = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-    let target = url.trim();
+  const runAnalysis = async (raw: string, fresh = false) => {
+    let target = raw.trim();
     if (!target.startsWith("http")) target = "https://" + target;
+    const key = siteKey(target);
+    if (!fresh) {
+      const saved = getSaved<SavedCompetitor>("competitor", key);
+      if (saved) {
+        setUrl(target);
+        setData(saved.data.analysis);
+        setMetaAds(saved.data.metaAds);
+        setMetaError("");
+        setError("");
+        setSavedAt(saved.updatedAt);
+        return;
+      }
+    }
     setLoading(true);
     setError("");
     setData(null);
@@ -114,13 +139,21 @@ export default function CompetitorView() {
       if (json.error) setError(json.error);
       else {
         setData(json);
-        if (json.overview?.name) fetchMetaAds(json.overview.name);
+        putSaved<SavedCompetitor>("competitor", key, key, { analysis: json, metaAds: null });
+        setSavedAt(Date.now());
+        refreshRecent();
+        if (json.overview?.name) fetchMetaAds(json.overview.name, key);
       }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const analyze = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (url.trim()) runAnalysis(url);
   };
 
   return (
@@ -148,6 +181,14 @@ export default function CompetitorView() {
         </button>
       </form>
 
+      <RecentResearch
+        className="-mt-3 mb-6"
+        items={recent}
+        activeKey={data ? siteKey(url.startsWith("http") ? url : `https://${url}`) : null}
+        onOpen={(key) => runAnalysis(key)}
+        onDelete={(key) => { deleteSaved("competitor", key); refreshRecent(); }}
+      />
+
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
       {loading && (
@@ -160,6 +201,7 @@ export default function CompetitorView() {
 
       {data && !loading && (
         <div className="flex flex-col gap-4 view-enter">
+          <SavedBar savedAt={savedAt} onRefresh={() => runAnalysis(url, true)} />
           {/* Overview banner */}
           {data.overview && (
             <div className="bg-gradient-to-r from-[#eff6ff] to-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-5">
@@ -279,7 +321,7 @@ export default function CompetitorView() {
               </div>
               {metaAds !== null && !metaLoading && (
                 <button
-                  onClick={() => data?.overview?.name && fetchMetaAds(data.overview.name)}
+                  onClick={() => data?.overview?.name && fetchMetaAds(data.overview.name, siteKey(url.startsWith("http") ? url : `https://${url}`))}
                   className="text-xs text-[#275fe8] font-semibold hover:underline flex items-center gap-1"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>

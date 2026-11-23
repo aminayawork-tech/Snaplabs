@@ -11,6 +11,7 @@ const CACHE_TTL = 6 * 60 * 60 * 1000;
 const cache = new Map<string, { at: number; payload: unknown }>();
 
 export async function POST(req: NextRequest) {
+  const started = Date.now();
   const { keyword, fresh } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
   const cacheKey = String(keyword).trim().toLowerCase();
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   let topic: string = keyword;
   let [youtube, bluesky, hn, questions, news, tiktok] = await gather(keyword);
   const signal = () => youtube.length + bluesky.length + hn.length + questions.length + tiktok.length;
-  if (signal() < 6) {
+  if (signal() < 6 && Date.now() - started < 22000) {
     const broader = await broaderTopic(keyword);
     if (broader) {
       const before = signal();
@@ -80,7 +81,7 @@ Reply with ONLY this JSON:
 Give 6 ideas.`,
         }],
       },
-      { timeout: 40000 }
+      { timeout: Math.max(12000, 56000 - (Date.now() - started)), maxRetries: 0 }
     );
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
