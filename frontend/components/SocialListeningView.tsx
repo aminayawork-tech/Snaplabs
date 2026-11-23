@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
 
@@ -32,6 +32,7 @@ interface PlatformActivity {
 
 interface ContentDiscovery {
   topic?: string;
+  savedAt?: number;
   questions?: string[];
   top_content?: { title: string; platform: string; url: string; metric: string }[];
   ideas?: { title: string; platform: string; hook: string }[];
@@ -57,6 +58,7 @@ interface ListenData {
   ai_error?: string;
   needs_key?: string;
   platform: Platform;
+  savedAt?: number;
 }
 
 const ALL_PLATFORMS: Platform[] = ["reddit", "youtube", "bluesky", "hackernews", "x", "tiktok", "facebook"];
@@ -161,9 +163,41 @@ type ResultsMap = Partial<Record<Platform, ListenData>>;
 type LoadingMap = Partial<Record<Platform, boolean>>;
 type ErrorMap = Partial<Record<Platform, string>>;
 
-// Session-level caches
-const socialCache = new Map<string, ResultsMap>();
-const contentDiscoveryCache = new Map<string, ContentDiscovery>();
+// Saved research persists in localStorage so repeat searches don't spend API calls.
+interface SavedResearch { keyword: string; updatedAt: number; results: ResultsMap; content?: ContentDiscovery }
+const STORE_KEY = "snappy_social_research_v1";
+const MAX_SAVED = 20;
+
+function loadStore(): Record<string, SavedResearch> {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}"); } catch { return {}; }
+}
+
+function saveResearch(keyword: string, patch: Partial<Pick<SavedResearch, "results" | "content">>) {
+  const store = loadStore();
+  const k = keyword.toLowerCase();
+  const prev = store[k] ?? { keyword, updatedAt: 0, results: {} };
+  store[k] = { ...prev, keyword, updatedAt: Date.now(), results: { ...prev.results, ...patch.results }, content: patch.content ?? prev.content };
+  let entries = Object.entries(store).sort((a, b) => b[1].updatedAt - a[1].updatedAt).slice(0, MAX_SAVED);
+  while (entries.length) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(Object.fromEntries(entries))); return; }
+    catch { entries = entries.slice(0, -1); }
+  }
+}
+
+function deleteResearch(keyword: string) {
+  const store = loadStore();
+  delete store[keyword.toLowerCase()];
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* ignore */ }
+}
+
+function savedAgo(ts?: number): string {
+  if (!ts) return "";
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+}
 
 export default function SocialListeningView({ onNavigateToTrends }: { onNavigateToTrends?: (keyword: string) => void }) {
   const [keyword, setKeyword] = useState("");
@@ -172,7 +206,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
   const [loadingMap, setLoadingMap] = useState<LoadingMap>({});
   const [errorMap, setErrorMap] = useState<ErrorMap>({});
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [fromCache, setFromCache] = useState(false);
+  const [recent, setRecent] = useState<SavedResearch[]>([]);
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeSection, setActiveSection] = useState<"social" | "content">("social");
@@ -180,25 +214,28 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
   const [contentDiscoveryLoading, setContentDiscoveryLoading] = useState(false);
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
+  const refreshRecent = () => setRecent(Object.values(loadStore()).sort((a, b) => b.updatedAt - a.updatedAt));
+  useEffect(refreshRecent, []);
 
-  const fetchPlatform = async (platform: Platform, kw: string) => {
+  const fetchPlatform = async (platform: Platform, kw: string, fresh = false) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
     setErrorMap(prev => ({ ...prev, [platform]: undefined }));
     try {
       const res = await fetch("/api/social/listen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw, platform }),
+        body: JSON.stringify({ keyword: kw, platform, fresh }),
       });
       const json = await res.json();
       if (json.error) {
         setErrorMap(prev => ({ ...prev, [platform]: json.error }));
       } else {
-        setResults(prev => {
-          const next = { ...prev, [platform]: json };
-          socialCache.set(kw.toLowerCase(), next);
-          return next;
-        });
+        const stamped = { ...json, savedAt: Date.now() };
+        setResults(prev => ({ ...prev, [platform]: stamped }));
+        if (!json.ai_error) {
+          saveResearch(kw, { results: { [platform]: stamped } });
+          refreshRecent();
+        }
       }
     } catch (e) {
       setErrorMap(prev => ({ ...prev, [platform]: String(e) }));
@@ -207,56 +244,44 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
     }
   };
 
-  const fetchContentDiscovery = async (kw: string) => {
-    const cacheKey = kw.toLowerCase();
-    const cached = contentDiscoveryCache.get(cacheKey);
-    if (cached) { setContentDiscovery(cached); return; }
+  const fetchContentDiscovery = async (kw: string, fresh = false) => {
     setContentDiscoveryLoading(true);
     try {
       const res = await fetch("/api/social/content-discovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw }),
+        body: JSON.stringify({ keyword: kw, fresh }),
       });
       const json = await res.json();
       if (!json.error) {
-        contentDiscoveryCache.set(cacheKey, json);
-        setContentDiscovery(json);
+        const stamped = { ...json, savedAt: Date.now() };
+        setContentDiscovery(stamped);
+        saveResearch(kw, { content: stamped });
+        refreshRecent();
       }
     } catch { /* silently fail */ }
     finally { setContentDiscoveryLoading(false); }
   };
 
-  const analyze = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!keyword.trim()) return;
-
-    const kw = keyword.trim();
-    const cacheKey = kw.toLowerCase();
-
-    const cached = socialCache.get(cacheKey);
-    if (cached) {
-      setResults(cached);
-      setErrorMap({});
-      setHasAnalyzed(true);
-      setFromCache(true);
-      setShowAll(false);
-      setActiveSection("social");
-      setContentDiscovery(contentDiscoveryCache.get(cacheKey) ?? null);
-      return;
-    }
-
-    // Just show the platform pills — user clicks each one to load it
-    setResults({});
+  const openResearch = (kw: string) => {
+    const saved = loadStore()[kw.toLowerCase()];
+    setKeyword(kw);
+    setResults(saved?.results ?? {});
+    setContentDiscovery(saved?.content ?? null);
     setErrorMap({});
     setError("");
     setShowAll(false);
     setActiveSection("social");
     setHasAnalyzed(true);
-    setFromCache(false);
-    setContentDiscovery(null);
-    // Auto-load the active platform immediately
-    fetchPlatform(activePlatform, kw);
+    const savedPlatforms = Object.keys(saved?.results ?? {}) as Platform[];
+    if (saved?.results[activePlatform]) return;
+    if (savedPlatforms.length) setActivePlatform(savedPlatforms[0]);
+    else fetchPlatform(activePlatform, kw);
+  };
+
+  const analyze = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keyword.trim()) openResearch(keyword.trim());
   };
 
   const data = results[activePlatform] ?? null;
@@ -290,11 +315,17 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
 
-      {fromCache && hasAnalyzed && (
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500 mb-4">
-          <span>Loaded from cache — results for <strong>{keyword.trim()}</strong></span>
-          <button onClick={() => { const k = keyword.trim().toLowerCase(); socialCache.delete(k); contentDiscoveryCache.delete(k); setResults({}); setContentDiscovery(null); setHasAnalyzed(false); setFromCache(false); }}
-            className="text-[#275fe8] font-semibold hover:underline ml-3">Reload fresh</button>
+      {recent.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap -mt-2 mb-5">
+          <span className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mr-1">Recent research</span>
+          {recent.slice(0, 10).map(r => (
+            <span key={r.keyword} className={`inline-flex items-center rounded-full border text-xs transition ${r.keyword.toLowerCase() === keyword.trim().toLowerCase() && hasAnalyzed ? "bg-[#eff6ff] border-[#bfdbfe] text-[#275fe8]" : "bg-white border-slate-200 text-slate-600 hover:border-[#93c5fd]"}`}>
+              <button onClick={() => openResearch(r.keyword)} className="pl-3 pr-1.5 py-1 font-medium" title={`Saved ${savedAgo(r.updatedAt)} · ${Object.keys(r.results).length} platform(s)`}>
+                {r.keyword}
+              </button>
+              <button onClick={() => { deleteResearch(r.keyword); refreshRecent(); }} className="pr-2 text-slate-300 hover:text-red-500" title="Delete saved research">×</button>
+            </span>
+          ))}
         </div>
       )}
 
@@ -374,6 +405,12 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
 
       {data && !isActiveLoading && (
         <div className="flex flex-col gap-4 view-enter">
+          {data.savedAt && (
+            <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved {savedAgo(data.savedAt)} — reopening this search costs no API calls</span>
+                  <button onClick={() => fetchPlatform(activePlatform, keyword.trim(), true)} className="text-[#275fe8] font-semibold hover:underline flex-shrink-0">Refresh {PLATFORMS.find(p => p.key === activePlatform)?.label}</button>
+                </div>
+          )}
 
           {data.data_source === "live" ? (
             <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs text-emerald-800">
@@ -604,6 +641,12 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
               </div>
             ) : contentDiscovery ? (
               <div className="flex flex-col gap-4">
+                {contentDiscovery.savedAt && (
+                  <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved {savedAgo(contentDiscovery.savedAt)} — reopening this search costs no API calls</span>
+                  <button onClick={() => fetchContentDiscovery(keyword.trim(), true)} className="text-[#275fe8] font-semibold hover:underline flex-shrink-0">Refresh strategy</button>
+                </div>
+                )}
                 {(contentDiscovery.top_content ?? []).length > 0 && (
                   <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2">

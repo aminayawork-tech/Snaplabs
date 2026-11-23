@@ -7,9 +7,15 @@ export const dynamic = "force-dynamic";
 
 const fmtNum = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : `${n}`);
 
+const CACHE_TTL = 6 * 60 * 60 * 1000;
+const cache = new Map<string, { at: number; payload: unknown }>();
+
 export async function POST(req: NextRequest) {
-  const { keyword } = await req.json();
+  const { keyword, fresh } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
+  const cacheKey = String(keyword).trim().toLowerCase();
+  const hit = cache.get(cacheKey);
+  if (hit && !fresh && Date.now() - hit.at < CACHE_TTL) return Response.json(hit.payload);
 
   const gather = (kw: string) => Promise.all([
     fetchYouTube(kw), fetchBluesky(kw), fetchHackerNews(kw),
@@ -80,7 +86,9 @@ Give 6 ideas.`,
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     const start = text.indexOf("{");
     const data = start >= 0 ? JSON.parse(text.slice(start, text.lastIndexOf("}") + 1)) : {};
-    return Response.json({ ...data, topic, questions: questions.slice(0, 15), top_content: topContent });
+    const payload = { ...data, topic, questions: questions.slice(0, 15), top_content: topContent };
+    cache.set(cacheKey, { at: Date.now(), payload });
+    return Response.json(payload);
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 500 });
   }

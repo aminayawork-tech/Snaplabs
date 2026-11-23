@@ -40,11 +40,19 @@ function parseJSON(text: string) {
   try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
 }
 
+// Shields the paid APIs from repeat searches within a warm server instance.
+const CACHE_TTL = 6 * 60 * 60 * 1000;
+const cache = new Map<string, { at: number; payload: unknown }>();
+
 export async function POST(req: NextRequest) {
-  const { keyword, platform: raw } = await req.json();
+  const { keyword, platform: raw, fresh } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
   const platform: Platform = raw in LABEL ? raw : "reddit";
   const fetcher = FETCHERS[platform];
+
+  const cacheKey = `${platform}:${String(keyword).trim().toLowerCase()}`;
+  const hit = cache.get(cacheKey);
+  if (hit && !fresh && Date.now() - hit.at < CACHE_TTL) return Response.json(hit.payload);
 
   const gather = (kw: string) => Promise.all([
     fetcher ? fetcher(kw) : Promise.resolve([] as SourcePost[]),
@@ -140,7 +148,7 @@ Reply with ONLY this JSON:
     url: typeof pp.source === "number" ? outPosts[pp.source]?.url ?? null : null,
   }));
 
-  return Response.json({
+  const payload = {
     platform,
     topic,
     data_source: live ? "live" : "estimated",
@@ -158,5 +166,7 @@ Reply with ONLY this JSON:
     needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY (or REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)"
       : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY"
       : !live && ["tiktok", "facebook", "x"].includes(platform) && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY" : undefined,
-  });
+  };
+  if (!aiError) cache.set(cacheKey, { at: Date.now(), payload });
+  return Response.json(payload);
 }
