@@ -2,27 +2,28 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   fetchReddit, fetchYouTube, fetchBluesky, fetchHackerNews,
-  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, fetchTikTok, topHashtags, type SourcePost,
+  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, fetchTikTok, fetchFacebook, fetchTwitter, topHashtags, type SourcePost,
 } from "@/lib/socialSources";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
 type Sentiment = "positive" | "neutral" | "negative";
 
 const LABEL: Record<Platform, string> = {
   reddit: "Reddit", youtube: "YouTube", bluesky: "Bluesky", hackernews: "Hacker News",
-  x: "X (Twitter)", linkedin: "LinkedIn", tiktok: "TikTok", facebook: "Facebook",
+  x: "X (Twitter)", tiktok: "TikTok", facebook: "Facebook",
 };
 
 const FETCHERS: Partial<Record<Platform, (k: string) => Promise<SourcePost[]>>> = {
   reddit: fetchReddit, youtube: fetchYouTube, bluesky: fetchBluesky, hackernews: fetchHackerNews, tiktok: fetchTikTok,
+  facebook: fetchFacebook, x: fetchTwitter,
 };
 
 const COMMUNITY_KIND: Record<Platform, string> = {
   reddit: "subreddit names without r/", youtube: "YouTube channel names", bluesky: "Bluesky hashtags without # or feed topics",
-  hackernews: "HN topic areas", x: "hashtags without #", linkedin: "LinkedIn groups or creator niches",
+  hackernews: "HN topic areas", x: "hashtags without #",
   tiktok: "TikTok hashtags without #", facebook: "Facebook group names",
 };
 
@@ -145,8 +146,8 @@ Reply with ONLY this JSON:
     data_source: live ? "live" : "estimated",
     posts: outPosts,
     sentiment_summary: { ...counts, overall, summary: (ai?.summary as string) ?? "" },
-    top_communities: live && platform === "tiktok" ? topHashtags(posts)
-      : live && (platform === "reddit" || platform === "youtube") ? topCommunities(posts) : ((ai?.communities as string[]) ?? []),
+    top_communities: live && (platform === "tiktok" || platform === "x") ? topHashtags(posts)
+      : live && (platform === "reddit" || platform === "youtube" || platform === "facebook") ? topCommunities(posts) : ((ai?.communities as string[]) ?? []),
     key_themes: (ai?.themes as string[]) ?? [],
     pain_points: painPoints,
     questions: (ai?.questions as string[]) ?? [],
@@ -156,6 +157,6 @@ Reply with ONLY this JSON:
     ai_error: aiError || undefined,
     needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY (or REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)"
       : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY"
-      : !live && platform === "tiktok" && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY" : undefined,
+      : !live && ["tiktok", "facebook", "x"].includes(platform) && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY" : undefined,
   });
 }

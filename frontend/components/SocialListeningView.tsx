@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
 
 interface Post {
   title: string;
@@ -59,7 +59,7 @@ interface ListenData {
   platform: Platform;
 }
 
-const ALL_PLATFORMS: Platform[] = ["reddit", "youtube", "bluesky", "hackernews", "x", "linkedin", "tiktok", "facebook"];
+const ALL_PLATFORMS: Platform[] = ["reddit", "youtube", "bluesky", "hackernews", "x", "tiktok", "facebook"];
 
 const PLATFORMS: { key: Platform; label: string; pill: string; activePill: string }[] = [
   { key: "reddit",     label: "Reddit",      pill: "bg-orange-50 text-orange-700 border-orange-200",    activePill: "bg-orange-600 text-white border-orange-600" },
@@ -67,13 +67,12 @@ const PLATFORMS: { key: Platform; label: string; pill: string; activePill: strin
   { key: "bluesky",    label: "Bluesky",     pill: "bg-sky-50 text-sky-700 border-sky-200",             activePill: "bg-sky-500 text-white border-sky-500" },
   { key: "hackernews", label: "HackerNews",  pill: "bg-amber-50 text-amber-700 border-amber-200",       activePill: "bg-amber-500 text-white border-amber-500" },
   { key: "x",          label: "X",           pill: "bg-slate-100 text-slate-700 border-slate-300",      activePill: "bg-slate-900 text-white border-slate-900" },
-  { key: "linkedin",   label: "LinkedIn",    pill: "bg-blue-50 text-blue-700 border-blue-200",          activePill: "bg-blue-700 text-white border-blue-700" },
   { key: "tiktok",     label: "TikTok",      pill: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", activePill: "bg-fuchsia-600 text-white border-fuchsia-600" },
   { key: "facebook",   label: "Facebook",    pill: "bg-indigo-50 text-indigo-700 border-indigo-200",    activePill: "bg-indigo-600 text-white border-indigo-600" },
 ];
 
 const COMMUNITY_PREFIX: Record<Platform, string> = {
-  reddit: "r/", youtube: "", bluesky: "#", hackernews: "", x: "#", linkedin: "", tiktok: "#", facebook: "",
+  reddit: "r/", youtube: "", bluesky: "#", hackernews: "", x: "#", tiktok: "#", facebook: "",
 };
 
 const COMMUNITY_STYLE: Record<Platform, string> = {
@@ -82,14 +81,13 @@ const COMMUNITY_STYLE: Record<Platform, string> = {
   bluesky:    "bg-sky-50 text-sky-700 hover:bg-sky-100",
   hackernews: "bg-amber-50 text-amber-700 hover:bg-amber-100",
   x:          "bg-slate-100 text-slate-700 hover:bg-slate-200",
-  linkedin:   "bg-blue-50 text-blue-700 hover:bg-blue-100",
   tiktok:     "bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100",
   facebook:   "bg-indigo-50 text-indigo-700 hover:bg-indigo-100",
 };
 
 const COMMUNITY_LABEL: Record<Platform, string> = {
   reddit: "Active Subreddits", youtube: "Top Channels", bluesky: "Hashtags & Feeds", hackernews: "Topic Areas",
-  x: "Top Hashtags", linkedin: "Active Communities",
+  x: "Top Hashtags",
   tiktok: "Top Hashtags", facebook: "Active Groups & Pages",
 };
 
@@ -99,14 +97,13 @@ const COMMUNITY_LINK: Record<Platform, (c: string) => string | null> = {
   bluesky:    c => c.startsWith("@") ? `https://bsky.app/profile/${c.slice(1)}` : null,
   hackernews: () => null,
   x:          c => `https://x.com/hashtag/${encodeURIComponent(c)}`,
-  linkedin:   () => null,
   tiktok:     c => `https://tiktok.com/tag/${encodeURIComponent(c)}`,
   facebook:   () => null,
 };
 
 const POST_HEADER: Record<Platform, string> = {
   reddit: "Reddit Discussions", youtube: "YouTube Videos", bluesky: "Bluesky Posts", hackernews: "HackerNews Stories",
-  x: "Conversations", linkedin: "Posts", tiktok: "Videos", facebook: "Posts",
+  x: "Conversations", tiktok: "Videos", facebook: "Posts",
 };
 
 const SENTIMENT_STYLES = {
@@ -393,7 +390,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                 {data.search_questions.length > 0
                   ? `Based on ${data.search_questions.length} real Google searches and today's news.`
                   : "Based on AI knowledge of this audience."}
-                {" "}Reddit, YouTube, TikTok, Bluesky and HackerNews show real posts.
+                {" "}Reddit, YouTube, TikTok, Facebook, X, Bluesky and HackerNews show real posts.
               </span>
             </div>
           )}

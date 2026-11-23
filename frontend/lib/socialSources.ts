@@ -355,3 +355,71 @@ export function topHashtags(posts: SourcePost[], n = 6): string[] {
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([t]) => t);
 }
+
+// ── Facebook via RapidAPI ("Facebook Scraper"; RAPIDAPI_KEY + optional RAPIDAPI_FACEBOOK_HOST) ──
+interface FacebookPost {
+  post_id: string; url?: string; message?: string; timestamp?: number; reactions_count?: number;
+  comments_count?: number; author?: { name?: string }; top_comments?: { text?: string; message?: string }[];
+}
+
+export async function fetchFacebook(keyword: string): Promise<SourcePost[]> {
+  const key = process.env.RAPIDAPI_KEY;
+  if (!key) return [];
+  const host = process.env.RAPIDAPI_FACEBOOK_HOST || "facebook-scraper3.p.rapidapi.com";
+  const headers = { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host };
+  const phrase = keyword.trim().includes(" ") ? `"${keyword.trim()}"` : keyword.trim();
+
+  const page = async (q: string, cursor?: string) =>
+    getJSON<{ results?: FacebookPost[]; cursor?: string }>(
+      `https://${host}/search/posts?query=${encodeURIComponent(q)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      { headers }, 15000
+    );
+
+  const raw: FacebookPost[] = [];
+  const add = (more?: FacebookPost[]) => {
+    for (const p of more ?? []) if (p.message && !raw.some((r) => r.post_id === p.post_id)) raw.push(p);
+  };
+  const first = await page(phrase);
+  add(first?.results);
+  if (first?.cursor) { await sleep(1100); add((await page(phrase, first.cursor))?.results); }
+  if (raw.length < 3 && phrase !== keyword.trim()) { await sleep(1100); add((await page(keyword.trim()))?.results); }
+
+  return raw.slice(0, 20).map((p) => ({
+    title: clip(p.message!.replace(/\s+/g, " "), 140),
+    text: clip(p.message!, 400),
+    community: p.author?.name ?? "",
+    author: p.author?.name ?? "",
+    score: p.reactions_count ?? 0,
+    num_comments: p.comments_count ?? 0,
+    url: p.url ?? "",
+    created_utc: p.timestamp ?? 0,
+    comments: (p.top_comments ?? []).map((c) => c.text ?? c.message ?? "").filter(Boolean).slice(0, 6).map((c) => clip(c, 280)),
+  }));
+}
+
+// ── X / Twitter via RapidAPI ("Twitter API45"; RAPIDAPI_KEY + optional RAPIDAPI_TWITTER_HOST) ──
+interface Tweet {
+  tweet_id?: string; screen_name?: string; text?: string; created_at?: string;
+  favorites?: number; retweets?: number; replies?: number; views?: string | number;
+}
+
+export async function fetchTwitter(keyword: string): Promise<SourcePost[]> {
+  const key = process.env.RAPIDAPI_KEY;
+  if (!key) return [];
+  const host = process.env.RAPIDAPI_TWITTER_HOST || "twitter-api45.p.rapidapi.com";
+  const data = await getJSON<{ timeline?: Tweet[] }>(
+    `https://${host}/search.php?query=${encodeURIComponent(keyword)}&search_type=Top`,
+    { headers: { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host } }, 15000
+  );
+  return (data?.timeline ?? []).filter((t) => t.text && t.tweet_id).slice(0, 20).map((t) => ({
+    title: clip(t.text!.replace(/\s+/g, " "), 140),
+    text: clip(t.text!, 400),
+    community: t.screen_name ? `@${t.screen_name}` : "",
+    author: t.screen_name ?? "",
+    score: (t.favorites ?? 0) + (t.retweets ?? 0),
+    num_comments: t.replies ?? 0,
+    url: `https://x.com/${t.screen_name ?? "i"}/status/${t.tweet_id}`,
+    created_utc: t.created_at ? Math.floor(Date.parse(t.created_at) / 1000) || 0 : 0,
+    comments: [],
+  }));
+}

@@ -67,7 +67,7 @@ Using this evidence, work out what content is winning and what is missing. Be sp
 Reply with ONLY this JSON:
 {"top_formats":["4 specific formats, e.g. '10-min registry practice walkthrough video'"],
 "best_angles":["4 specific angles with the hook"],
-"platform_activity":[{"platform":"YouTube","level":"high|medium|low","what_works":"specific"},{"platform":"Reddit","level":"...","what_works":"..."},{"platform":"TikTok","level":"...","what_works":"..."},{"platform":"Instagram","level":"...","what_works":"..."},{"platform":"LinkedIn","level":"...","what_works":"..."},{"platform":"Blog / SEO","level":"...","what_works":"..."}],
+"platform_activity":[{"platform":"YouTube","level":"high|medium|low","what_works":"specific"},{"platform":"Reddit","level":"...","what_works":"..."},{"platform":"TikTok","level":"...","what_works":"..."},{"platform":"Instagram","level":"...","what_works":"..."},{"platform":"Facebook","level":"...","what_works":"..."},{"platform":"Blog / SEO","level":"...","what_works":"..."}],
 "trending_topics":["5 short sub-topics rising right now"],
 "content_gaps":["4 specific gaps"],
 "ideas":[{"title":"ready-to-use title","platform":"where to post","hook":"first line or first 3 seconds"}]}
