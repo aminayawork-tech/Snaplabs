@@ -60,7 +60,69 @@ async function redditAuthHeader(): Promise<Record<string, string> | null> {
   return { Authorization: `Bearer ${data.access_token}` };
 }
 
+// ── Reddit via RapidAPI (SteadyAPI "Reddit"; RAPIDAPI_KEY + optional RAPIDAPI_REDDIT_HOST) ──
+// Basic plan allows ~1 request/second, so calls are made one at a time.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface RapidPost { id: string; title: string; author: string; subreddit: string; selftext?: string; score?: number; num_comments?: number; url?: string; permalink?: string; created_utc?: number; over_18?: boolean }
+
+async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
+  const key = process.env.RAPIDAPI_KEY!;
+  const host = process.env.RAPIDAPI_REDDIT_HOST || "reddit3.p.rapidapi.com";
+  const headers = { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host };
+  const phrase = keyword.trim().includes(" ") ? `"${keyword.trim()}"` : keyword.trim();
+  const words = keyword.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const spam = /for hire|hire me|pay (someone|me)|take my [\w ]{0,20}(exam|test|class|course)|do my [\w ]{0,20}(homework|exam)|cheat|bypass|proctored exam help/i;
+  const exact = keyword.trim().toLowerCase();
+  const relevant = (p: RapidPost) => {
+    if (spam.test(p.title)) return false;
+    const title = p.title.toLowerCase();
+    return `${title} ${(p.selftext ?? "").toLowerCase()}`.includes(exact) || words.every((w) => title.includes(w));
+  };
+
+  const search = async (q: string, timeFilter: string) =>
+    (await getJSON<{ body?: RapidPost[] }>(
+      `https://${host}/v1/reddit/search?search=${encodeURIComponent(q)}&filter=posts&timeFilter=${timeFilter}&sortType=relevance`,
+      { headers }, 12000
+    ))?.body ?? [];
+
+  let raw: RapidPost[] = [];
+  const add = (more: RapidPost[]) => {
+    const seen = new Set(raw.map((p) => p.id));
+    raw = [...raw, ...more.filter((p) => relevant(p) && !seen.has(p.id))];
+  };
+  add(await search(phrase, "year"));
+  if (raw.length < 5) { await sleep(1100); add(await search(phrase, "all")); }
+  if (raw.length < 3 && phrase !== keyword.trim()) { await sleep(1100); add(await search(keyword.trim(), "all")); }
+
+  const posts: SourcePost[] = raw.filter((p) => !p.over_18).slice(0, 25).map((p) => ({
+    title: p.title,
+    text: clip(String(p.selftext ?? ""), 400),
+    community: p.subreddit,
+    author: p.author,
+    score: p.score ?? 0,
+    num_comments: p.num_comments ?? 0,
+    url: p.url || `https://www.reddit.com${p.permalink ?? ""}`,
+    created_utc: p.created_utc ?? 0,
+    comments: [],
+  }));
+
+  for (const p of [...posts].filter((x) => x.num_comments > 0).sort((a, b) => b.num_comments - a.num_comments).slice(0, 2)) {
+    await sleep(1100);
+    const detail = await getJSON<{ body?: { post_comments?: { content?: string; score?: number }[] } }>(
+      `https://${host}/v1/reddit/post?url=${encodeURIComponent(p.url)}`, { headers }, 8000
+    );
+    p.comments = (detail?.body?.post_comments ?? [])
+      .filter((c) => c.content && c.content !== "[deleted]" && c.content !== "[removed]")
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, 6)
+      .map((c) => clip(String(c.content), 280));
+  }
+  return posts;
+}
+
 export async function fetchReddit(keyword: string): Promise<SourcePost[]> {
+  if (!process.env.REDDIT_CLIENT_ID && process.env.RAPIDAPI_KEY) return fetchRedditRapid(keyword);
   const auth = await redditAuthHeader();
   const host = auth ? "https://oauth.reddit.com" : "https://www.reddit.com";
   const q = encodeURIComponent(keyword);

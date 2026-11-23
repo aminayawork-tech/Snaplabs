@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   let topic: string = keyword;
   let [posts, questions, news] = await gather(keyword);
-  if (posts.length < 3 && questions.length < 3) {
+  if (fetcher ? posts.length < 3 : questions.length < 3) {
     const broader = await broaderTopic(keyword);
     if (broader) {
       const [p2, q2, n2] = await gather(broader);
@@ -153,7 +153,7 @@ Reply with ONLY this JSON:
     opportunities: (ai?.opportunities as string[]) ?? [],
     search_questions: questions.slice(0, 12),
     ai_error: aiError || undefined,
-    needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID ? "REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET"
+    needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY (or REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)"
       : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY" : undefined,
   });
 }
