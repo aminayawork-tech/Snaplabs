@@ -54,8 +54,6 @@ export const api = {
   agents: {
     run: (body: { agent_id: string; research_data: ResearchData; biz_name: string; task_override?: string }, signal?: AbortSignal) =>
       streamSSE("/api/agents/run", body, signal),
-    runAll: (body: { research_data: ResearchData; biz_name: string }, signal?: AbortSignal) =>
-      streamSSE("/api/agents/run-all", body, signal),
   },
 
   chat: (body: { message: string; research_data: ResearchData; history: { role: string; content: string }[] }, signal?: AbortSignal) =>

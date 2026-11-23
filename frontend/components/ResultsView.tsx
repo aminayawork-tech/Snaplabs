@@ -3,10 +3,10 @@ import { useState } from "react";
 import type { AuditResult, Competitor, QuickWin, AudiencePersona, AgentOutput, Keyword } from "@/lib/types";
 import { AGENTS } from "@/lib/types";
 import { api } from "@/lib/api";
-import { renderMarkdown } from "@/lib/renderMarkdown";
 import { exportPDF } from "@/lib/exportPDF";
 import Section from "./Section";
 import AgentGrid from "./AgentGrid";
+import AgentOutputView from "./AgentOutput";
 import ChatPanel from "./ChatPanel";
 
 function guessAgentId(tactic: string): string {
@@ -258,8 +258,8 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
                   </button>
                 </div>
               </div>
-              <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 leading-relaxed max-h-[520px] overflow-y-auto">
-                {renderMarkdown(streamText || output?.output || "")}
+              <div className="max-h-[640px] overflow-y-auto">
+                <AgentOutputView agentId={agentId} text={streamText || output?.output || ""} streaming={running} />
               </div>
             </div>
           )}

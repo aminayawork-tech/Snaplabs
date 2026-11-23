@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getTask } from "@/lib/agentRunner";
+import { buildAgentPrompt } from "@/lib/agentRunner";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -8,15 +8,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const { agent_id, research_data, biz_name, task_override } = await req.json();
   const enc = new TextEncoder();
-  const biz = biz_name ?? "this business";
-
-  const task = task_override
-    ? `Complete this specific marketing task for ${biz} in full. Produce ready-to-use output — actual copy, templates, scripts, or plans — that can be used immediately. Do not outline or summarize; write the real thing.\n\nTASK: ${task_override}`
-    : getTask(agent_id, biz);
-
-  const system = task_override
-    ? `You are a senior marketing specialist executing a specific task for ${biz}. Use every detail from the audit data below to make your output specific to this business — use their real service names, real audience, real location, real competitors where relevant. Output should be complete and ready to hand off or publish.\n\nAudit Data:\n${JSON.stringify(research_data).slice(0, 12000)}`
-    : `You are a specialized marketing AI agent. Generate specific, actionable marketing content.\n\nAudit Data:\n${JSON.stringify(research_data).slice(0, 12000)}`;
+  const { system, task, maxTokens } = buildAgentPrompt(agent_id, biz_name, research_data, task_override);
 
   const stream = new ReadableStream({
     async start(ctrl) {
@@ -25,7 +17,7 @@ export async function POST(req: NextRequest) {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
         const response = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: 8192,
+          max_tokens: maxTokens,
           system,
           messages: [{ role: "user", content: task }],
         });

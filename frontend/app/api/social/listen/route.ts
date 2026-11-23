@@ -1,126 +1,145 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  fetchReddit, fetchYouTube, fetchBluesky, fetchHackerNews,
+  fetchSearchQuestions, fetchNewsHeadlines, type SourcePost,
+} from "@/lib/socialSources";
 
-export const maxDuration = 45;
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+type Sentiment = "positive" | "neutral" | "negative";
 
-interface HNPost { title: string; author: string; score: number; num_comments: number; url: string; created_utc: number; }
+const LABEL: Record<Platform, string> = {
+  reddit: "Reddit", youtube: "YouTube", bluesky: "Bluesky", hackernews: "Hacker News",
+  x: "X (Twitter)", linkedin: "LinkedIn", tiktok: "TikTok", facebook: "Facebook",
+};
 
-async function fetchHN(keyword: string): Promise<HNPost[]> {
-  try {
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 4000);
-    const res = await fetch(
-      `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(keyword)}&hitsPerPage=10&tags=story`,
-      { signal: ac.signal }
-    );
-    clearTimeout(t);
-    if (!res.ok) return [];
-    const data = await res.json();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data.hits ?? []).filter((h: any) => h.title).slice(0, 10).map((h: any) => ({
-      title: h.title as string, author: h.author as string,
-      score: (h.points ?? 0) as number, num_comments: (h.num_comments ?? 0) as number,
-      // Use original story URL when available; fall back to HN discussion page
-      url: (h.url as string | null) ?? `https://news.ycombinator.com/item?id=${h.objectID}`,
-      created_utc: Math.floor(new Date(h.created_at).getTime() / 1000),
-    }));
-  } catch { return []; }
+const FETCHERS: Partial<Record<Platform, (k: string) => Promise<SourcePost[]>>> = {
+  reddit: fetchReddit, youtube: fetchYouTube, bluesky: fetchBluesky, hackernews: fetchHackerNews,
+};
+
+const COMMUNITY_KIND: Record<Platform, string> = {
+  reddit: "subreddit names without r/", youtube: "YouTube channel names", bluesky: "Bluesky hashtags without # or feed topics",
+  hackernews: "HN topic areas", x: "hashtags without #", linkedin: "LinkedIn groups or creator niches",
+  tiktok: "TikTok hashtags without #", facebook: "Facebook group names",
+};
+
+function topCommunities(posts: SourcePost[], n = 6): string[] {
+  const counts = new Map<string, number>();
+  for (const p of posts) counts.set(p.community, (counts.get(p.community) ?? 0) + 1 + Math.log10(1 + p.num_comments));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([c]) => c);
 }
 
-const PLATFORM_LABEL: Record<Platform, string> = {
-  reddit: "Reddit", hackernews: "HackerNews", x: "X (Twitter)",
-  linkedin: "LinkedIn", tiktok: "TikTok", facebook: "Facebook",
-};
-
-const DEFAULT_COMMUNITIES: Record<Platform, string[]> = {
-  reddit:     ["marketing", "entrepreneur", "smallbusiness", "socialmedia"],
-  hackernews: ["Technology", "Startups", "Science", "Business"],
-  x:          ["marketing", "socialmedia", "digitalmarketing", "contentcreator"],
-  linkedin:   ["Marketing Professionals", "Digital Marketing", "Entrepreneurs", "B2B Sales"],
-  tiktok:     ["marketing", "smallbusiness", "entrepreneur", "contentcreator"],
-  facebook:   ["Digital Marketing Group", "Entrepreneurs Network", "Small Business Community", "Social Media Marketing"],
-};
-
-const COMMUNITY_TYPE: Record<Platform, string> = {
-  reddit: "subreddit names (no r/ prefix)", hackernews: "HN topic areas",
-  x: "hashtags (no # symbol)", linkedin: "LinkedIn group names",
-  tiktok: "TikTok hashtags (no # symbol)", facebook: "Facebook group names",
-};
-
-const VALID_PLATFORMS = new Set<Platform>(["reddit", "hackernews", "x", "linkedin", "tiktok", "facebook"]);
+function parseJSON(text: string) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
+}
 
 export async function POST(req: NextRequest) {
-  const { keyword, platform: rawPlatform } = await req.json();
+  const { keyword, platform: raw } = await req.json();
   if (!keyword) return Response.json({ error: "Keyword required" }, { status: 400 });
+  const platform: Platform = raw in LABEL ? raw : "reddit";
+  const fetcher = FETCHERS[platform];
 
-  const platform: Platform = VALID_PLATFORMS.has(rawPlatform) ? rawPlatform : "reddit";
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+  const [posts, questions, news] = await Promise.all([
+    fetcher ? fetcher(keyword) : Promise.resolve([] as SourcePost[]),
+    fetchSearchQuestions(keyword),
+    fetchNewsHeadlines(keyword),
+  ]);
+  const live = posts.length > 0;
+  const analysed = [...posts].sort((a, b) => (b.num_comments + b.score / 10) - (a.num_comments + a.score / 10)).slice(0, 20);
 
-  const realPosts = platform === "hackernews" ? await fetchHN(keyword) : [];
-  const hasReal = realPosts.length > 0;
+  const postBlock = analysed.map((p, i) => {
+    const comments = p.comments.length ? `\n   Top replies: ${p.comments.map((c) => `"${c}"`).join(" | ")}` : "";
+    return `[${i}] (${p.community}, ${p.score} ${platform === "youtube" ? "views" : "pts"}, ${p.num_comments} comments) ${p.title}${p.text && p.text !== p.title ? `\n   ${p.text}` : ""}${comments}`;
+  }).join("\n");
 
-  const postCtx = hasReal
-    ? `Recent posts: ${realPosts.slice(0, 5).map(p => `"${p.title}"`).join("; ")}.`
-    : "";
+  const prompt = `You are a social listening analyst. Topic: "${keyword}". Platform: ${LABEL[platform]}.
 
-  const prompt = `Social insights for "${keyword}" on ${PLATFORM_LABEL[platform]}. ${postCtx}
-Reply with ONLY JSON. Use real ${COMMUNITY_TYPE[platform]} for "communities":
-{"overall":"neutral","summary":"2 sentences.","themes":["a","b","c","d"],"opportunities":["x","y","z"],"communities":["c1","c2","c3","c4"],"pos":30,"neu":50,"neg":20}`;
+${live
+    ? `REAL ${LABEL[platform].toUpperCase()} POSTS (collected just now):\n${postBlock}`
+    : `${LABEL[platform]} has no public data API, so there are no posts. Base your analysis on the real search and news signals below, and on what you know about how this audience talks on ${LABEL[platform]}. Be specific to "${keyword}", never generic.`}
 
-  // Default fallback — used if Claude times out or errors
-  const fallback = {
-    overall: "neutral" as const,
-    summary: `Discussion about "${keyword}" on ${PLATFORM_LABEL[platform]} shows mixed engagement across the community with varied perspectives on the topic.`,
-    themes: [keyword, `${keyword} tips`, `${keyword} trends`, "community insights"],
-    opportunities: [
-      `Create educational content about ${keyword}`,
-      `Engage with existing ${keyword} communities`,
-      `Address common questions about ${keyword}`,
-    ],
-    communities: DEFAULT_COMMUNITIES[platform],
-    pos: 33, neu: 44, neg: 23,
-  };
+REAL GOOGLE SEARCHES people type about this topic:
+${questions.join("; ") || "(none)"}
 
-  let ai = fallback;
+LATEST NEWS HEADLINES:
+${news.join("; ") || "(none)"}
 
+Rules: be concrete and specific to this topic and these people. No generic marketing advice like "create educational content" or "engage with communities". Every opportunity and content idea must name the specific pain point, question or angle it targets.${live ? " Pain point quotes must be copied verbatim (shortened if needed) from the posts or replies above." : " Leave quote empty when you have no real source."}
+
+Reply with ONLY this JSON:
+{
+  "summary": "3-4 sentences on what people are actually saying, what they want, and what frustrates them",
+  "overall": "positive|neutral|negative",
+  ${live ? `"post_sentiments": [{"i": 0, "s": "positive|neutral|negative", "insight": "what this post reveals, one line"}],` : `"pos": 0, "neu": 0, "neg": 0,`}
+  "pain_points": [{"point": "specific frustration", "quote": "verbatim snippet or empty", "source": ${live ? "post index number or null" : "null"}}],
+  "questions": ["real questions this audience asks (5-8)"],
+  "themes": ["5-7 short specific themes"],
+  "communities": ["4-6 real ${COMMUNITY_KIND[platform]} where this conversation happens"],
+  "content_ideas": [{"title": "specific post/video title", "format": "e.g. Reddit post, short video, carousel", "why": "which pain point or question it answers"}],
+  "opportunities": ["3-5 specific marketing moves"]
+}${live ? `\nInclude a post_sentiments entry for every post index 0-${analysed.length - 1}.` : ""}`;
+
+  let ai: Record<string, unknown> | null = null;
+  let aiError = "";
   try {
-    // Use Anthropic SDK timeout — if Claude doesn't respond in 7s, we use fallback
-    const response = await anthropic.messages.create(
-      {
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 180,
-        messages: [{ role: "user", content: prompt }],
-      },
-      { timeout: 7000 }
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+    const res = await anthropic.messages.create(
+      { model: "claude-haiku-4-5-20251001", max_tokens: 3000, messages: [{ role: "user", content: prompt }] },
+      { timeout: 40000 }
     );
-    const text = response.content[0].type === "text" ? response.content[0].text : "{}";
-    const match = text.match(/\{[\s\S]*\}/);
-    const parsed = match ? JSON.parse(match[0]) : null;
-    if (parsed) ai = parsed;
-  } catch {
-    // Timeout or error — use fallback silently, still return 200
+    ai = parseJSON(res.content[0].type === "text" ? res.content[0].text : "");
+    if (!ai) aiError = "AI analysis returned an unreadable response — try again.";
+  } catch (e) {
+    aiError = `AI analysis failed: ${e instanceof Error ? e.message : String(e)}`;
   }
 
-  const overall = (["positive","neutral","negative"].includes(ai.overall) ? ai.overall : "neutral") as "positive"|"neutral"|"negative";
+  const sentiments = new Map<number, { s: Sentiment; insight: string }>();
+  for (const ps of (ai?.post_sentiments as { i: number; s: Sentiment; insight: string }[] | undefined) ?? []) {
+    if (["positive", "neutral", "negative"].includes(ps.s)) sentiments.set(Number(ps.i), { s: ps.s, insight: ps.insight ?? "" });
+  }
+
+  const outPosts = analysed.map((p, i) => ({
+    title: p.title, text: p.text, community: p.community, author: p.author,
+    score: p.score, num_comments: p.num_comments, url: p.url, created_utc: p.created_utc,
+    sentiment: sentiments.get(i)?.s ?? ("neutral" as Sentiment),
+    key_insight: sentiments.get(i)?.insight ?? "",
+  }));
+
+  const counts = live
+    ? {
+        positive: outPosts.filter((p) => p.sentiment === "positive").length,
+        neutral: outPosts.filter((p) => p.sentiment === "neutral").length,
+        negative: outPosts.filter((p) => p.sentiment === "negative").length,
+      }
+    : { positive: Number(ai?.pos ?? 0), neutral: Number(ai?.neu ?? 0), negative: Number(ai?.neg ?? 0) };
+  const overall = (["positive", "neutral", "negative"].includes(ai?.overall as string) ? ai?.overall : "neutral") as Sentiment;
+
+  const painPoints = ((ai?.pain_points as { point: string; quote?: string; source?: number | null }[] | undefined) ?? []).map((pp) => ({
+    point: pp.point,
+    quote: pp.quote ?? "",
+    url: typeof pp.source === "number" ? outPosts[pp.source]?.url ?? null : null,
+  }));
 
   return Response.json({
-    posts: realPosts.map(p => ({
-      title: p.title, subreddit: p.author, score: p.score,
-      num_comments: p.num_comments, url: p.url, created_utc: p.created_utc,
-      sentiment: "neutral" as const, key_insight: "",
-    })),
-    sentiment_summary: {
-      positive: ai.pos ?? 33, neutral: ai.neu ?? 44, negative: ai.neg ?? 23,
-      overall,
-      summary: ai.summary ?? fallback.summary,
-    },
-    top_communities: ai.communities ?? fallback.communities,
-    key_themes: ai.themes ?? fallback.themes,
-    opportunities: ai.opportunities ?? fallback.opportunities,
-    data_source: hasReal ? platform : "ai",
     platform,
+    data_source: live ? "live" : "estimated",
+    posts: outPosts,
+    sentiment_summary: { ...counts, overall, summary: (ai?.summary as string) ?? "" },
+    top_communities: live && (platform === "reddit" || platform === "youtube") ? topCommunities(posts) : ((ai?.communities as string[]) ?? []),
+    key_themes: (ai?.themes as string[]) ?? [],
+    pain_points: painPoints,
+    questions: (ai?.questions as string[]) ?? [],
+    content_ideas: (ai?.content_ideas as { title: string; format: string; why: string }[]) ?? [],
+    opportunities: (ai?.opportunities as string[]) ?? [],
+    search_questions: questions.slice(0, 12),
+    ai_error: aiError || undefined,
+    needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID ? "REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET"
+      : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY" : undefined,
   });
 }

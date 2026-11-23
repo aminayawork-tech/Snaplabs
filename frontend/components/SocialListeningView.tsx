@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
 
-type Platform = "reddit" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
+type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "linkedin" | "tiktok" | "facebook";
 
 interface Post {
   title: string;
-  subreddit: string;
+  text: string;
+  community: string;
+  author: string;
   score: number;
   num_comments: number;
   url: string;
@@ -29,6 +31,9 @@ interface PlatformActivity {
 }
 
 interface ContentDiscovery {
+  questions?: string[];
+  top_content?: { title: string; platform: string; url: string; metric: string }[];
+  ideas?: { title: string; platform: string; hook: string }[];
   top_formats: string[];
   best_angles: string[];
   platform_activity: PlatformActivity[];
@@ -42,14 +47,22 @@ interface ListenData {
   top_communities: string[];
   key_themes: string[];
   opportunities: string[];
-  data_source: string;
+  pain_points: { point: string; quote: string; url: string | null }[];
+  questions: string[];
+  content_ideas: { title: string; format: string; why: string }[];
+  search_questions: string[];
+  data_source: "live" | "estimated";
+  ai_error?: string;
+  needs_key?: string;
   platform: Platform;
 }
 
-const ALL_PLATFORMS: Platform[] = ["reddit", "hackernews", "x", "linkedin", "tiktok", "facebook"];
+const ALL_PLATFORMS: Platform[] = ["reddit", "youtube", "bluesky", "hackernews", "x", "linkedin", "tiktok", "facebook"];
 
 const PLATFORMS: { key: Platform; label: string; pill: string; activePill: string }[] = [
   { key: "reddit",     label: "Reddit",      pill: "bg-orange-50 text-orange-700 border-orange-200",    activePill: "bg-orange-600 text-white border-orange-600" },
+  { key: "youtube",    label: "YouTube",     pill: "bg-red-50 text-red-700 border-red-200",             activePill: "bg-red-600 text-white border-red-600" },
+  { key: "bluesky",    label: "Bluesky",     pill: "bg-sky-50 text-sky-700 border-sky-200",             activePill: "bg-sky-500 text-white border-sky-500" },
   { key: "hackernews", label: "HackerNews",  pill: "bg-amber-50 text-amber-700 border-amber-200",       activePill: "bg-amber-500 text-white border-amber-500" },
   { key: "x",          label: "X",           pill: "bg-slate-100 text-slate-700 border-slate-300",      activePill: "bg-slate-900 text-white border-slate-900" },
   { key: "linkedin",   label: "LinkedIn",    pill: "bg-blue-50 text-blue-700 border-blue-200",          activePill: "bg-blue-700 text-white border-blue-700" },
@@ -58,11 +71,13 @@ const PLATFORMS: { key: Platform; label: string; pill: string; activePill: strin
 ];
 
 const COMMUNITY_PREFIX: Record<Platform, string> = {
-  reddit: "r/", hackernews: "", x: "#", linkedin: "", tiktok: "#", facebook: "",
+  reddit: "r/", youtube: "", bluesky: "#", hackernews: "", x: "#", linkedin: "", tiktok: "#", facebook: "",
 };
 
 const COMMUNITY_STYLE: Record<Platform, string> = {
   reddit:     "bg-orange-50 text-orange-700 hover:bg-orange-100",
+  youtube:    "bg-red-50 text-red-700 hover:bg-red-100",
+  bluesky:    "bg-sky-50 text-sky-700 hover:bg-sky-100",
   hackernews: "bg-amber-50 text-amber-700 hover:bg-amber-100",
   x:          "bg-slate-100 text-slate-700 hover:bg-slate-200",
   linkedin:   "bg-blue-50 text-blue-700 hover:bg-blue-100",
@@ -71,13 +86,15 @@ const COMMUNITY_STYLE: Record<Platform, string> = {
 };
 
 const COMMUNITY_LABEL: Record<Platform, string> = {
-  reddit: "Active Subreddits", hackernews: "Topic Areas",
+  reddit: "Active Subreddits", youtube: "Top Channels", bluesky: "Hashtags & Feeds", hackernews: "Topic Areas",
   x: "Top Hashtags", linkedin: "Active Communities",
   tiktok: "Top Hashtags", facebook: "Active Groups & Pages",
 };
 
 const COMMUNITY_LINK: Record<Platform, (c: string) => string | null> = {
   reddit:     c => `https://reddit.com/r/${c}`,
+  youtube:    c => `https://www.youtube.com/results?search_query=${encodeURIComponent(c)}`,
+  bluesky:    c => c.startsWith("@") ? `https://bsky.app/profile/${c.slice(1)}` : null,
   hackernews: () => null,
   x:          c => `https://x.com/hashtag/${encodeURIComponent(c)}`,
   linkedin:   () => null,
@@ -86,7 +103,7 @@ const COMMUNITY_LINK: Record<Platform, (c: string) => string | null> = {
 };
 
 const POST_HEADER: Record<Platform, string> = {
-  reddit: "Reddit Discussions", hackernews: "HackerNews Stories",
+  reddit: "Reddit Discussions", youtube: "YouTube Videos", bluesky: "Bluesky Posts", hackernews: "HackerNews Stories",
   x: "Conversations", linkedin: "Posts", tiktok: "Videos", facebook: "Posts",
 };
 
@@ -359,10 +376,27 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
       {data && !isActiveLoading && (
         <div className="flex flex-col gap-4 view-enter">
 
-          {data.data_source === "ai" && (
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-700">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span><strong>AI-powered insights</strong> — Real-time {PLATFORMS.find(p => p.key === activePlatform)?.label} data is not available. Showing Claude-generated analysis based on typical discussions.</span>
+          {data.data_source === "live" ? (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+              <span><strong>Live data</strong> — analyzed {data.posts.length} real {PLATFORMS.find(p => p.key === activePlatform)?.label} posts{data.top_communities.length > 0 && activePlatform !== "hackernews" ? ` from ${data.top_communities.slice(0, 3).map(c => `${COMMUNITY_PREFIX[activePlatform]}${c}`).join(", ")}` : ""}, plus {data.search_questions.length} real Google searches.</span>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-800">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0 mt-px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>
+                {data.needs_key
+                  ? <><strong>Not connected</strong> — add <code className="font-mono">{data.needs_key}</code> in Vercel to pull live {PLATFORMS.find(p => p.key === activePlatform)?.label} posts. </>
+                  : <><strong>Estimated</strong> — {PLATFORMS.find(p => p.key === activePlatform)?.label} has no public data API. </>}
+                This analysis is grounded in {data.search_questions.length} real Google searches and today&apos;s news. Try Reddit, YouTube, Bluesky or HackerNews for real posts.
+              </span>
+            </div>
+          )}
+
+          {data.ai_error && (
+            <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-xs text-red-700">
+              <span>{data.ai_error}</span>
+              <button onClick={() => fetchPlatform(activePlatform, keyword.trim())} className="font-semibold underline flex-shrink-0">Retry</button>
             </div>
           )}
 
@@ -385,18 +419,18 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
           {/* ── SOCIAL LISTENING ── */}
           {activeSection === "social" && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {!data.ai_error && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Sentiment Overview</p>
                   <div className="flex items-center gap-3 mb-4">
                     <SentimentIcon overall={data.sentiment_summary.overall} />
                     <div>
                       <p className="font-bold text-slate-900 capitalize">{data.sentiment_summary.overall} overall</p>
-                      <p className="text-xs text-slate-400">{totalPosts > 0 ? `${totalPosts} posts analyzed` : "AI-estimated sentiment"}</p>
+                      <p className="text-xs text-slate-400">{data.data_source === "live" ? `${totalPosts} real posts analyzed` : "Estimated sentiment"}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <SentimentBar label="Positive" count={data.sentiment_summary.positive} total={totalPosts || 100} color="bg-[#eff6ff]0" />
+                    <SentimentBar label="Positive" count={data.sentiment_summary.positive} total={totalPosts || 100} color="bg-emerald-500" />
                     <SentimentBar label="Neutral"  count={data.sentiment_summary.neutral}  total={totalPosts || 100} color="bg-slate-400" />
                     <SentimentBar label="Negative" count={data.sentiment_summary.negative} total={totalPosts || 100} color="bg-red-500" />
                   </div>
@@ -431,12 +465,66 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
 
-              <div className="bg-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-4">
-                <p className="text-[0.6875rem] font-semibold text-[#275fe8] uppercase tracking-[0.1em] mb-2">AI Summary</p>
-                <p className="text-sm text-slate-700 leading-relaxed">{data.sentiment_summary.summary}</p>
-              </div>
+              {data.sentiment_summary.summary && (
+                <div className="bg-[#f0f7ff] border border-[#bfdbfe] rounded-2xl p-4">
+                  <p className="text-[0.6875rem] font-semibold text-[#275fe8] uppercase tracking-[0.1em] mb-2">What People Are Saying</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{data.sentiment_summary.summary}</p>
+                </div>
+              )}
+
+              {(data.pain_points.length > 0 || data.questions.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {data.pain_points.length > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                      <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Pain Points</p>
+                      <ul className="space-y-3">
+                        {data.pain_points.map((pp, i) => (
+                          <li key={i} className="text-sm">
+                            <p className="font-semibold text-slate-800 flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 flex-shrink-0" />{pp.point}
+                            </p>
+                            {pp.quote && (
+                              <p className="ml-3.5 mt-1 pl-3 border-l-2 border-slate-200 text-xs text-slate-500 italic">
+                                &ldquo;{pp.quote}&rdquo;
+                                {pp.url && <a href={pp.url} target="_blank" rel="noopener noreferrer" className="not-italic text-[#275fe8] font-semibold ml-1.5 hover:underline">source ↗</a>}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {data.questions.length > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                      <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Questions People Ask</p>
+                      <ul className="space-y-2">
+                        {data.questions.map((q, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                            <span className="text-[#275fe8] font-bold flex-shrink-0">?</span>{q}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {data.content_ideas.length > 0 && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                  <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Content Ideas From This Conversation</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {data.content_ideas.map((c, i) => (
+                      <div key={i} className="border border-slate-100 bg-slate-50 rounded-xl p-3.5">
+                        <span className="text-[0.625rem] font-bold uppercase tracking-wide text-[#275fe8]">{c.format}</span>
+                        <p className="text-sm font-semibold text-slate-800 mt-1 leading-snug">{c.title}</p>
+                        <p className="text-xs text-slate-500 mt-1.5">{c.why}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {data.opportunities.length > 0 && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
@@ -473,11 +561,11 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                             {post.key_insight && (
                               <p className="text-xs text-slate-500 mt-1 italic">{post.key_insight}</p>
                             )}
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400 flex-wrap">
                               <span className={`font-semibold ${COMMUNITY_STYLE[activePlatform].split(" ")[1]}`}>
-                                {activePlatform === "reddit" ? `r/${post.subreddit}` : activePlatform === "hackernews" ? `by ${post.subreddit}` : post.subreddit}
+                                {activePlatform === "reddit" ? `r/${post.community}` : activePlatform === "hackernews" ? `by ${post.author}` : post.community}
                               </span>
-                              <span>↑ {post.score}</span>
+                              <span>{activePlatform === "youtube" ? `${post.score.toLocaleString()} views` : `↑ ${post.score}`}</span>
                               <span>{post.num_comments} comments</span>
                               <span>{timeAgo(post.created_utc)}</span>
                             </div>
@@ -503,10 +591,54 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
             contentDiscoveryLoading ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="w-8 h-8 border-4 border-[#eff6ff] border-t-[#275fe8] rounded-full animate-spin" />
-                <p className="text-sm text-slate-500">Generating content strategy…</p>
+                <p className="text-sm text-slate-500">Pulling live YouTube, Bluesky &amp; search data…</p>
               </div>
             ) : contentDiscovery ? (
               <div className="flex flex-col gap-4">
+                {(contentDiscovery.top_content ?? []).length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <p className="text-[0.6875rem] font-semibold text-slate-500 uppercase tracking-[0.1em]">Top Performing Content Right Now (live)</p>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {(contentDiscovery.top_content ?? []).map((c, i) => (
+                        <a key={i} href={c.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition">
+                          <span className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-400 w-20 flex-shrink-0">{c.platform}</span>
+                          <span className="text-sm font-semibold text-slate-800 flex-1 min-w-0 truncate">{c.title}</span>
+                          <span className="text-xs text-slate-400 flex-shrink-0 hidden sm:block">{c.metric}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(contentDiscovery.ideas ?? []).length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">Ready-to-Use Content Ideas</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {(contentDiscovery.ideas ?? []).map((idea, i) => (
+                        <div key={i} className="border border-slate-100 bg-slate-50 rounded-xl p-3.5">
+                          <span className="text-[0.625rem] font-bold uppercase tracking-wide text-[#275fe8]">{idea.platform}</span>
+                          <p className="text-sm font-semibold text-slate-800 mt-1 leading-snug">{idea.title}</p>
+                          <p className="text-xs text-slate-500 mt-1.5"><span className="font-semibold text-slate-600">Hook:</span> {idea.hook}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(contentDiscovery.questions ?? []).length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-3">What People Are Googling</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(contentDiscovery.questions ?? []).map((q, i) => (
+                        <span key={i} className="text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">{q}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {(contentDiscovery.platform_activity ?? []).length > 0 && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <p className="text-[0.6875rem] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-4">Platform Activity</p>
