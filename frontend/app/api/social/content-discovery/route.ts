@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { fetchYouTube, fetchBluesky, fetchHackerNews, fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, type SourcePost } from "@/lib/socialSources";
+import { fetchYouTube, fetchTikTok, fetchBluesky, fetchHackerNews, fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, type SourcePost } from "@/lib/socialSources";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -13,25 +13,26 @@ export async function POST(req: NextRequest) {
 
   const gather = (kw: string) => Promise.all([
     fetchYouTube(kw), fetchBluesky(kw), fetchHackerNews(kw),
-    fetchSearchQuestions(kw), fetchNewsHeadlines(kw),
+    fetchSearchQuestions(kw), fetchNewsHeadlines(kw), fetchTikTok(kw),
   ]);
   let topic: string = keyword;
-  let [youtube, bluesky, hn, questions, news] = await gather(keyword);
-  const signal = () => youtube.length + bluesky.length + hn.length + questions.length;
+  let [youtube, bluesky, hn, questions, news, tiktok] = await gather(keyword);
+  const signal = () => youtube.length + bluesky.length + hn.length + questions.length + tiktok.length;
   if (signal() < 6) {
     const broader = await broaderTopic(keyword);
     if (broader) {
       const before = signal();
       const next = await gather(broader);
-      if (next[0].length + next[1].length + next[2].length + next[3].length > before) {
+      if (next[0].length + next[1].length + next[2].length + next[3].length + next[5].length > before) {
         topic = broader;
-        [youtube, bluesky, hn, questions, news] = next;
+        [youtube, bluesky, hn, questions, news, tiktok] = next;
       }
     }
   }
 
   const top = (posts: SourcePost[], n: number) => [...posts].sort((a, b) => b.score - a.score).slice(0, n);
   const topContent = [
+    ...top(tiktok, 5).map((p) => ({ title: p.title, platform: "TikTok", url: p.url, metric: `${fmtNum(p.score)} views · ${p.community}` })),
     ...top(youtube, 6).map((p) => ({ title: p.title, platform: "YouTube", url: p.url, metric: `${fmtNum(p.score)} views · ${p.community}` })),
     ...top(bluesky, 3).map((p) => ({ title: p.title, platform: "Bluesky", url: p.url, metric: `${fmtNum(p.score)} likes+reposts` })),
     ...top(hn, 3).map((p) => ({ title: p.title, platform: "Hacker News", url: p.url, metric: `${p.score} points · ${p.num_comments} comments` })),
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
   const evidence = [
     youtube.length && `TOP YOUTUBE VIDEOS:\n${top(youtube, 10).map((p) => `- "${p.title}" (${fmtNum(p.score)} views, ${p.community})`).join("\n")}`,
     youtube.some((p) => p.comments.length) && `YOUTUBE VIEWER COMMENTS:\n${youtube.flatMap((p) => p.comments).slice(0, 15).map((c) => `- "${c}"`).join("\n")}`,
+    tiktok.length && `TOP TIKTOKS:\n${top(tiktok, 10).map((p) => `- "${p.title}" (${fmtNum(p.score)} views, ${p.num_comments} comments)`).join("\n")}`,
+    tiktok.some((p) => p.comments.length) && `TIKTOK COMMENTS:\n${tiktok.flatMap((p) => p.comments).slice(0, 15).map((c) => `- "${c}"`).join("\n")}`,
     bluesky.length && `BLUESKY POSTS:\n${top(bluesky, 8).map((p) => `- "${p.title}" (${p.score} engagements)`).join("\n")}`,
     hn.length && `HACKER NEWS:\n${top(hn, 5).map((p) => `- "${p.title}" (${p.score} pts)`).join("\n")}`,
     questions.length && `REAL GOOGLE SEARCHES:\n${questions.join("; ")}`,

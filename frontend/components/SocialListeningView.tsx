@@ -393,7 +393,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                 {data.search_questions.length > 0
                   ? `Based on ${data.search_questions.length} real Google searches and today's news.`
                   : "Based on AI knowledge of this audience."}
-                {" "}Reddit, YouTube, Bluesky and HackerNews show real posts.
+                {" "}Reddit, YouTube, TikTok, Bluesky and HackerNews show real posts.
               </span>
             </div>
           )}
@@ -577,7 +577,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
                               <span className={`font-semibold ${COMMUNITY_STYLE[activePlatform].split(" ")[1]}`}>
                                 {activePlatform === "reddit" ? `r/${post.community}` : activePlatform === "hackernews" ? `by ${post.author}` : post.community}
                               </span>
-                              <span>{activePlatform === "youtube" ? `${post.score.toLocaleString()} views` : `↑ ${post.score}`}</span>
+                              <span>{activePlatform === "youtube" || activePlatform === "tiktok" ? `${post.score.toLocaleString()} views` : `↑ ${post.score}`}</span>
                               <span>{post.num_comments} comments</span>
                               <span>{timeAgo(post.created_utc)}</span>
                             </div>

@@ -298,3 +298,60 @@ export async function broaderTopic(keyword: string): Promise<string | null> {
   const best = scored.filter((s) => s.n >= 3).sort((a, b) => words_(b.v) - words_(a.v) || b.n - a.n)[0];
   return best?.v ?? null;
 }
+
+// ── TikTok via RapidAPI ("TikTok Scraper"; RAPIDAPI_KEY + optional RAPIDAPI_TIKTOK_HOST) ──
+interface TikTokVideo {
+  video_id: string; title?: string; play_count?: number; digg_count?: number; comment_count?: number;
+  create_time?: number; author?: { unique_id?: string; nickname?: string };
+}
+
+export async function fetchTikTok(keyword: string): Promise<SourcePost[]> {
+  const key = process.env.RAPIDAPI_KEY;
+  if (!key) return [];
+  const host = process.env.RAPIDAPI_TIKTOK_HOST || "tiktok-scraper7.p.rapidapi.com";
+  const headers = { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host };
+  const search = await getJSON<{ data?: { videos?: TikTokVideo[] } }>(
+    `https://${host}/feed/search?keywords=${encodeURIComponent(keyword)}&region=us&count=20&cursor=0&publish_time=0&sort_type=0`,
+    { headers }, 15000
+  );
+
+  const posts: SourcePost[] = (search?.data?.videos ?? []).filter((v) => v.title).map((v) => {
+    const handle = v.author?.unique_id ?? "";
+    return {
+      title: clip(v.title!, 140),
+      text: clip(v.title!, 400),
+      community: handle ? `@${handle}` : "",
+      author: v.author?.nickname || handle,
+      score: v.play_count ?? 0,
+      num_comments: v.comment_count ?? 0,
+      url: `https://www.tiktok.com/@${handle}/video/${v.video_id}`,
+      created_utc: v.create_time ?? 0,
+      comments: [],
+      _id: v.video_id,
+    };
+  });
+
+  for (const p of [...posts].sort((a, b) => b.num_comments - a.num_comments).slice(0, 3)) {
+    await sleep(1100);
+    const res = await getJSON<{ data?: { comments?: { text?: string; digg_count?: number }[] } }>(
+      `https://${host}/comment/list?url=${(p as SourcePost & { _id: string })._id}&count=20&cursor=0`, { headers }, 8000
+    );
+    p.comments = (res?.data?.comments ?? [])
+      .filter((c) => c.text && c.text.length > 8)
+      .sort((a, b) => (b.digg_count ?? 0) - (a.digg_count ?? 0))
+      .slice(0, 8)
+      .map((c) => clip(String(c.text), 280));
+  }
+  return posts;
+}
+
+export function topHashtags(posts: SourcePost[], n = 6): string[] {
+  const counts = new Map<string, number>();
+  const generic = new Set(["fyp", "foryou", "foryoupage", "viral", "fy", "trending", "xyzbca", "tiktok"]);
+  for (const p of posts) {
+    for (const tag of new Set((p.text.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((t) => t.slice(1).toLowerCase()))) {
+      if (!generic.has(tag)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([t]) => t);
+}

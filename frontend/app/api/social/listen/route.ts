@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   fetchReddit, fetchYouTube, fetchBluesky, fetchHackerNews,
-  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, type SourcePost,
+  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, fetchTikTok, topHashtags, type SourcePost,
 } from "@/lib/socialSources";
 
 export const maxDuration = 60;
@@ -17,7 +17,7 @@ const LABEL: Record<Platform, string> = {
 };
 
 const FETCHERS: Partial<Record<Platform, (k: string) => Promise<SourcePost[]>>> = {
-  reddit: fetchReddit, youtube: fetchYouTube, bluesky: fetchBluesky, hackernews: fetchHackerNews,
+  reddit: fetchReddit, youtube: fetchYouTube, bluesky: fetchBluesky, hackernews: fetchHackerNews, tiktok: fetchTikTok,
 };
 
 const COMMUNITY_KIND: Record<Platform, string> = {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   const postBlock = analysed.map((p, i) => {
     const comments = p.comments.length ? `\n   Top replies: ${p.comments.map((c) => `"${c}"`).join(" | ")}` : "";
-    return `[${i}] (${p.community}, ${p.score} ${platform === "youtube" ? "views" : "pts"}, ${p.num_comments} comments) ${p.title}${p.text && p.text !== p.title ? `\n   ${p.text}` : ""}${comments}`;
+    return `[${i}] (${p.community}, ${p.score} ${platform === "youtube" || platform === "tiktok" ? "views" : "pts"}, ${p.num_comments} comments) ${p.title}${p.text && p.text !== p.title ? `\n   ${p.text}` : ""}${comments}`;
   }).join("\n");
 
   const prompt = `You are a social listening analyst. Topic: "${topic}". Platform: ${LABEL[platform]}.
@@ -145,7 +145,8 @@ Reply with ONLY this JSON:
     data_source: live ? "live" : "estimated",
     posts: outPosts,
     sentiment_summary: { ...counts, overall, summary: (ai?.summary as string) ?? "" },
-    top_communities: live && (platform === "reddit" || platform === "youtube") ? topCommunities(posts) : ((ai?.communities as string[]) ?? []),
+    top_communities: live && platform === "tiktok" ? topHashtags(posts)
+      : live && (platform === "reddit" || platform === "youtube") ? topCommunities(posts) : ((ai?.communities as string[]) ?? []),
     key_themes: (ai?.themes as string[]) ?? [],
     pain_points: painPoints,
     questions: (ai?.questions as string[]) ?? [],
@@ -154,6 +155,7 @@ Reply with ONLY this JSON:
     search_questions: questions.slice(0, 12),
     ai_error: aiError || undefined,
     needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY (or REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)"
-      : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY" : undefined,
+      : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY"
+      : !live && platform === "tiktok" && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY" : undefined,
   });
 }
