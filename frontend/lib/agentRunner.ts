@@ -130,10 +130,11 @@ export function buildAgentPrompt(
 ): { system: string; task: string; maxTokens: number } {
   const biz = bizName || "this business";
   const audit = JSON.stringify(researchData).slice(0, 12000);
+  const today = `Today's date is ${new Date().toISOString().slice(0, 10)}. Use the current year in any dated content, and treat older years in the audit data as out of date.`;
 
   if (taskOverride) {
     return {
-      system: `You are a senior marketing specialist executing a specific task for ${biz}. Output must be complete and ready to hand off or publish.\n\n${FORMAT_RULES}\n\nAudit Data:\n${audit}`,
+      system: `You are a senior marketing specialist executing a specific task for ${biz}. Output must be complete and ready to hand off or publish.\n${today}\n\n${FORMAT_RULES}\n\nAudit Data:\n${audit}`,
       task: `Complete this marketing task for ${biz} in full. Write the real thing — actual copy, templates, scripts or plans.\n\nTASK: ${taskOverride}`,
       maxTokens: 6000,
     };
@@ -141,7 +142,7 @@ export function buildAgentPrompt(
 
   const def = TASKS[agentId];
   return {
-    system: `You are a specialist marketing agent producing deliverables a business owner can publish today.\n\n${FORMAT_RULES}\n\nAudit Data:\n${audit}`,
+    system: `You are a specialist marketing agent producing deliverables a business owner can publish today.\n${today}\n\n${FORMAT_RULES}\n\nAudit Data:\n${audit}`,
     task: def ? def.task(biz) : `Produce a marketing action plan for ${biz}.`,
     maxTokens: def?.maxTokens ?? 4000,
   };

@@ -144,7 +144,10 @@ export async function runResearch(
       model: "claude-sonnet-4-6",
       max_tokens: 8192,
       system: SYSTEM,
-      messages: [{ role: "user", content: PROMPT.replace("{url}", url).replace("{markdown}", markdown.slice(0, 30000)) }],
+      messages: [{
+        role: "user",
+        content: `Today's date is ${new Date().toISOString().slice(0, 10)}. Keywords must reflect current searches: never include a past year in any keyword, and only add the current year where people genuinely search with it.\n\n${PROMPT.replace("{url}", url).replace("{markdown}", markdown.slice(0, 30000))}`,
+      }],
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";

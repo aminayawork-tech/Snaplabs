@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       results.push({ keyword, sparkline, growth_pct: growth, current_interest: current, rising_queries: rising });
       await new Promise((r) => setTimeout(r, 250));
     } catch {
-      results.push({ keyword, sparkline: [], growth_pct: 0, current_interest: 0, rising_queries: [] });
+      results.push({ keyword, sparkline: [], growth_pct: 0, current_interest: 0, rising_queries: [], unavailable: true });
     }
   }
 

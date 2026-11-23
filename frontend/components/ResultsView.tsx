@@ -241,7 +241,15 @@ function QuickWinCard({ win, index, researchData, bizName, personas, onAgentOutp
                   {running && <span className="inline-block w-1.5 h-3.5 bg-[#275fe8] ml-1 animate-pulse align-middle" />}
                 </p>
                 <div className="flex gap-2">
-                  {!running && output && (
+                  {running && (
+                    <button
+                      onClick={() => abortRef[0]?.abort()}
+                      className="text-xs text-red-500 hover:text-red-700 font-semibold transition"
+                    >
+                      ■ Stop
+                    </button>
+                  )}
+                  {!running && (output || streamText) && (
                     <button
                       onClick={activate}
                       className="text-xs text-slate-400 hover:text-brand font-semibold transition"

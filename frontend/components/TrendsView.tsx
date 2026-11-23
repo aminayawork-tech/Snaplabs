@@ -601,6 +601,7 @@ interface RealTrend {
   growth_pct: number;
   current_interest: number;
   rising_queries: string[];
+  unavailable?: boolean;
 }
 
 interface Row extends AIKeyword {
@@ -1424,7 +1425,11 @@ function ResultsPage({
                     )}
                   </button>
                   <div>
-                    <GrowthBadge pct={growth} estimated={!isReal} />
+                    {r.real && !isReal
+                      ? r.real.unavailable
+                        ? <span className="text-[0.6875rem] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap" title="Google Trends didn't respond — try again in a minute">Unavailable</span>
+                        : <span className="text-[0.6875rem] font-semibold text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full whitespace-nowrap" title="Google Trends has no data — search volume is too low to measure">Too niche</span>
+                      : <GrowthBadge pct={growth} estimated={!isReal} />}
                   </div>
                   <div className="hidden sm:block">
                     <VolumeBadge tier={r.volume} />
@@ -1465,7 +1470,9 @@ function ResultsPage({
             </div>
           )}
           <p className="text-xs text-slate-400 mt-3 text-center">
-            {rows.filter(r => r.real).length} keywords with real Google Trends data · rest are AI estimates · Growth = last 6 months vs prior 6 months
+            {rows.filter(r => r.real && r.real.sparkline.length > 1).length} of {rows.length} keywords have real Google Trends data
+            {rows.some(r => r.real && !r.real.unavailable && r.real.sparkline.length <= 1) && " · \"Too niche\" = search volume too low for Google Trends — try a broader phrase"}
+            {" · "}Growth = second half of the period vs first half
           </p>
         </>
       )}
@@ -1555,7 +1562,11 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   }, [fetchRealTrends, trendsTimeRange, geo]);
 
   const runAuditKeywords = useCallback(() => {
-    const kws = auditKeywords.slice(0, 8).map(k => typeof k === "string" ? k : k.keyword).filter(Boolean);
+    const year = new Date().getFullYear();
+    const kws = auditKeywords.slice(0, 8)
+      .map(k => (typeof k === "string" ? k : k.keyword) ?? "")
+      .map(k => k.replace(/\b20\d{2}\b/g, y => (Number(y) < year ? "" : y)).replace(/\s{2,}/g, " ").trim())
+      .filter(Boolean);
     if (!kws.length) return;
     const aiRows: Row[] = kws.map(k => ({ keyword: k, trend: "stable", growth: 0, volume: "medium" }));
     setContext(bizName ? `${bizName} — audit keywords` : "Audit keywords");

@@ -10,17 +10,25 @@ export async function POST(req: NextRequest) {
   const enc = new TextEncoder();
   const { system, task, maxTokens } = buildAgentPrompt(agent_id, biz_name, research_data, task_override);
 
+  let claude: ReturnType<Anthropic["messages"]["stream"]> | null = null;
+  req.signal.addEventListener("abort", () => claude?.abort());
+
   const stream = new ReadableStream({
+    cancel() {
+      claude?.abort();
+    },
     async start(ctrl) {
-      const send = (d: object) => ctrl.enqueue(enc.encode(`data: ${JSON.stringify(d)}\n\n`));
+      const send = (d: object) => {
+        try { ctrl.enqueue(enc.encode(`data: ${JSON.stringify(d)}\n\n`)); } catch { claude?.abort(); }
+      };
       try {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
-        const response = anthropic.messages.stream({
+        const response = (claude = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
           max_tokens: maxTokens,
           system,
           messages: [{ role: "user", content: task }],
-        });
+        }));
 
         for await (const event of response) {
           if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
@@ -28,10 +36,12 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (e) {
-        send({ type: "error", text: String(e) });
+        if (!req.signal.aborted) send({ type: "error", text: String(e) });
       } finally {
-        ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
-        ctrl.close();
+        try {
+          ctrl.enqueue(enc.encode("data: [DONE]\n\n"));
+          ctrl.close();
+        } catch { /* client already disconnected */ }
       }
     },
   });
