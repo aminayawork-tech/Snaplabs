@@ -124,6 +124,9 @@ export default function LandingPage() {
           <span className="font-bold text-slate-900 tracking-tight">Snappy<span className="text-[#275fe8]">marketer</span></span>
           <span className="text-slate-300">·</span>
           <span className="text-slate-400 text-sm">© {new Date().getFullYear()}</span>
+          <span className="text-slate-300 text-xs hidden md:inline">
+            Icon by <a href="https://www.streamlinehq.com" target="_blank" rel="noopener noreferrer" className="hover:underline">Streamline</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" className="hover:underline">CC BY 4.0</a>)
+          </span>
         </div>
         <Link href="/login" className="text-sm font-semibold text-[#275fe8] hover:underline underline-offset-2">
           Sign In to Platform →
