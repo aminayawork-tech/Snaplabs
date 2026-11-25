@@ -1,19 +1,14 @@
 export default function SnapLogo({ size = 28, className = "" }: { size?: number; className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" width={size} height={size} className={className} aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#275fe8"/>
-      <g strokeLinecap="round" strokeLinejoin="round" fill="none">
-        <path d="M22.5 34 L23 10.5" stroke="#275fe8" strokeWidth="10.5"/>
-        <path d="M22.5 34 L23 10.5" stroke="#fff" strokeWidth="7.5"/>
-        <path d="M28.5 35 L31 20.5 L42.5 21" stroke="#275fe8" strokeWidth="10.5"/>
-        <path d="M28.5 35 L31 20.5 L42.5 21" stroke="#fff" strokeWidth="7.5"/>
-      </g>
-      <rect x="13" y="31" width="23" height="25" rx="9" fill="#fff" stroke="#275fe8" strokeWidth="1.6" transform="rotate(-10 24.5 43.5)"/>
-      <path d="M17 41.5 h9 M17.5 48 h8.5" stroke="#275fe8" strokeWidth="1.8" strokeLinecap="round"/>
-      <path d="M33.5 45 L40.5 28.5" stroke="#275fe8" strokeWidth="10.5" strokeLinecap="round"/>
-      <path d="M33.5 45 L40.5 28.5" stroke="#fff" strokeWidth="7.5" strokeLinecap="round"/>
-      <g stroke="#fde047" strokeWidth="3.2" strokeLinecap="round">
-        <path d="M47.5 14.5 l3-4.5"/><path d="M51 21 l5.5-1"/><path d="M49.5 27.5 l4.5 3"/>
+    <svg viewBox="0 0 256 256" width={size} height={size} className={className} aria-hidden="true">
+      <rect width="256" height="256" rx="60" fill="#275fe8" />
+      <g fill="none" stroke="#fff" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M96 222 C76 196 70 166 80 140" />
+        <path d="M80 140 L66 70 C63 54 86 48 91 64 L108 118" />
+        <path d="M108 118 C104 84 132 66 158 74 C186 82 190 116 166 130 C146 142 118 146 116 170 C114 196 150 206 174 188 C186 178 190 166 186 156" />
+        <path d="M174 34 L180 54" />
+        <path d="M212 60 L196 72" />
+        <path d="M222 104 L202 104" />
       </g>
     </svg>
   );
