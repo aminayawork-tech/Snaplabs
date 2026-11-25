@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   fetchReddit, fetchYouTube, fetchBluesky, fetchHackerNews,
-  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, fetchTikTok, fetchFacebook, fetchTwitter, topHashtags, type SourcePost,
+  fetchSearchQuestions, fetchNewsHeadlines, broaderTopic, SourceError, fetchTikTok, fetchFacebook, fetchTwitter, topHashtags, type SourcePost,
 } from "@/lib/socialSources";
 
 export const maxDuration = 60;
@@ -55,15 +55,20 @@ export async function POST(req: NextRequest) {
   const hit = cache.get(cacheKey);
   if (hit && !fresh && Date.now() - hit.at < CACHE_TTL) return Response.json(hit.payload);
 
+  let sourceError = "";
+  const safeFetch = (kw: string) => fetcher!(kw).catch((e) => {
+    sourceError ||= e instanceof SourceError ? e.message : "the provider couldn't be reached.";
+    return [] as SourcePost[];
+  });
   const gather = (kw: string) => Promise.all([
-    fetcher ? fetcher(kw) : Promise.resolve([] as SourcePost[]),
+    fetcher ? safeFetch(kw) : Promise.resolve([] as SourcePost[]),
     fetchSearchQuestions(kw),
     fetchNewsHeadlines(kw),
   ]);
 
   let topic: string = keyword;
   let [posts, questions, news] = await gather(keyword);
-  if ((fetcher ? posts.length < 3 : questions.length < 3) && Date.now() - started < 22000) {
+  if (!sourceError && (fetcher ? posts.length < 3 : questions.length < 3) && Date.now() - started < 22000) {
     const broader = await broaderTopic(keyword);
     if (broader) {
       const [p2, q2, n2] = await gather(broader);
@@ -164,10 +169,11 @@ Reply with ONLY this JSON:
     opportunities: (ai?.opportunities as string[]) ?? [],
     search_questions: questions.slice(0, 12),
     ai_error: aiError || undefined,
+    source_error: !live && sourceError ? sourceError : undefined,
     needs_key: !live && platform === "reddit" && !process.env.REDDIT_CLIENT_ID && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY (or REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)"
       : !live && platform === "youtube" && !process.env.YOUTUBE_API_KEY ? "YOUTUBE_API_KEY"
       : !live && ["tiktok", "facebook", "x"].includes(platform) && !process.env.RAPIDAPI_KEY ? "RAPIDAPI_KEY" : undefined,
   };
-  if (!aiError) cache.set(cacheKey, { at: Date.now(), payload });
+  if (!aiError && !sourceError) cache.set(cacheKey, { at: Date.now(), payload });
   return Response.json(payload);
 }

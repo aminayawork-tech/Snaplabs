@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
   if (hit && !fresh && Date.now() - hit.at < CACHE_TTL) return Response.json(hit.payload);
 
   const gather = (kw: string) => Promise.all([
-    fetchYouTube(kw), fetchBluesky(kw), fetchHackerNews(kw),
-    fetchSearchQuestions(kw), fetchNewsHeadlines(kw), fetchTikTok(kw),
+    fetchYouTube(kw).catch(() => []), fetchBluesky(kw), fetchHackerNews(kw),
+    fetchSearchQuestions(kw), fetchNewsHeadlines(kw), fetchTikTok(kw).catch(() => []),
   ]);
   let topic: string = keyword;
   let [youtube, bluesky, hn, questions, news, tiktok] = await gather(keyword);

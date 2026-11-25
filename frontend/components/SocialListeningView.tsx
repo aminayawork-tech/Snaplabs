@@ -58,6 +58,7 @@ interface ListenData {
   data_source: "live" | "estimated";
   topic?: string;
   ai_error?: string;
+  source_error?: string;
   needs_key?: string;
   platform: Platform;
   savedAt?: number;
@@ -236,7 +237,7 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
       } else {
         const stamped = { ...json, savedAt: Date.now() };
         setResults(prev => ({ ...prev, [platform]: stamped }));
-        if (!json.ai_error) {
+        if (!json.ai_error && !json.source_error) {
           saveResearch(kw, { results: { [platform]: stamped } });
           refreshRecent();
         }
@@ -436,7 +437,9 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-800">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 flex-shrink-0 mt-px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <span>
-                {data.needs_key
+                {data.source_error
+                  ? <><strong>Couldn&apos;t get live {PLATFORMS.find(p => p.key === activePlatform)?.label} posts</strong> — {data.source_error} Meanwhile, here&apos;s an estimate. </>
+                  : data.needs_key
                   ? <><strong>Not connected</strong> — add <code className="font-mono">{data.needs_key}</code> in Vercel to pull live {PLATFORMS.find(p => p.key === activePlatform)?.label} posts. </>
                   : <><strong>Estimated</strong> — {PLATFORMS.find(p => p.key === activePlatform)?.label} has no public data API. </>}
                 {data.search_questions.length > 0

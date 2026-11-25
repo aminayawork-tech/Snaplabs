@@ -31,6 +31,39 @@ async function getJSON<T = unknown>(url: string, init: RequestInit = {}, ms = 60
   }
 }
 
+// Raised when a live data source refuses a request (quota used up, bad key, rate limit) so the UI can say why.
+export class SourceError extends Error {}
+
+function friendlySourceError(msg: string, status: number): string {
+  if (/monthly quota/i.test(msg)) return "the monthly quota on your RapidAPI plan for this API is used up. Upgrade the plan on RapidAPI or wait for the monthly reset.";
+  if (/not subscribed/i.test(msg)) return "you're not subscribed to this API on RapidAPI.";
+  if (/quota/i.test(msg)) return "the API's daily quota is used up. It resets within 24 hours.";
+  if (/key not valid|invalid api key|api key/i.test(msg) || status === 401 || status === 403) return "the API key was rejected. Check it in Vercel.";
+  if (status === 429 || /rate limit|too many|temporar/i.test(msg)) return "the provider is rate-limiting or temporarily unavailable. Try again in a minute.";
+  return `the provider returned an error (${status}): ${msg.slice(0, 120)}`;
+}
+
+async function getJSONStrict<T>(url: string, init: RequestInit = {}, ms = 8000): Promise<T> {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const res = await fetch(url, { ...init, signal: ac.signal, cache: "no-store", headers: { "User-Agent": UA, ...(init.headers ?? {}) } });
+    const text = await res.text();
+    let data: unknown = null;
+    try { data = JSON.parse(text); } catch { /* non-JSON body */ }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as any;
+    const msg = String(d?.message ?? d?.error?.message ?? d?.error ?? text.slice(0, 150));
+    if (!res.ok || /exceeded the|not subscribed/i.test(String(d?.message ?? ""))) throw new SourceError(friendlySourceError(msg, res.status));
+    return data as T;
+  } catch (e) {
+    if (e instanceof SourceError) throw e;
+    throw new SourceError((e as Error).name === "AbortError" ? "the provider didn't respond in time." : "the provider couldn't be reached.");
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n).trim()}…` : s);
 const stripHtml = (s: string) =>
   s.replace(/<[^>]+>/g, " ").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&")
@@ -82,11 +115,10 @@ async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
     return `${title} ${(p.selftext ?? "").toLowerCase()}`.includes(exact) || words.every((w) => title.includes(w));
   };
 
+  const searchUrl = (q: string, timeFilter: string) =>
+    `https://${host}/v1/reddit/search?search=${encodeURIComponent(q)}&filter=posts&timeFilter=${timeFilter}&sortType=relevance`;
   const search = async (q: string, timeFilter: string) =>
-    (await getJSON<{ body?: RapidPost[] }>(
-      `https://${host}/v1/reddit/search?search=${encodeURIComponent(q)}&filter=posts&timeFilter=${timeFilter}&sortType=relevance`,
-      { headers }, 12000
-    ))?.body ?? [];
+    (await getJSON<{ body?: RapidPost[] }>(searchUrl(q, timeFilter), { headers }, 12000))?.body ?? [];
 
   const hasTime = budget();
   let raw: RapidPost[] = [];
@@ -94,8 +126,9 @@ async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
     const seen = new Set(raw.map((p) => p.id));
     raw = [...raw, ...more.filter((p) => relevant(p) && !seen.has(p.id))];
   };
-  add(await search(phrase, "year"));
-  if (raw.length < 5 && hasTime()) { await sleep(1100); add(await search(phrase, "all")); }
+  // The Basic plan allows only 100 calls a month, so follow-up searches run only when results are thin.
+  add((await getJSONStrict<{ body?: RapidPost[] }>(searchUrl(phrase, "year"), { headers }, 12000))?.body ?? []);
+  if (raw.length < 3 && hasTime()) { await sleep(1100); add(await search(phrase, "all")); }
   if (raw.length < 3 && phrase !== keyword.trim() && hasTime()) { await sleep(1100); add(await search(keyword.trim(), "all")); }
 
   const posts: SourcePost[] = raw.filter((p) => !p.over_18).slice(0, 25).map((p) => ({
@@ -110,7 +143,7 @@ async function fetchRedditRapid(keyword: string): Promise<SourcePost[]> {
     comments: [],
   }));
 
-  for (const p of [...posts].filter((x) => x.num_comments > 0).sort((a, b) => b.num_comments - a.num_comments).slice(0, 2)) {
+  for (const p of [...posts].filter((x) => x.num_comments > 0).sort((a, b) => b.num_comments - a.num_comments).slice(0, 1)) {
     if (!hasTime()) break;
     await sleep(1100);
     const detail = await getJSON<{ body?: { post_comments?: { content?: string; score?: number }[] } }>(
@@ -163,7 +196,7 @@ export async function fetchYouTube(keyword: string): Promise<SourcePost[]> {
   if (!key) return [];
   const params = new URLSearchParams({ part: "snippet", q: keyword, type: "video", maxResults: "12", order: "relevance", relevanceLanguage: "en", key });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const search = await getJSON<any>(`https://www.googleapis.com/youtube/v3/search?${params}`);
+  const search = await getJSONStrict<any>(`https://www.googleapis.com/youtube/v3/search?${params}`);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: any[] = search?.items ?? [];
   if (!items.length) return [];
@@ -288,13 +321,14 @@ export async function fetchNewsHeadlines(keyword: string): Promise<string[]> {
 // For brand names / ultra-niche phrases with no data, find the broader topic their audience actually searches.
 export async function broaderTopic(keyword: string): Promise<string | null> {
   const words = keyword.trim().split(/\s+/);
-  if (words.length < 2) return null;
+  // Two-word phrases are already broad; dropping to one word ("sonography school" -> "school") loses the topic.
+  if (words.length < 3) return null;
   const variants = [...new Set([
     words.slice(1).join(" "),
     words.slice(0, -1).join(" "),
     words.length > 2 ? words.slice(-2).join(" ") : "",
     words.length > 2 ? words.slice(1, -1).join(" ") : "",
-  ])].filter((v) => v && v.toLowerCase() !== keyword.toLowerCase());
+  ])].filter((v) => v && v.split(/\s+/).length >= 2 && v.toLowerCase() !== keyword.toLowerCase());
 
   const scored = await Promise.all(variants.map(async (v) => ({ v, n: (await fetchSearchQuestions(v)).length })));
   // Prefer the most specific variant that still has real search demand.
@@ -315,7 +349,7 @@ export async function fetchTikTok(keyword: string): Promise<SourcePost[]> {
   const host = process.env.RAPIDAPI_TIKTOK_HOST || "tiktok-scraper7.p.rapidapi.com";
   const headers = { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host };
   const hasTime = budget();
-  const search = await getJSON<{ data?: { videos?: TikTokVideo[] } }>(
+  const search = await getJSONStrict<{ data?: { videos?: TikTokVideo[] } }>(
     `https://${host}/feed/search?keywords=${encodeURIComponent(keyword)}&region=us&count=20&cursor=0&publish_time=0&sort_type=0`,
     { headers }, 15000
   );
@@ -386,9 +420,11 @@ export async function fetchFacebook(keyword: string): Promise<SourcePost[]> {
     for (const p of more ?? []) if (p.message && !raw.some((r) => r.post_id === p.post_id)) raw.push(p);
   };
   const hasTime = budget();
-  const first = await page(phrase);
+  const first = await getJSONStrict<{ results?: FacebookPost[]; cursor?: string }>(
+    `https://${host}/search/posts?query=${encodeURIComponent(phrase)}`, { headers }, 15000
+  );
   add(first?.results);
-  if (first?.cursor && hasTime()) { await sleep(1100); add((await page(phrase, first.cursor))?.results); }
+  if (first?.cursor && raw.length < 5 && hasTime()) { await sleep(1100); add((await page(phrase, first.cursor))?.results); }
   if (raw.length < 3 && phrase !== keyword.trim() && hasTime()) { await sleep(1100); add((await page(keyword.trim()))?.results); }
 
   return raw.slice(0, 20).map((p) => ({
@@ -414,10 +450,11 @@ export async function fetchTwitter(keyword: string): Promise<SourcePost[]> {
   const key = process.env.RAPIDAPI_KEY;
   if (!key) return [];
   const host = process.env.RAPIDAPI_TWITTER_HOST || "twitter-api45.p.rapidapi.com";
-  const data = await getJSON<{ timeline?: Tweet[] }>(
+  const data = await getJSONStrict<{ timeline?: Tweet[]; status?: string; error?: string }>(
     `https://${host}/search.php?query=${encodeURIComponent(keyword)}&search_type=Top`,
     { headers: { "X-RapidAPI-Key": key, "X-RapidAPI-Host": host } }, 15000
   );
+  if (data?.status === "failed") throw new SourceError(friendlySourceError(String(data.error ?? "failed"), 429));
   return (data?.timeline ?? []).filter((t) => t.text && t.tweet_id).slice(0, 20).map((t) => ({
     title: clip(t.text!.replace(/\s+/g, " "), 140),
     text: clip(t.text!, 400),
