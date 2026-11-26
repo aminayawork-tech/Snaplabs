@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { getSaved, putSaved, listSaved, deleteSaved, syncSaved } from "@/lib/savedResearch";
 import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 interface Persona {
@@ -69,7 +69,11 @@ export default function AudienceView() {
   const [savedAt, setSavedAt] = useState<number | undefined>();
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const refreshRecent = () => setRecent(listSaved<AudienceData>("audience"));
-  useEffect(refreshRecent, []);
+  useEffect(() => {
+    refreshRecent();
+    syncSaved("audience").then((ok) => ok && refreshRecent());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runResearch = async (mkt: string, fresh = false) => {
     const key = mkt.toLowerCase();

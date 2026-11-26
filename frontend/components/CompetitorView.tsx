@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { getSaved, putSaved, listSaved, deleteSaved, syncSaved } from "@/lib/savedResearch";
 import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 interface CompetitorData {
@@ -82,7 +82,11 @@ export default function CompetitorView() {
   const [savedAt, setSavedAt] = useState<number | undefined>();
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const refreshRecent = () => setRecent(listSaved<SavedCompetitor>("competitor"));
-  useEffect(refreshRecent, []);
+  useEffect(() => {
+    refreshRecent();
+    syncSaved("competitor").then((ok) => ok && refreshRecent());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchMetaAds = async (competitorName: string, key: string) => {
     setMetaLoading(true);

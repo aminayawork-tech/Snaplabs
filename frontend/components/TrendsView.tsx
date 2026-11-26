@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Keyword } from "@/lib/types";
-import { getSaved, putSaved, listSaved, deleteSaved } from "@/lib/savedResearch";
+import { getSaved, putSaved, listSaved, deleteSaved, syncSaved } from "@/lib/savedResearch";
 import { RecentResearch, SavedBar, type RecentItem } from "./RecentResearch";
 
 type VolumeTier = "high" | "medium" | "low";
@@ -1515,7 +1515,11 @@ export default function TrendsView({ auditKeywords = [], bizName, initialCategor
   const refreshRecent = () => setRecent(listSaved<SavedTrends>("trends").map(e => ({
     ...e, label: `${e.data.context.replace(/^"|"$/g, "")}${e.data.geo !== "US" ? ` · ${e.data.geo}` : ""}`,
   })));
-  useEffect(refreshRecent, []);
+  useEffect(() => {
+    refreshRecent();
+    syncSaved("trends").then((ok) => ok && refreshRecent());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchRealTrends = useCallback(async (aiRows: Row[], timeRange: TrendsTimeRange = "1y", geoCode = "US") => {
     const topKws = aiRows.slice(0, REAL_FETCH_LIMIT).map(r => r.keyword);

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { RecentResearch, SavedBar } from "./RecentResearch";
+import { getSaved, putSaved, listSaved, deleteSaved, syncSaved } from "@/lib/savedResearch";
 import { buildResearchMarkdown, downloadMarkdown } from "@/lib/exportResearch";
 
 type Platform = "reddit" | "youtube" | "bluesky" | "hackernews" | "x" | "tiktok" | "facebook";
@@ -176,31 +177,40 @@ async function readJSON(res: Response) {
   }
 }
 
-// Saved research persists in localStorage so repeat searches don't spend API calls.
+// Saved research is stored per keyword through lib/savedResearch (browser cache + server sync).
 interface SavedResearch { keyword: string; updatedAt: number; results: ResultsMap; content?: ContentDiscovery }
-const STORE_KEY = "snappy_social_research_v1";
-const MAX_SAVED = 20;
+interface SocialData { results: ResultsMap; content?: ContentDiscovery }
+const LEGACY_KEY = "snappy_social_research_v1";
 
-function loadStore(): Record<string, SavedResearch> {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}"); } catch { return {}; }
+// One-time move of research saved before server sync existed.
+function migrateLegacy() {
+  try {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) ?? "null") as Record<string, SavedResearch> | null;
+    if (!legacy) return;
+    for (const r of Object.values(legacy).sort((a, b) => a.updatedAt - b.updatedAt)) {
+      if (!getSaved("social", r.keyword.toLowerCase())) putSaved<SocialData>("social", r.keyword.toLowerCase(), r.keyword, { results: r.results, content: r.content });
+    }
+    localStorage.removeItem(LEGACY_KEY);
+  } catch { /* ignore */ }
 }
 
-function saveResearch(keyword: string, patch: Partial<Pick<SavedResearch, "results" | "content">>) {
-  const store = loadStore();
+function loadStore(): Record<string, SavedResearch> {
+  return Object.fromEntries(listSaved<SocialData>("social").map((e) => [e.key, {
+    keyword: e.label, updatedAt: e.updatedAt, results: e.data.results ?? {}, content: e.data.content,
+  }]));
+}
+
+function saveResearch(keyword: string, patch: Partial<SocialData>) {
   const k = keyword.toLowerCase();
-  const prev = store[k] ?? { keyword, updatedAt: 0, results: {} };
-  store[k] = { ...prev, keyword, updatedAt: Date.now(), results: { ...prev.results, ...patch.results }, content: patch.content ?? prev.content };
-  let entries = Object.entries(store).sort((a, b) => b[1].updatedAt - a[1].updatedAt).slice(0, MAX_SAVED);
-  while (entries.length) {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(Object.fromEntries(entries))); return; }
-    catch { entries = entries.slice(0, -1); }
-  }
+  const prev = getSaved<SocialData>("social", k)?.data ?? { results: {} };
+  putSaved<SocialData>("social", k, keyword, {
+    results: { ...prev.results, ...patch.results },
+    content: patch.content ?? prev.content,
+  });
 }
 
 function deleteResearch(keyword: string) {
-  const store = loadStore();
-  delete store[keyword.toLowerCase()];
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* ignore */ }
+  deleteSaved("social", keyword.toLowerCase());
 }
 
 
@@ -220,7 +230,12 @@ export default function SocialListeningView({ onNavigateToTrends }: { onNavigate
 
   const anyLoading = ALL_PLATFORMS.some(p => loadingMap[p]);
   const refreshRecent = () => setRecent(Object.values(loadStore()).sort((a, b) => b.updatedAt - a.updatedAt));
-  useEffect(refreshRecent, []);
+  useEffect(() => {
+    migrateLegacy();
+    refreshRecent();
+    syncSaved("social").then((ok) => ok && refreshRecent());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchPlatform = async (platform: Platform, kw: string, fresh = false) => {
     setLoadingMap(prev => ({ ...prev, [platform]: true }));
